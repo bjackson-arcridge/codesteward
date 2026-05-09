@@ -1,0 +1,44 @@
+{
+  "name": "codesteward",
+  "version": "0.0.1",
+  "description": "CodeSteward project-local CLI and Decision Record store logic.",
+  "license": "MIT",
+  "author": "arcridge",
+  "homepage": "https://github.com/photomuse/MyLLMTeam/tree/main/codesteward#readme",
+  "bugs": {
+    "url": "https://github.com/photomuse/MyLLMTeam/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/photomuse/MyLLMTeam.git",
+    "directory": "codesteward/packages/cli"
+  },
+  "keywords": [
+    "codesteward",
+    "decision-records",
+    "cli",
+    "ai",
+    "agents"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/main.js",
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "codesteward": "./dist/main.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepack": "npm run compile",
+    "check-types": "tsc --noEmit",
+    "compile": "npm run check-types && node esbuild.js",
+    "compile-tests": "node -e \"require('node:fs').rmSync('out', { recursive: true, force: true })\" && tsc -p . --outDir out",
+    "test:unit": "npm run compile-tests && node --test out/unit/*.test.js",
+    "cli": "node dist/main.js"
+  }
+}

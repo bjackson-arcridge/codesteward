@@ -1,0 +1,36 @@
+{
+  "name": "codesteward-workspace",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Agentic workflows that focus on human in the loop.",
+  "workspaces": [
+    "packages/cli",
+    "packages/vscode"
+  ],
+  "scripts": {
+    "check-types": "npm run check-types --workspaces",
+    "compile": "npm run compile --workspaces",
+    "lint": "eslint packages",
+    "package:vscode": "npm --workspace packages/vscode run package:vsix",
+    "test:unit": "npm run test:unit --workspaces --if-present",
+    "test": "npm --workspace packages/vscode run test",
+    "cli": "npm --workspace codesteward run cli --",
+    "pack:cli": "npm --workspace codesteward pack --pack-destination .",
+    "install:cli:local": "npm run pack:cli && npm install -g \"./$(ls -t codesteward-*.tgz | head -n1)\"",
+    "uninstall:cli:local": "npm uninstall -g codesteward",
+    "publish:cli": "npm --workspace codesteward publish"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.109.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "typescript-eslint": "^8.56.1",
+    "eslint": "^9.39.3",
+    "esbuild": "^0.27.3",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.9.3",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.9.1"
+  }
+}

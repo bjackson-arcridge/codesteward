@@ -1,0 +1,199 @@
+{
+  "name": "codesteward-vscode",
+  "displayName": "CodeSteward",
+  "description": "Markdown-backed Decision Records and agent skills for AI coding workflows.",
+  "version": "0.0.1",
+  "publisher": "arcridge",
+  "engines": {
+    "vscode": "^1.109.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "files": [
+    "dist",
+    "media",
+    "README.md",
+    "LICENSE"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codesteward.installCli",
+        "title": "CodeSteward: Install CLI",
+        "icon": "$(cloud-download)",
+        "enablement": "!codesteward.cliAvailable"
+      },
+      {
+        "command": "codesteward.bootstrap",
+        "title": "CodeSteward: Bootstrap Decisions",
+        "icon": "$(search)",
+        "enablement": "codesteward.workspaceInitialized"
+      },
+      {
+        "command": "codesteward.showDiagnostics",
+        "title": "CodeSteward: Show Diagnostics",
+        "icon": "$(output)"
+      },
+      {
+        "command": "codesteward.candidates.open",
+        "title": "CodeSteward: Open Candidate Preview",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "codesteward.candidates.editSource",
+        "title": "CodeSteward: Edit Candidate Source",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "codesteward.records.filterByDomain",
+        "title": "CodeSteward: Filter Decision Records by Domain",
+        "icon": "$(filter)",
+        "enablement": "codesteward.workspaceInitialized"
+      },
+      {
+        "command": "codesteward.records.filterByTag",
+        "title": "CodeSteward: Filter Decision Records by Tag",
+        "icon": "$(filter)",
+        "enablement": "codesteward.workspaceInitialized"
+      },
+      {
+        "command": "codesteward.records.clearTagFilter",
+        "title": "CodeSteward: Clear Decision Record Filters",
+        "icon": "$(clear-all)",
+        "enablement": "codesteward.workspaceInitialized"
+      },
+      {
+        "command": "codesteward.records.openPreview",
+        "title": "CodeSteward: Open Decision Record Preview",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "codesteward.records.editSource",
+        "title": "CodeSteward: Edit Decision Record Source",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "codesteward.candidates.accept",
+        "title": "CodeSteward: Accept Candidate",
+        "icon": "$(check)"
+      },
+      {
+        "command": "codesteward.candidates.reject",
+        "title": "CodeSteward: Reject Candidate",
+        "icon": "$(close)"
+      },
+      {
+        "command": "codesteward.candidates.retire",
+        "title": "CodeSteward: Retire Candidate",
+        "icon": "$(archive)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codesteward",
+          "title": "CodeSteward",
+          "icon": "media/codesteward.svg"
+        }
+      ]
+    },
+    "views": {
+      "codesteward": [
+        {
+          "id": "codesteward.welcome",
+          "name": "CodeSteward",
+          "type": "webview",
+          "when": "codesteward.workspaceUninitialized"
+        },
+        {
+          "id": "codesteward.records",
+          "name": "DECISION RECORDS",
+          "type": "webview",
+          "when": "codesteward.workspaceInitialized"
+        },
+        {
+          "id": "codesteward.candidates",
+          "name": "CANDIDATES",
+          "type": "webview",
+          "when": "codesteward.workspaceInitialized"
+        },
+        {
+          "id": "codesteward.records.rejected",
+          "name": "REJECTED DRS",
+          "type": "webview",
+          "when": "codesteward.workspaceInitialized",
+          "visibility": "collapsed"
+        },
+        {
+          "id": "codesteward.records.retired",
+          "name": "RETIRED DRS",
+          "type": "webview",
+          "when": "codesteward.workspaceInitialized",
+          "visibility": "collapsed"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CodeSteward",
+      "properties": {
+        "codesteward.cliPath": {
+          "type": "string",
+          "default": "codesteward",
+          "description": "Path to the CodeSteward CLI executable."
+        }
+      }
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "codesteward.installCli",
+          "when": "view == codesteward.welcome && !codesteward.cliAvailable",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "codesteward.installCli",
+          "when": "!codesteward.cliAvailable"
+        },
+        {
+          "command": "codesteward.bootstrap",
+          "when": "codesteward.workspaceInitialized"
+        },
+        {
+          "command": "codesteward.showDiagnostics"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "prepack": "npm run package",
+    "vscode:prepublish": "npm run package",
+    "check-types:host": "tsc --noEmit",
+    "check-types:webview": "tsc --noEmit -p tsconfig.webview.json",
+    "check-types": "npm run check-types:host && npm run check-types:webview",
+    "compile": "npm run check-types && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "watch:tsc-webview": "tsc --noEmit --watch -p tsconfig.webview.json",
+    "package": "npm run check-types && node esbuild.js --production",
+    "package:vsix": "vsce package --no-dependencies --allow-missing-repository",
+    "compile-tests": "tsc -p . --outDir out",
+    "test:unit": "npm run compile-tests && node --test out/unit/*.test.js",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "prepare-test-workspaces": "node src/test/prepare-workspaces.mjs",
+    "pretest": "npm run compile-tests && npm run compile && npm run prepare-test-workspaces",
+    "test": "vscode-test"
+  },
+  "dependencies": {
+    "@floating-ui/dom": "^1.7.6",
+    "@vscode/codicons": "^0.0.45",
+    "lit": "^3.3.2"
+  }
+}
