@@ -2,16 +2,16 @@
   "name": "codesteward",
   "version": "0.0.1",
   "description": "CodeSteward project-local CLI and Decision Record store logic.",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "arcridge",
-  "homepage": "https://github.com/photomuse/MyLLMTeam/tree/main/codesteward#readme",
+  "homepage": "https://github.com/bjackson-arcridge/codesteward/tree/main/packages/cli#readme",
   "bugs": {
-    "url": "https://github.com/photomuse/MyLLMTeam/issues"
+    "url": "https://github.com/bjackson-arcridge/codesteward/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/photomuse/MyLLMTeam.git",
-    "directory": "codesteward/packages/cli"
+    "url": "git+https://github.com/bjackson-arcridge/codesteward.git",
+    "directory": "packages/cli"
   },
   "keywords": [
     "codesteward",
@@ -23,12 +23,14 @@
   "engines": {
     "node": ">=20"
   },
-  "main": "./dist/main.js",
+  "main": "dist/main.js",
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "bin": {
-    "codesteward": "./dist/main.js"
+    "codesteward": "dist/main.js"
   },
   "publishConfig": {
     "access": "public"
