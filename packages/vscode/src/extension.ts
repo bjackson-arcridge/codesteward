@@ -19,6 +19,7 @@ import type { RecordRenderDiagnostic, RecordSummary } from './webviews/records/m
 import type { BootstrapProvider, CandidateRenderDiagnostic, CandidateSummary } from './webviews/candidates/messages';
 import type { WebviewToHost as WelcomeWebviewToHost, WelcomeRenderDiagnostic } from './webviews/welcome/messages';
 import { renderMarkdownPreviewSource } from './markdownPreview';
+import { sundialCliCommand, sundialCliInstallArgs } from './sundialCli';
 
 const execFileAsync = promisify(execFile);
 const markdownPreviewScheme = 'sundial-preview';
@@ -1078,7 +1079,7 @@ async function installCli(welcomeProvider: WelcomeWebviewProvider): Promise<void
 	runCommandInTerminal(
 		cwd,
 		'npm',
-		['install', '-g', 'sundial'],
+		sundialCliInstallArgs(),
 		'Sundial CLI Install',
 		async exitCode => {
 			await refreshWorkspaceState(welcomeProvider);
@@ -1313,7 +1314,7 @@ async function isCliAvailable(): Promise<boolean> {
 }
 
 function cliPath(): string {
-	return vscode.workspace.getConfiguration('sundial').get('cliPath', 'sundial');
+	return vscode.workspace.getConfiguration('sundial').get('cliPath', sundialCliCommand);
 }
 
 function isIntegrationTest(): boolean {

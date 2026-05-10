@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
-  <title id="title">CodeSteward VS Code icon</title>
+  <title id="title">Sundial VS Code icon</title>
   <desc id="desc">Lemon sundial mark on a rounded slate button with a subtle highlight gradient.</desc>
   <defs>
     <linearGradient id="button-fill" x1="0" y1="8" x2="0" y2="248" gradientUnits="userSpaceOnUse">
