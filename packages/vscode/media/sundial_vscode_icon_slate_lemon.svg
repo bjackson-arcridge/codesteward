@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">CodeSteward VS Code icon</title>
+  <desc id="desc">Lemon sundial mark on a rounded slate button with a subtle highlight gradient.</desc>
+  <defs>
+    <linearGradient id="button-fill" x1="0" y1="8" x2="0" y2="248" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2E3744"/>
+      <stop offset="0.48" stop-color="#1E2530"/>
+      <stop offset="1" stop-color="#11161D"/>
+    </linearGradient>
+    <linearGradient id="top-highlight" x1="0" y1="8" x2="0" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0.055"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="edge-stroke" x1="0" y1="8" x2="0" y2="248" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3A4350" stop-opacity="0.70"/>
+      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.35"/>
+    </linearGradient>
+    <filter id="button-shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#000000" flood-opacity="0.34"/>
+    </filter>
+    <clipPath id="button-clip">
+      <rect x="10" y="10" width="236" height="236" rx="38"/>
+    </clipPath>
+  </defs>
+
+  <rect x="10" y="10" width="236" height="236" rx="38" fill="url(#button-fill)" filter="url(#button-shadow)"/>
+  <g clip-path="url(#button-clip)">
+    <rect x="10" y="10" width="236" height="236" rx="38" fill="url(#top-highlight)"/>
+    <ellipse cx="82" cy="28" rx="116" ry="64" fill="#FFFFFF" opacity="0.045"/>
+    <rect x="10" y="207" width="236" height="39" fill="#000000" opacity="0.09"/>
+  </g>
+  <rect x="10.5" y="10.5" width="235" height="235" rx="37.5" fill="none" stroke="url(#edge-stroke)" stroke-width="1"/>
+
+  <g id="sundial-mark" fill="#F3E85A" transform="translate(-25.360 -24.936) scale(0.288000)">
+    <path id="outer-c" d="M 617.887 225.931 A 320 320 0 1 0 847.554 601.099 L 781.767 601.099 A 256 256 0 1 1 584.342 283.773 Z"/>
+    <path id="inner-c" d="M 543.200 354.715 A 180.366 180.366 0 1 0 702.249 601.099 L 611.372 601.099 A 104.543 104.543 0 1 1 498.694 431.458 Z"/>
+    <path id="gnomon-triangle" d="M 690.534 250.162 L 850.561 526.099 L 530.508 526.099 Z"/>
+  </g>
+</svg>

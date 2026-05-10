@@ -29,6 +29,7 @@
     "AI",
     "Other"
   ],
+  "icon": "media/sundial_vscode_icon_slate_lemon_256.png",
   "files": [
     "dist",
     "media",
