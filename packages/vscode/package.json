@@ -4,10 +4,29 @@
   "description": "Markdown-backed Decision Records and agent skills for AI coding workflows.",
   "version": "0.0.1",
   "publisher": "arcridge",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/bjackson-arcridge/sundial/tree/main/packages/vscode#readme",
+  "bugs": {
+    "url": "https://github.com/bjackson-arcridge/sundial/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bjackson-arcridge/sundial.git",
+    "directory": "packages/vscode"
+  },
+  "keywords": [
+    "decision-records",
+    "ai",
+    "agents",
+    "claude",
+    "codex",
+    "ai-coding"
+  ],
   "engines": {
     "vscode": "^1.109.0"
   },
   "categories": [
+    "AI",
     "Other"
   ],
   "files": [
@@ -183,7 +202,7 @@
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "watch:tsc-webview": "tsc --noEmit --watch -p tsconfig.webview.json",
     "package": "npm run check-types && node esbuild.js --production",
-    "package:vsix": "vsce package --no-dependencies --allow-missing-repository",
+    "package:vsix": "vsce package --no-dependencies",
     "compile-tests": "tsc -p . --outDir out",
     "test:unit": "npm run compile-tests && node --test out/unit/*.test.js",
     "watch-tests": "tsc -p . -w --outDir out",
