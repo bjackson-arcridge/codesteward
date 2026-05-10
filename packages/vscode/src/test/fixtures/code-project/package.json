@@ -1,6 +1,6 @@
 {
-  "name": "codesteward-integration-fixture",
+  "name": "sundial-integration-fixture",
   "private": true,
   "version": "0.0.0",
-  "description": "Synthetic project used by CodeSteward VS Code integration tests."
+  "description": "Synthetic project used by Sundial VS Code integration tests."
 }

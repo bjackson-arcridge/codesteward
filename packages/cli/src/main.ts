@@ -49,17 +49,17 @@ interface CliOptions {
 	readonly command: readonly string[];
 }
 
-const usage = `CodeSteward CLI
+const usage = `Sundial CLI
 
 Usage:
-  codesteward [--cwd <path>] [--quiet] [--no-session-log] <command>
+  sundial [--cwd <path>] [--quiet] [--no-session-log] <command>
 
 Commands:
-  init        Create or update the project-local .codesteward store at an explicit root
+  init        Create or update the project-local .sundial store at an explicit root
   update      Update installed skill files for the discovered or explicit project root
   status      Report store health, counts, and validation state
   bootstrap   Run an LLM-backed bootstrap that creates candidates via the CLI
-  tags        List known domains and tags from .codesteward/tags.md
+  tags        List known domains and tags from .sundial/tags.md
   dr retrieve Retrieve visible accepted DRs by domain and optional tag
   dr get      Cat DR markdown files by id
   dr list     List DRs by status or tag
@@ -219,7 +219,7 @@ async function runCandidate(
 		return;
 	}
 
-	write(io.stderr, 'Usage: codesteward candidate (create | list | show | accept | reject | retire)\n');
+	write(io.stderr, 'Usage: sundial candidate (create | list | show | accept | reject | retire)\n');
 	io.exitCode = 64;
 }
 
@@ -295,7 +295,7 @@ async function runCandidateShow(
 	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
 ): Promise<void> {
 	if (args.length !== 1) {
-		write(io.stderr, 'Usage: codesteward candidate show <id>\n');
+		write(io.stderr, 'Usage: sundial candidate show <id>\n');
 		io.exitCode = 64;
 		return;
 	}
@@ -323,7 +323,7 @@ async function runCandidateAccept(
 	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
 ): Promise<void> {
 	if (args.length !== 1) {
-		write(io.stderr, 'Usage: codesteward candidate accept <id>\n');
+		write(io.stderr, 'Usage: sundial candidate accept <id>\n');
 		io.exitCode = 64;
 		return;
 	}
@@ -443,7 +443,7 @@ async function runDr(
 		return;
 	}
 
-	write(io.stderr, 'Usage: codesteward dr (retrieve | get | list | enable | disable | retire | promote | delete)\n');
+	write(io.stderr, 'Usage: sundial dr (retrieve | get | list | enable | disable | retire | promote | delete)\n');
 	io.exitCode = 64;
 }
 
@@ -600,7 +600,7 @@ async function runDrSetEnabled(
 	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
 ): Promise<void> {
 	if (args.length !== 1) {
-		write(io.stderr, `Usage: codesteward dr ${enabled ? 'enable' : 'disable'} <id>\n`);
+		write(io.stderr, `Usage: sundial dr ${enabled ? 'enable' : 'disable'} <id>\n`);
 		io.exitCode = 64;
 		return;
 	}
@@ -790,14 +790,14 @@ function parseGetArgs(
 
 	for (const arg of args) {
 		if (arg.startsWith('-')) {
-			return usageError('Usage: codesteward dr get <id> [<id>]\n', io);
+			return usageError('Usage: sundial dr get <id> [<id>]\n', io);
 		}
 
 		ids.push(arg);
 	}
 
 	if (ids.length === 0) {
-		return usageError('Usage: codesteward dr get <id> [<id>]\n', io);
+		return usageError('Usage: sundial dr get <id> [<id>]\n', io);
 	}
 
 	return { ids };
@@ -816,7 +816,7 @@ function parseListArgs(
 		if (arg === '--status') {
 			const value = args[index + 1];
 			if (!isDecisionRecordStatus(value)) {
-				return usageError('Usage: codesteward dr list [--status candidate|accepted|rejected|retired] [--tag <tag>]\n', io);
+				return usageError('Usage: sundial dr list [--status candidate|accepted|rejected|retired] [--tag <tag>]\n', io);
 			}
 
 			status = value;
@@ -827,7 +827,7 @@ function parseListArgs(
 		if (arg === '--tag') {
 			const value = args[index + 1];
 			if (value === undefined) {
-				return usageError('Usage: codesteward dr list [--status candidate|accepted|rejected|retired] [--tag <tag>]\n', io);
+				return usageError('Usage: sundial dr list [--status candidate|accepted|rejected|retired] [--tag <tag>]\n', io);
 			}
 
 			tag = value;
@@ -835,7 +835,7 @@ function parseListArgs(
 			continue;
 		}
 
-		return usageError('Usage: codesteward dr list [--status candidate|accepted|rejected|retired] [--tag <tag>]\n', io);
+		return usageError('Usage: sundial dr list [--status candidate|accepted|rejected|retired] [--tag <tag>]\n', io);
 	}
 
 	return { status, tag };
@@ -998,7 +998,7 @@ function parseCandidateListArgs(
 		if (arg === '--status') {
 			const value = args[index + 1];
 			if (!isDecisionRecordStatus(value)) {
-				return usageError('Usage: codesteward candidate list [--status candidate|rejected|retired]\n', io);
+				return usageError('Usage: sundial candidate list [--status candidate|rejected|retired]\n', io);
 			}
 
 			status = value;
@@ -1011,7 +1011,7 @@ function parseCandidateListArgs(
 			continue;
 		}
 
-		return usageError('Usage: codesteward candidate list [--status candidate|rejected|retired]\n', io);
+		return usageError('Usage: sundial candidate list [--status candidate|rejected|retired]\n', io);
 	}
 
 	return { status };
@@ -1025,18 +1025,18 @@ function parseCandidateRejectArgs(
 	let reason: string | undefined;
 
 	if (id === undefined) {
-		return usageError('Usage: codesteward candidate reject <id> [--reason <text>]\n', io);
+		return usageError('Usage: sundial candidate reject <id> [--reason <text>]\n', io);
 	}
 
 	for (let index = 0; index < rest.length; index += 1) {
 		const arg = rest[index];
 		if (arg !== '--reason') {
-			return usageError('Usage: codesteward candidate reject <id> [--reason <text>]\n', io);
+			return usageError('Usage: sundial candidate reject <id> [--reason <text>]\n', io);
 		}
 
 		const value = rest[index + 1];
 		if (value === undefined) {
-			return usageError('Usage: codesteward candidate reject <id> [--reason <text>]\n', io);
+			return usageError('Usage: sundial candidate reject <id> [--reason <text>]\n', io);
 		}
 
 		reason = value;
@@ -1067,7 +1067,7 @@ function parseRetireArgs(
 ): { readonly id: string; readonly by: string | undefined } | undefined {
 	const [id, ...rest] = args;
 	let by: string | undefined;
-	const usage = `Usage: codesteward ${command} <id> [--by <id>]\n`;
+	const usage = `Usage: sundial ${command} <id> [--by <id>]\n`;
 
 	if (id === undefined) {
 		return usageError(usage, io);
@@ -1112,7 +1112,7 @@ function parseHistoricalDrArgs(
 ): { readonly id: string; readonly from: 'rejected' | 'retired' | undefined } | undefined {
 	const [id, ...rest] = args;
 	let from: 'rejected' | 'retired' | undefined;
-	const usage = `Usage: codesteward dr ${command} <id> [--from rejected|retired]\n`;
+	const usage = `Usage: sundial dr ${command} <id> [--from rejected|retired]\n`;
 
 	if (id === undefined) {
 		return usageError(usage, io);
@@ -1166,7 +1166,7 @@ function parseBootstrapArgs(
 }
 
 function bootstrapUsage(): string {
-	return 'Usage: codesteward bootstrap --provider claude|codex\n';
+	return 'Usage: sundial bootstrap --provider claude|codex\n';
 }
 
 export function bootstrapCommand(
@@ -1186,9 +1186,9 @@ export function bootstrapCommand(
 					'Read',
 					'Glob',
 					'Grep',
-					'Bash(codesteward --cwd * candidate create *)',
-					'Bash(codesteward --cwd * tags)',
-					'Bash(codesteward --cwd * dr list *)',
+					'Bash(sundial --cwd * candidate create *)',
+					'Bash(sundial --cwd * tags)',
+					'Bash(sundial --cwd * dr list *)',
 				].join(','),
 				prompt,
 			],
@@ -1271,24 +1271,24 @@ function bootstrapPrompt(paths: StorePaths): string {
 	const root = paths.root;
 
 	return [
-		'You are running a CodeSteward bootstrap.',
+		'You are running a Sundial bootstrap.',
 		'',
 		`Project root: ${root}`,
 		'',
 		'Goal:',
 		'- Inspect existing project instructions, markdown documentation, and representative source code.',
-		'- Find consequential project-specific decisions that should become CodeSteward Decision Record candidates.',
-		'- Create candidates only by running the public CodeSteward CLI. Do not write .codesteward files directly.',
+		'- Find consequential project-specific decisions that should become Sundial Decision Record candidates.',
+		'- Create candidates only by running the public Sundial CLI. Do not write .sundial files directly.',
 		'',
 		'Important candidate creation contract:',
-		`- Use this command shape: codesteward --cwd ${shellQuote(root)} candidate create --title "<title>" --domain "<domain>" --decision "<terse guidance>"`,
-		'- Use --proposed-domain <domain> "<description>" instead of --domain when the domain is not already listed in .codesteward/tags.md.',
+		`- Use this command shape: sundial --cwd ${shellQuote(root)} candidate create --title "<title>" --domain "<domain>" --decision "<terse guidance>"`,
+		'- Use --proposed-domain <domain> "<description>" instead of --domain when the domain is not already listed in .sundial/tags.md.',
 		'- Add --tag <known-tag> when a known tag applies.',
 		'- Use --proposed-tag <tag> "<description>" when a new tag is truly useful.',
 		'- Add --appendix "<human-facing context>" only when explanatory background helps reviewers; do not put governing guidance there.',
 		'- Add --affected <path> and --ref <path-or-symbol> when useful.',
-		'- Use existing domains and tags from .codesteward/tags.md when possible. Proposed vocabulary is for truly useful missing terms.',
-		'- Every DR candidate must go through `codesteward candidate create`; do not create markdown files manually.',
+		'- Use existing domains and tags from .sundial/tags.md when possible. Proposed vocabulary is for truly useful missing terms.',
+		'- Every DR candidate must go through `sundial candidate create`; do not create markdown files manually.',
 		'',
 		'What to inspect:',
 		'- AGENTS.md, AGENT.md, CLAUDE.md, .agents/**, .claude/**.',
@@ -1310,15 +1310,15 @@ function shellQuote(value: string): string {
 }
 
 function candidateCreateUsage(): string {
-	return 'Usage: codesteward candidate create --title <title> [--domain <domain> | --proposed-domain <domain> <description>] --decision <text> [--appendix <text>] [--tag <tag>] [--proposed-tag <tag> <description>] [--affected <path>] [--ref <ref>]\n';
+	return 'Usage: sundial candidate create --title <title> [--domain <domain> | --proposed-domain <domain> <description>] --decision <text> [--appendix <text>] [--tag <tag>] [--proposed-tag <tag> <description>] [--affected <path>] [--ref <ref>]\n';
 }
 
 function retrieveUsage(): string {
-	return 'Usage: codesteward dr retrieve [--domain <domain>] [--tag <tag>...]\n';
+	return 'Usage: sundial dr retrieve [--domain <domain>] [--tag <tag>...]\n';
 }
 
 function retrieveHelp(): string {
-	return `Usage: codesteward dr retrieve [--domain <domain>] [--tag <tag>...]
+	return `Usage: sundial dr retrieve [--domain <domain>] [--tag <tag>...]
 
 Retrieve visible accepted Decision Records.
 
@@ -1562,7 +1562,7 @@ async function runStatus(
 		return;
 	}
 
-	write(io.stdout, `CodeSteward store: ${paths.store}\n`);
+	write(io.stdout, `Sundial store: ${paths.store}\n`);
 	write(io.stdout, `Domains: ${vocabulary.domains.length}\n`);
 	write(io.stdout, `Tags: ${vocabulary.tags.length}\n`);
 
@@ -1601,7 +1601,7 @@ async function runUpdate(
 			return;
 		}
 
-		write(io.stdout, `Updated CodeSteward skill files at ${result.paths.root}\n`);
+		write(io.stdout, `Updated Sundial skill files at ${result.paths.root}\n`);
 		renderPathGroup('Created', result.created, io);
 		renderPathGroup('Already current', result.existing, io);
 		renderPathGroup('Updated', result.updated, io);
@@ -1658,7 +1658,7 @@ function parseUpdateArgs(
 }
 
 function updateUsageError(io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>): undefined {
-	write(io.stderr, 'Usage: codesteward update [--root <path>] --claude|--codex\n');
+	write(io.stderr, 'Usage: sundial update [--root <path>] --claude|--codex\n');
 	io.exitCode = 64;
 	return undefined;
 }
@@ -1723,7 +1723,7 @@ async function runInit(
 		return;
 	}
 
-	write(io.stdout, `Initialized CodeSteward store at ${result.paths.store}\n`);
+	write(io.stdout, `Initialized Sundial store at ${result.paths.store}\n`);
 
 	if (!parsed.claude && !parsed.codex) {
 		write(io.stdout, 'Agent runtime bootstrap skipped. Pass --claude, --codex, or both to install runtime assets.\n');
@@ -1806,7 +1806,7 @@ function parseInitArgs(
 }
 
 function initUsageError(io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>): undefined {
-	write(io.stderr, 'Usage: codesteward init --root <path> [--claude] [--codex]\n');
+	write(io.stderr, 'Usage: sundial init --root <path> [--claude] [--codex]\n');
 	io.exitCode = 64;
 	return undefined;
 }
@@ -1817,7 +1817,7 @@ async function runTags(
 	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
 ): Promise<void> {
 	if (args.length > 0) {
-		write(io.stderr, `Usage: codesteward tags\n`);
+		write(io.stderr, `Usage: sundial tags\n`);
 		io.exitCode = 64;
 		return;
 	}
@@ -1894,7 +1894,7 @@ async function requireStore(
 	const paths = await discoverStore(cwd);
 
 	if (paths === undefined) {
-		write(io.stderr, 'No .codesteward store found. Run codesteward init --root <path> first.\n');
+		write(io.stderr, 'No .sundial store found. Run sundial init --root <path> first.\n');
 		io.exitCode = 1;
 		return undefined;
 	}
@@ -1909,7 +1909,7 @@ async function requireStoreAtRoot(
 	const paths = getStorePaths(root);
 
 	if (!await pathExists(paths.store)) {
-		write(io.stderr, `No .codesteward store found at ${paths.root}. Run codesteward init --root ${paths.root} first.\n`);
+		write(io.stderr, `No .sundial store found at ${paths.root}. Run sundial init --root ${paths.root} first.\n`);
 		io.exitCode = 1;
 		return undefined;
 	}

@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { promisify } from 'node:util';
 import * as vscode from 'vscode';
 import {
-	discoverCodeStewardRoot,
+	discoverSundialRoot,
 	listCandidateSummaries,
 	listDecisionRecordSummaries,
 	listKnownDomains,
@@ -21,7 +21,7 @@ import type { WebviewToHost as WelcomeWebviewToHost, WelcomeRenderDiagnostic } f
 import { renderMarkdownPreviewSource } from './markdownPreview';
 
 const execFileAsync = promisify(execFile);
-const markdownPreviewScheme = 'codesteward-preview';
+const markdownPreviewScheme = 'sundial-preview';
 let activeMarkdownPreviewProvider: FrontmatterMarkdownPreviewProvider | undefined;
 
 interface RecordsState {
@@ -68,7 +68,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	const candidatesDiagnostics: CandidatesDiagnostics = {};
 	const welcomeDiagnostics: WelcomeDiagnostics = {};
 	const diagnosticsEnabled = isIntegrationTest();
-	const diagnosticsChannel = vscode.window.createOutputChannel('CodeSteward Diagnostics');
+	const diagnosticsChannel = vscode.window.createOutputChannel('Sundial Diagnostics');
 	context.subscriptions.push(diagnosticsChannel);
 	const markdownPreviewProvider = new FrontmatterMarkdownPreviewProvider();
 	activeMarkdownPreviewProvider = markdownPreviewProvider;
@@ -98,7 +98,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			}
 
 			if (command.kind === 'installCli') {
-				void vscode.commands.executeCommand('codesteward.installCli');
+				void vscode.commands.executeCommand('sundial.installCli');
 				return;
 			}
 
@@ -271,34 +271,34 @@ export function activate(context: vscode.ExtensionContext): void {
 		},
 	});
 
-	context.subscriptions.push(vscode.window.registerWebviewViewProvider('codesteward.welcome', welcomeProvider));
-	context.subscriptions.push(vscode.window.registerWebviewViewProvider('codesteward.records', recordsProvider));
-	context.subscriptions.push(vscode.window.registerWebviewViewProvider('codesteward.records.rejected', rejectedRecordsProvider));
-	context.subscriptions.push(vscode.window.registerWebviewViewProvider('codesteward.records.retired', retiredRecordsProvider));
-	context.subscriptions.push(vscode.window.registerWebviewViewProvider('codesteward.candidates', candidatesProvider));
+	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.welcome', welcomeProvider));
+	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.records', recordsProvider));
+	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.records.rejected', rejectedRecordsProvider));
+	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.records.retired', retiredRecordsProvider));
+	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.candidates', candidatesProvider));
 
-	context.subscriptions.push(vscode.commands.registerCommand('codesteward.installCli', () => installCli(welcomeProvider)));
-	context.subscriptions.push(vscode.commands.registerCommand('codesteward.bootstrap', () => bootstrap(candidatesProvider)));
-	context.subscriptions.push(vscode.commands.registerCommand('codesteward.records.filterByDomain', () => runFilterByDomain(recordsState, recordsProvider)));
-	context.subscriptions.push(vscode.commands.registerCommand('codesteward.records.filterByTag', () => runFilterByTag(recordsState, recordsProvider)));
-	context.subscriptions.push(vscode.commands.registerCommand('codesteward.records.clearTagFilter', async () => {
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.installCli', () => installCli(welcomeProvider)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.bootstrap', () => bootstrap(candidatesProvider)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.filterByDomain', () => runFilterByDomain(recordsState, recordsProvider)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.filterByTag', () => runFilterByTag(recordsState, recordsProvider)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.clearTagFilter', async () => {
 		clearRecordFilters(recordsState);
 		await recordsProvider.refresh();
 	}));
-	context.subscriptions.push(vscode.commands.registerCommand('codesteward.records.openPreview', (id?: string) => previewRecord(id)));
-	context.subscriptions.push(vscode.commands.registerCommand('codesteward.records.editSource', (id?: string) => editRecordSource(id)));
-	context.subscriptions.push(vscode.commands.registerCommand('codesteward.candidates.open', (id?: string) => previewCandidate(id)));
-	context.subscriptions.push(vscode.commands.registerCommand('codesteward.candidates.editSource', (id?: string) => editCandidateSource(id)));
-	context.subscriptions.push(vscode.commands.registerCommand('codesteward.candidates.accept', (id?: string) => {
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.openPreview', (id?: string) => previewRecord(id)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.editSource', (id?: string) => editRecordSource(id)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.open', (id?: string) => previewCandidate(id)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.editSource', (id?: string) => editCandidateSource(id)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.accept', (id?: string) => {
 		return acceptCandidate(id, undefined, welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider);
 	}));
-	context.subscriptions.push(vscode.commands.registerCommand('codesteward.candidates.reject', (id?: string) => {
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.reject', (id?: string) => {
 		return rejectCandidate(id, undefined, welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider);
 	}));
-	context.subscriptions.push(vscode.commands.registerCommand('codesteward.candidates.retire', (id?: string) => {
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.retire', (id?: string) => {
 		return retireCandidate(id, undefined, welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider);
 	}));
-	context.subscriptions.push(vscode.commands.registerCommand('codesteward.showDiagnostics', async () => {
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.showDiagnostics', async () => {
 		const diagnostics = await buildDiagnostics(
 			context.extensionUri,
 			context.extensionMode,
@@ -315,7 +315,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	}));
 	if (diagnosticsEnabled) {
 		context.subscriptions.push(vscode.commands.registerCommand(
-			'codesteward.internal.webviewDiagnostics',
+			'sundial.internal.webviewDiagnostics',
 			() => buildDiagnostics(
 				context.extensionUri,
 				context.extensionMode,
@@ -328,27 +328,27 @@ export function activate(context: vscode.ExtensionContext): void {
 			),
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
-			'codesteward.internal.welcome.toggleAgent',
+			'sundial.internal.welcome.toggleAgent',
 			(agent: 'claude' | 'codex', selected: boolean) => welcomeProvider.toggleAgentForDiagnostics(agent, selected),
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
-			'codesteward.internal.welcome.click',
+			'sundial.internal.welcome.click',
 			() => welcomeProvider.clickInitForDiagnostics(),
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
-			'codesteward.internal.candidates.click',
+			'sundial.internal.candidates.click',
 			(id: string, target: 'title' | 'preview') => candidatesProvider.clickCandidateForDiagnostics(id, target),
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
-			'codesteward.internal.candidates.selectProvider',
+			'sundial.internal.candidates.selectProvider',
 			(provider: BootstrapProvider) => candidatesProvider.selectProviderForDiagnostics(provider),
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
-			'codesteward.internal.candidates.refresh',
+			'sundial.internal.candidates.refresh',
 			() => candidatesProvider.refresh(),
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
-			'codesteward.internal.candidates.lifecycle',
+			'sundial.internal.candidates.lifecycle',
 			(action: 'accept' | 'reject', id: string, reason?: string) => {
 				if (action === 'accept') {
 					return acceptCandidate(id, undefined, welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider);
@@ -358,7 +358,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			},
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
-			'codesteward.internal.records.lifecycle',
+			'sundial.internal.records.lifecycle',
 			(action: 'enable' | 'disable' | 'retire' | 'promote' | 'delete', id: string, value?: string) => {
 				if (action === 'enable' || action === 'disable') {
 					return setRecordEnabled(id, action === 'enable', refreshGovernance);
@@ -376,7 +376,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			},
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
-			'codesteward.internal.records.selectFilter',
+			'sundial.internal.records.selectFilter',
 			(filter: 'domain' | 'tag', value?: string) => recordsProvider.selectFilterForDiagnostics(filter, value),
 		));
 	}
@@ -388,7 +388,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		void refreshWorkspaceState(welcomeProvider);
 	}));
 	context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
-		if (event.affectsConfiguration('codesteward.cliPath')) {
+		if (event.affectsConfiguration('sundial.cliPath')) {
 			void refreshWorkspaceState(welcomeProvider);
 		}
 	}));
@@ -570,7 +570,7 @@ async function collectWorkspaceStores(): Promise<readonly WorkspaceStore[]> {
 	const seen = new Set<string>();
 
 	for (const folder of folders) {
-		const root = await discoverCodeStewardRoot(folder.uri.fsPath);
+		const root = await discoverSundialRoot(folder.uri.fsPath);
 		if (root === undefined || seen.has(root)) {
 			continue;
 		}
@@ -1031,9 +1031,9 @@ async function initializeProject(
 	agents: AgentSelection,
 ): Promise<void> {
 	if (!await isCliAvailable()) {
-		const action = await vscode.window.showErrorMessage('Install the CodeSteward CLI before initializing this project.', 'Install CLI');
+		const action = await vscode.window.showErrorMessage('Install the Sundial CLI before initializing this project.', 'Install CLI');
 		if (action === 'Install CLI') {
-			await vscode.commands.executeCommand('codesteward.installCli');
+			await vscode.commands.executeCommand('sundial.installCli');
 		}
 
 		return;
@@ -1041,16 +1041,16 @@ async function initializeProject(
 
 	const root = await chooseWorkspaceRoot('uninitialized');
 	if (root === undefined) {
-		void vscode.window.showErrorMessage('Open an uninitialized workspace folder before initializing CodeSteward.');
+		void vscode.window.showErrorMessage('Open an uninitialized workspace folder before initializing Sundial.');
 		return;
 	}
 
 	const agentArgs = [...(agents.claude ? ['--claude'] : []), ...(agents.codex ? ['--codex'] : [])];
 
-	runCodeStewardInTerminal(
+	runSundialInTerminal(
 		root,
 		['--cwd', root, 'init', '--root', root, ...agentArgs],
-		'CodeSteward Initialize',
+		'Sundial Initialize',
 		async exitCode => {
 			await candidatesProvider.refresh();
 			await recordsProvider.refresh();
@@ -1058,11 +1058,11 @@ async function initializeProject(
 			await retiredRecordsProvider.refresh();
 			await refreshWorkspaceState(welcomeProvider);
 			if (exitCode !== 0) {
-				void vscode.window.showErrorMessage(`CodeSteward initialization failed with exit code ${exitCode ?? 'unknown'}. See the terminal for details.`);
+				void vscode.window.showErrorMessage(`Sundial initialization failed with exit code ${exitCode ?? 'unknown'}. See the terminal for details.`);
 				return;
 			}
 
-			const bootstrapChoice = await vscode.window.showInformationMessage('CodeSteward project initialized.', 'Bootstrap decisions');
+			const bootstrapChoice = await vscode.window.showInformationMessage('Sundial project initialized.', 'Bootstrap decisions');
 			if (bootstrapChoice === 'Bootstrap decisions') {
 				await bootstrap(candidatesProvider, root);
 			}
@@ -1070,7 +1070,7 @@ async function initializeProject(
 	);
 
 	scheduleWorkspaceRefresh(welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider);
-	void vscode.window.showInformationMessage('CodeSteward initialization started in the terminal.');
+	void vscode.window.showInformationMessage('Sundial initialization started in the terminal.');
 }
 
 async function installCli(welcomeProvider: WelcomeWebviewProvider): Promise<void> {
@@ -1078,20 +1078,20 @@ async function installCli(welcomeProvider: WelcomeWebviewProvider): Promise<void
 	runCommandInTerminal(
 		cwd,
 		'npm',
-		['install', '-g', 'codesteward'],
-		'CodeSteward CLI Install',
+		['install', '-g', 'sundial'],
+		'Sundial CLI Install',
 		async exitCode => {
 			await refreshWorkspaceState(welcomeProvider);
 			if (exitCode !== 0) {
-				void vscode.window.showErrorMessage(`CodeSteward CLI installation failed with exit code ${exitCode ?? 'unknown'}. See the terminal for details.`);
+				void vscode.window.showErrorMessage(`Sundial CLI installation failed with exit code ${exitCode ?? 'unknown'}. See the terminal for details.`);
 				return;
 			}
 
-			void vscode.window.showInformationMessage('CodeSteward CLI installed.');
+			void vscode.window.showInformationMessage('Sundial CLI installed.');
 		},
 	);
 	scheduleCliAvailabilityRefresh(welcomeProvider);
-	void vscode.window.showInformationMessage('CodeSteward CLI installation started in the terminal.');
+	void vscode.window.showInformationMessage('Sundial CLI installation started in the terminal.');
 }
 
 function scheduleCliAvailabilityRefresh(welcomeProvider: WelcomeWebviewProvider): void {
@@ -1120,7 +1120,7 @@ function scheduleWorkspaceRefresh(
 	}
 }
 
-function runCodeStewardInTerminal(
+function runSundialInTerminal(
 	root: string,
 	args: readonly string[],
 	name: string,
@@ -1203,7 +1203,7 @@ async function bootstrap(
 ): Promise<void> {
 	const root = selectedRoot ?? await chooseWorkspaceRoot('initialized');
 	if (root === undefined) {
-		void vscode.window.showErrorMessage('Open an initialized workspace folder before running CodeSteward bootstrap.');
+		void vscode.window.showErrorMessage('Open an initialized workspace folder before running Sundial bootstrap.');
 		return;
 	}
 
@@ -1212,10 +1212,10 @@ async function bootstrap(
 		return;
 	}
 
-	runCodeStewardInTerminal(
+	runSundialInTerminal(
 		root,
 		['--cwd', root, 'bootstrap', '--provider', provider],
-		`CodeSteward Bootstrap (${provider})`,
+		`Sundial Bootstrap (${provider})`,
 		async () => {
 			await candidatesProvider.refresh();
 			await updateWorkspaceState();
@@ -1286,7 +1286,7 @@ async function runLifecycle(_id: string, args: readonly string[], filePath: stri
 	}
 
 	try {
-		await runCodeSteward(root, args);
+		await runSundial(root, args);
 	} catch (error) {
 		showCommandError(error);
 	}
@@ -1298,7 +1298,7 @@ async function workspaceRootForPath(filePath: string): Promise<string | undefine
 	return match?.root;
 }
 
-async function runCodeSteward(root: string, args: readonly string[]): Promise<string> {
+async function runSundial(root: string, args: readonly string[]): Promise<string> {
 	const { stdout, stderr } = await execFileAsync(cliPath(), ['--cwd', root, ...args], { cwd: root });
 	return `${stdout}${stderr}`;
 }
@@ -1313,7 +1313,7 @@ async function isCliAvailable(): Promise<boolean> {
 }
 
 function cliPath(): string {
-	return vscode.workspace.getConfiguration('codesteward').get('cliPath', 'codesteward');
+	return vscode.workspace.getConfiguration('sundial').get('cliPath', 'sundial');
 }
 
 function isIntegrationTest(): boolean {
@@ -1339,7 +1339,7 @@ function isNodeError(error: unknown): error is NodeJS.ErrnoException {
 
 function showCommandError(error: unknown): void {
 	const message = error instanceof Error ? error.message : String(error);
-	void vscode.window.showErrorMessage(`CodeSteward command failed: ${message}`);
+	void vscode.window.showErrorMessage(`Sundial command failed: ${message}`);
 }
 
 async function chooseWorkspaceRoot(state: WorkspaceRootState): Promise<string | undefined> {
@@ -1350,7 +1350,7 @@ async function chooseWorkspaceRoot(state: WorkspaceRootState): Promise<string | 
 
 	const seen = new Set<string>();
 	const candidates = (await Promise.all(folders.map(async folder => {
-		const discoveredRoot = await discoverCodeStewardRoot(folder.uri.fsPath);
+		const discoveredRoot = await discoverSundialRoot(folder.uri.fsPath);
 		const root = discoveredRoot ?? folder.uri.fsPath;
 		return {
 			folder,
@@ -1387,8 +1387,8 @@ async function chooseWorkspaceRoot(state: WorkspaceRootState): Promise<string | 
 		root: candidate.root,
 	})), {
 		placeHolder: state === 'initialized'
-			? 'Select an initialized CodeSteward project root'
-			: 'Select the project root for CodeSteward bootstrap',
+			? 'Select an initialized Sundial project root'
+			: 'Select the project root for Sundial bootstrap',
 	});
 
 	return pick?.root;
@@ -1396,17 +1396,17 @@ async function chooseWorkspaceRoot(state: WorkspaceRootState): Promise<string | 
 
 async function updateWorkspaceState(): Promise<void> {
 	const folders = vscode.workspace.workspaceFolders ?? [];
-	const discoveredRoots = await Promise.all(folders.map(folder => discoverCodeStewardRoot(folder.uri.fsPath)));
+	const discoveredRoots = await Promise.all(folders.map(folder => discoverSundialRoot(folder.uri.fsPath)));
 	const anyInitialized = discoveredRoots.some(root => root !== undefined);
 	const anyUninitialized = folders.length > 0 && discoveredRoots.some(root => root === undefined);
 	const cliAvailable = await isCliAvailable();
 	const stores = await collectWorkspaceStores();
 	const hasCandidates = (await Promise.all(stores.map(async store => (await listCandidateSummaries(store.root)).length > 0))).some(Boolean);
 
-	await vscode.commands.executeCommand('setContext', 'codesteward.workspaceInitialized', anyInitialized);
-	await vscode.commands.executeCommand('setContext', 'codesteward.workspaceUninitialized', anyUninitialized);
-	await vscode.commands.executeCommand('setContext', 'codesteward.hasCandidates', hasCandidates);
-	await vscode.commands.executeCommand('setContext', 'codesteward.cliAvailable', cliAvailable);
+	await vscode.commands.executeCommand('setContext', 'sundial.workspaceInitialized', anyInitialized);
+	await vscode.commands.executeCommand('setContext', 'sundial.workspaceUninitialized', anyUninitialized);
+	await vscode.commands.executeCommand('setContext', 'sundial.hasCandidates', hasCandidates);
+	await vscode.commands.executeCommand('setContext', 'sundial.cliAvailable', cliAvailable);
 }
 
 async function refreshWorkspaceState(welcomeProvider: WelcomeWebviewProvider): Promise<void> {

@@ -1,6 +1,6 @@
-# Claude Agent SDK — API Reference for CodeSteward
+# Claude Agent SDK — API Reference for Sundial
 
-> This document summarizes the key API surfaces of the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`) relevant to building CodeSteward. Each section links to the authoritative source documentation. The SDK was formerly known as the "Claude Code SDK" and has been renamed.
+> This document summarizes the key API surfaces of the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`) relevant to building Sundial. Each section links to the authoritative source documentation. The SDK was formerly known as the "Claude Code SDK" and has been renamed.
 
 **SDK Packages:**
 - TypeScript: `@anthropic-ai/claude-agent-sdk` ([npm](https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk))
@@ -93,7 +93,7 @@ function getSessionMessages(sessionId: string, options?: { dir?: string; limit?:
 
 > [TypeScript SDK Reference — Options](https://platform.claude.com/docs/en/agent-sdk/typescript#options)
 
-The `Options` object passed to `query()`. Key properties for CodeSteward:
+The `Options` object passed to `query()`. Key properties for Sundial:
 
 | Property | Type | Default | Relevance |
 |---|---|---|---|
@@ -161,7 +161,7 @@ interface Query extends AsyncGenerator<SDKMessage, void> {
 }
 ```
 
-**Key for CodeSteward:**
+**Key for Sundial:**
 - `streamInput()` — inject messages mid-session (for decision point responses)
 - `interrupt()` — pause agent when decision point requires human input
 - `setPermissionMode()` — dynamically adjust permission level
@@ -174,7 +174,7 @@ interface Query extends AsyncGenerator<SDKMessage, void> {
 
 Three modes of system prompt configuration:
 
-### Preset with Append (Recommended for CodeSteward)
+### Preset with Append (Recommended for Sundial)
 ```typescript
 systemPrompt: {
   type: "preset",
@@ -182,7 +182,7 @@ systemPrompt: {
   append: "You are operating within an engineering workflow where..."
 }
 ```
-This preserves Claude Code's built-in tools, safety instructions, and coding guidelines, while adding the CodeSteward principal-agent framing.
+This preserves Claude Code's built-in tools, safety instructions, and coding guidelines, while adding the Sundial principal-agent framing.
 
 ### Custom String (Full Replacement)
 ```typescript
@@ -226,7 +226,7 @@ type PermissionMode =
 
 ### `canUseTool` Callback
 
-Called when a tool isn't resolved by hooks/rules/mode. This is the key integration point for CodeSteward's approval UI.
+Called when a tool isn't resolved by hooks/rules/mode. This is the key integration point for Sundial's approval UI.
 
 ```typescript
 type CanUseTool = (
@@ -247,7 +247,7 @@ type PermissionResult =
   | { behavior: "deny"; message: string; interrupt?: boolean };
 ```
 
-**CodeSteward usage:** The `canUseTool` callback is where we surface tool requests to the VSCode UI, allow the user to approve/deny/edit, and return the decision.
+**Sundial usage:** The `canUseTool` callback is where we surface tool requests to the VSCode UI, allow the user to approve/deny/edit, and return the decision.
 
 ---
 
@@ -310,7 +310,7 @@ type HookCallback = (
 ) => Promise<HookJSONOutput>;
 ```
 
-### Hook Input Types (Key Ones for CodeSteward)
+### Hook Input Types (Key Ones for Sundial)
 
 ```typescript
 type PreToolUseHookInput = BaseHookInput & {
@@ -372,7 +372,7 @@ type SyncHookJSONOutput = {
 };
 ```
 
-### CodeSteward Hook Wiring Plan
+### Sundial Hook Wiring Plan
 
 | Hook | Purpose |
 |---|---|
@@ -472,7 +472,7 @@ type SDKMessage =
 > [Custom Tools Guide](https://platform.claude.com/docs/en/agent-sdk/custom-tools)
 > [TypeScript SDK — MCP Config](https://platform.claude.com/docs/en/agent-sdk/typescript#mcpserverconfig)
 
-### In-Process SDK MCP Server (Critical for CodeSteward)
+### In-Process SDK MCP Server (Critical for Sundial)
 
 This is how we implement `consult_drs`, `signal_decision_point`, and `propose_dr`.
 
@@ -599,7 +599,7 @@ options: { resume: sessionId, forkSession: true }
 
 > [Streaming Guide](https://platform.claude.com/docs/en/agent-sdk/streaming-vs-single-mode)
 
-### Streaming Input Mode (Required for CodeSteward)
+### Streaming Input Mode (Required for Sundial)
 - Pass `AsyncIterable<SDKUserMessage>` as `prompt`
 - Enables: images, multi-turn, hooks, `canUseTool`, `streamInput()`, interrupts
 - Required for MCP custom tools
@@ -689,9 +689,9 @@ plugins: [
 
 ---
 
-## Quick Reference: CodeSteward Integration Points
+## Quick Reference: Sundial Integration Points
 
-| CodeSteward Need | SDK Mechanism | Key API |
+| Sundial Need | SDK Mechanism | Key API |
 |---|---|---|
 | Principal-agent framing | System prompt append | `systemPrompt: { preset: 'claude_code', append: '...' }` |
 | DR governance tools | In-process MCP server | `createSdkMcpServer()` + `tool()` |

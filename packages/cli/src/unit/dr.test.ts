@@ -45,7 +45,7 @@ const acceptedDr = [
 
 describe('decision record parsing and validation', () => {
 	test('parses frontmatter lists and markdown sections', () => {
-		const record = parseDecisionRecord(acceptedDr, '/repo/.codesteward/drs/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
+		const record = parseDecisionRecord(acceptedDr, '/repo/.sundial/drs/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
 
 		assert.equal(getRecordId(record), 'DR-0001');
 		assert.equal(getRecordDomain(record), 'cli');
@@ -56,7 +56,7 @@ describe('decision record parsing and validation', () => {
 
 	test('validates accepted DRs against required fields, status folder, and known tags', () => {
 		const vocabulary = parseTagVocabulary([
-			'# CodeSteward Tags',
+			'# Sundial Tags',
 			'',
 			'## repositories',
 			'',
@@ -67,7 +67,7 @@ describe('decision record parsing and validation', () => {
 			'Transaction choices.',
 			'',
 		].join('\n'));
-		const record = parseDecisionRecord(acceptedDr, '/repo/.codesteward/drs/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
+		const record = parseDecisionRecord(acceptedDr, '/repo/.sundial/drs/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
 
 		const result = validateDecisionRecord(record, vocabulary);
 
@@ -89,9 +89,9 @@ describe('decision record parsing and validation', () => {
 			'  - unknown-tag',
 			'---',
 			'',
-		].join('\n'), '/repo/.codesteward/drs/accepted/DR-0002-missing-decision.md', 'accepted');
+		].join('\n'), '/repo/.sundial/drs/accepted/DR-0002-missing-decision.md', 'accepted');
 
-		const result = validateDecisionRecord(record, parseTagVocabulary('# CodeSteward Tags\n'));
+		const result = validateDecisionRecord(record, parseTagVocabulary('# Sundial Tags\n'));
 
 		assert.deepEqual(result.errors, [
 			'Unknown tag "unknown-tag".',
@@ -117,10 +117,10 @@ describe('decision record parsing and validation', () => {
 			'',
 			'Use domain.',
 			'',
-		].join('\n'), '/repo/.codesteward/drs/accepted/DR-0003-legacy-dimension.md', 'accepted');
+		].join('\n'), '/repo/.sundial/drs/accepted/DR-0003-legacy-dimension.md', 'accepted');
 
 		const result = validateDecisionRecord(record, parseTagVocabulary([
-			'# CodeSteward Tags',
+			'# Sundial Tags',
 			'',
 			'## repositories',
 			'',
@@ -148,9 +148,9 @@ describe('decision record parsing and validation', () => {
 			'',
 			'Apply this for CLI work.',
 			'',
-		].join('\n'), '/repo/.codesteward/drs/accepted/DR-0004-untagged-domain-guidance.md', 'accepted');
+		].join('\n'), '/repo/.sundial/drs/accepted/DR-0004-untagged-domain-guidance.md', 'accepted');
 
-		const result = validateDecisionRecord(record, parseTagVocabulary('# CodeSteward Tags\n'));
+		const result = validateDecisionRecord(record, parseTagVocabulary('# Sundial Tags\n'));
 
 		assert.deepEqual(getRecordTags(record), []);
 		assert.deepEqual(result.errors, []);
@@ -173,9 +173,9 @@ describe('decision record parsing and validation', () => {
 			'',
 			'Use sections for staged detail.',
 			'',
-		].join('\n'), '/repo/.codesteward/drs/accepted/DR-0005-removed-fields.md', 'accepted');
+		].join('\n'), '/repo/.sundial/drs/accepted/DR-0005-removed-fields.md', 'accepted');
 
-		const result = validateDecisionRecord(record, parseTagVocabulary('# CodeSteward Tags\n'));
+		const result = validateDecisionRecord(record, parseTagVocabulary('# Sundial Tags\n'));
 
 		assert.deepEqual(result.errors, [
 			'Field "summary" is no longer supported; short detail uses "title".',
@@ -187,13 +187,13 @@ describe('decision record parsing and validation', () => {
 		const disabled = parseDecisionRecord(acceptedDr.replace(
 			'status: accepted\n',
 			'status: accepted\nenabled: false\n',
-		), '/repo/.codesteward/drs/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
+		), '/repo/.sundial/drs/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
 		const invalid = parseDecisionRecord(acceptedDr.replace(
 			'status: accepted\n',
 			'status: accepted\nenabled: no\n',
-		), '/repo/.codesteward/drs/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
+		), '/repo/.sundial/drs/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
 		const vocabulary = parseTagVocabulary([
-			'# CodeSteward Tags',
+			'# Sundial Tags',
 			'',
 			'## repositories',
 			'',
@@ -211,7 +211,7 @@ describe('decision record parsing and validation', () => {
 	});
 
 	test('lists records from lifecycle folders in deterministic id order', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-drs-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-drs-'));
 		const init = await initStore(root);
 		const firstPath = path.join(init.paths.store, 'drs', 'accepted', 'DR-0002-second.md');
 		const secondPath = path.join(init.paths.store, 'drs', 'accepted', 'DR-0001-first.md');

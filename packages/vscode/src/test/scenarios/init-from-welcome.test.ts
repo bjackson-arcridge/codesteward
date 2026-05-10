@@ -5,7 +5,7 @@ import {
 	activateExtension,
 	focusWelcomeView,
 	type ExtensionDiagnostics,
-	useLocalCodeStewardCli,
+	useLocalSundialCli,
 	wait,
 } from './shared/helpers';
 
@@ -34,13 +34,13 @@ suite('Scenario: init-from-welcome', () => {
 	});
 
 	test('toggling checkboxes flips selection and gates the init button when CLI is available', async () => {
-		await useLocalCodeStewardCli();
+		await useLocalSundialCli();
 		await activateExtension();
 		await focusWelcomeView();
 
 		await waitForWelcomeRender({ cliAvailable: true, initDisabled: true });
 
-		await vscode.commands.executeCommand('codesteward.internal.welcome.toggleAgent', 'claude', true);
+		await vscode.commands.executeCommand('sundial.internal.welcome.toggleAgent', 'claude', true);
 		await waitForWelcomeRender({
 			cliAvailable: true,
 			claudeSelected: true,
@@ -48,7 +48,7 @@ suite('Scenario: init-from-welcome', () => {
 			initDisabled: false,
 		});
 
-		await vscode.commands.executeCommand('codesteward.internal.welcome.toggleAgent', 'codex', true);
+		await vscode.commands.executeCommand('sundial.internal.welcome.toggleAgent', 'codex', true);
 		await waitForWelcomeRender({
 			cliAvailable: true,
 			claudeSelected: true,
@@ -56,7 +56,7 @@ suite('Scenario: init-from-welcome', () => {
 			initDisabled: false,
 		});
 
-		await vscode.commands.executeCommand('codesteward.internal.welcome.toggleAgent', 'claude', false);
+		await vscode.commands.executeCommand('sundial.internal.welcome.toggleAgent', 'claude', false);
 		await waitForWelcomeRender({
 			cliAvailable: true,
 			claudeSelected: false,
@@ -64,7 +64,7 @@ suite('Scenario: init-from-welcome', () => {
 			initDisabled: false,
 		});
 
-		await vscode.commands.executeCommand('codesteward.internal.welcome.toggleAgent', 'codex', false);
+		await vscode.commands.executeCommand('sundial.internal.welcome.toggleAgent', 'codex', false);
 		await waitForWelcomeRender({
 			cliAvailable: true,
 			claudeSelected: false,
@@ -74,13 +74,13 @@ suite('Scenario: init-from-welcome', () => {
 	});
 
 	test('clicking init dispatches the init command with the selected agent flags', async () => {
-		await useLocalCodeStewardCli();
+		await useLocalSundialCli();
 		await activateExtension();
 		await focusWelcomeView();
 
 		await waitForWelcomeRender({ cliAvailable: true });
 
-		await vscode.commands.executeCommand('codesteward.internal.welcome.toggleAgent', 'claude', true);
+		await vscode.commands.executeCommand('sundial.internal.welcome.toggleAgent', 'claude', true);
 		await waitForWelcomeRender({
 			cliAvailable: true,
 			claudeSelected: true,
@@ -88,7 +88,7 @@ suite('Scenario: init-from-welcome', () => {
 			initDisabled: false,
 		});
 
-		await vscode.commands.executeCommand('codesteward.internal.welcome.click');
+		await vscode.commands.executeCommand('sundial.internal.welcome.click');
 		const dispatched = await waitForWelcomeInitCommand();
 
 		assert.equal(dispatched.kind, 'init');
@@ -106,7 +106,7 @@ async function waitForWelcomeRender(
 
 	while (Date.now() - started < timeoutMs) {
 		await focusWelcomeView();
-		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('codesteward.internal.webviewDiagnostics');
+		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('sundial.internal.webviewDiagnostics');
 		const rendered = last.welcomeLastRendered;
 		if (
 			rendered !== undefined
@@ -135,7 +135,7 @@ async function waitForWelcomeInitCommand(timeoutMs = 5000): Promise<DispatchedIn
 	let last: ExtensionDiagnostics | undefined;
 
 	while (Date.now() - started < timeoutMs) {
-		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('codesteward.internal.webviewDiagnostics');
+		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('sundial.internal.webviewDiagnostics');
 		const command = last.welcomeLastCommand;
 		if (command !== undefined && command.kind === 'init') {
 			return command;

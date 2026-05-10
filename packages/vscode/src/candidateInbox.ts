@@ -18,11 +18,11 @@ export interface DecisionRecordSummary {
 
 export type DecisionRecordSummaryStatus = 'accepted' | 'rejected' | 'retired';
 
-export async function discoverCodeStewardRoot(startDirectory: string): Promise<string | undefined> {
+export async function discoverSundialRoot(startDirectory: string): Promise<string | undefined> {
 	let current = path.resolve(startDirectory);
 
 	for (;;) {
-		if (await directoryExists(path.join(current, '.codesteward'))) {
+		if (await directoryExists(path.join(current, '.sundial'))) {
 			return current;
 		}
 
@@ -36,12 +36,12 @@ export async function discoverCodeStewardRoot(startDirectory: string): Promise<s
 }
 
 export async function listCandidateSummaries(workspaceRoot: string): Promise<readonly CandidateSummary[]> {
-	const storeRoot = await discoverCodeStewardRoot(workspaceRoot);
+	const storeRoot = await discoverSundialRoot(workspaceRoot);
 	if (storeRoot === undefined) {
 		return [];
 	}
 
-	const records = await listMarkdownRecords(path.join(storeRoot, '.codesteward', 'drs', 'candidates'), summarizeCandidate);
+	const records = await listMarkdownRecords(path.join(storeRoot, '.sundial', 'drs', 'candidates'), summarizeCandidate);
 	return [...records].sort((left, right) => left.id.localeCompare(right.id));
 }
 
@@ -49,12 +49,12 @@ export async function listDecisionRecordSummaries(
 	workspaceRoot: string,
 	status: DecisionRecordSummaryStatus = 'accepted',
 ): Promise<readonly DecisionRecordSummary[]> {
-	const storeRoot = await discoverCodeStewardRoot(workspaceRoot);
+	const storeRoot = await discoverSundialRoot(workspaceRoot);
 	if (storeRoot === undefined) {
 		return [];
 	}
 
-	const records = await listMarkdownRecords(path.join(storeRoot, '.codesteward', 'drs', status), summarizeDecisionRecord);
+	const records = await listMarkdownRecords(path.join(storeRoot, '.sundial', 'drs', status), summarizeDecisionRecord);
 	return [...records].sort((left, right) => left.id.localeCompare(right.id));
 }
 
@@ -67,12 +67,12 @@ export async function listKnownDomains(workspaceRoot: string): Promise<readonly 
 }
 
 async function listKnownVocabulary(workspaceRoot: string, section: 'domains' | 'tags'): Promise<readonly string[]> {
-	const storeRoot = await discoverCodeStewardRoot(workspaceRoot);
+	const storeRoot = await discoverSundialRoot(workspaceRoot);
 	if (storeRoot === undefined) {
 		return [];
 	}
 
-	const tagsPath = path.join(storeRoot, '.codesteward', 'tags.md');
+	const tagsPath = path.join(storeRoot, '.sundial', 'tags.md');
 	let markdown: string;
 
 	try {

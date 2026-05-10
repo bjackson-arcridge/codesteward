@@ -3,18 +3,18 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { describe, test } from 'node:test';
-import { discoverCodeStewardRoot, listCandidateSummaries, listDecisionRecordSummaries, listKnownDomains, listKnownTags } from '../candidateInbox';
+import { discoverSundialRoot, listCandidateSummaries, listDecisionRecordSummaries, listKnownDomains, listKnownTags } from '../candidateInbox';
 
 describe('listCandidateSummaries', () => {
 	test('returns empty list when the candidate folder does not exist', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-vscode-empty-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-vscode-empty-'));
 
 		assert.deepEqual(await listCandidateSummaries(root), []);
 	});
 
 	test('reads candidate title, id, and path', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-vscode-candidates-'));
-		const directory = path.join(root, '.codesteward', 'drs', 'candidates');
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-vscode-candidates-'));
+		const directory = path.join(root, '.sundial', 'drs', 'candidates');
 		await fs.mkdir(directory, { recursive: true });
 		await fs.writeFile(path.join(directory, 'CAND-0001-test.md'), [
 			'---',
@@ -33,11 +33,11 @@ describe('listCandidateSummaries', () => {
 	});
 
 	test('reads accepted decision records and known tags', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-vscode-records-'));
-		const accepted = path.join(root, '.codesteward', 'drs', 'accepted');
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-vscode-records-'));
+		const accepted = path.join(root, '.sundial', 'drs', 'accepted');
 		await fs.mkdir(accepted, { recursive: true });
-		await fs.writeFile(path.join(root, '.codesteward', 'tags.md'), [
-			'# CodeSteward Vocabulary',
+		await fs.writeFile(path.join(root, '.sundial', 'tags.md'), [
+			'# Sundial Vocabulary',
 			'',
 			'## Domains',
 			'',
@@ -82,12 +82,12 @@ describe('listCandidateSummaries', () => {
 	});
 
 	test('discovers accepted records from a nested workspace folder', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-vscode-nested-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-vscode-nested-'));
 		const nested = path.join(root, 'packages', 'vscode');
-		const accepted = path.join(root, '.codesteward', 'drs', 'accepted');
+		const accepted = path.join(root, '.sundial', 'drs', 'accepted');
 		await fs.mkdir(nested, { recursive: true });
 		await fs.mkdir(accepted, { recursive: true });
-		await fs.writeFile(path.join(root, '.codesteward', 'tags.md'), [
+		await fs.writeFile(path.join(root, '.sundial', 'tags.md'), [
 			'# Tags',
 			'',
 			'## vscode',
@@ -107,7 +107,7 @@ describe('listCandidateSummaries', () => {
 
 		const [record] = await listDecisionRecordSummaries(nested);
 
-		assert.equal(await discoverCodeStewardRoot(nested), root);
+		assert.equal(await discoverSundialRoot(nested), root);
 		assert.equal(record?.id, 'DR-0002');
 		assert.equal(record?.domain, 'all');
 		assert.equal(record?.enabled, true);

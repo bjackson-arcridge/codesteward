@@ -7,7 +7,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 // Workspaces live outside the monorepo so an uninitialized scenario does not
-// inherit the repo's ancestor `.codesteward` store via discovery walk-up.
+// inherit the repo's ancestor `.sundial` store via discovery walk-up.
 export const workspacesRoot = path.join(os.tmpdir(), 'cs-it-ws');
 
 export const scenarios = [

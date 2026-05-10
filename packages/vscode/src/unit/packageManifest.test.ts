@@ -24,7 +24,7 @@ describe('package manifest contributions', () => {
 		const viewTitle = manifest.contributes?.menus?.['view/title'] ?? [];
 
 		assert.equal(
-			viewTitle.some(item => item.command === 'codesteward.bootstrap'),
+			viewTitle.some(item => item.command === 'sundial.bootstrap'),
 			false,
 		);
 	});

@@ -12,7 +12,7 @@ export function attachMessageRouter<Inbound, Outbound>(
 ): MessageRouter<Inbound, Outbound> {
 	const subscription = webview.onDidReceiveMessage((raw: unknown) => {
 		if (!guard(raw)) {
-			console.warn('codesteward: dropped malformed webview message', raw);
+			console.warn('sundial: dropped malformed webview message', raw);
 			return;
 		}
 

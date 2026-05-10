@@ -7,25 +7,25 @@ import { countDecisionRecords, discoverStore, initStore, updateRuntimeAssets } f
 
 describe('store bootstrap', () => {
 	test('creates the store layout idempotently without runtime assets by default', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-store-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-store-'));
 		const first = await initStore(root);
 		const second = await initStore(root);
 
-		assert.ok(first.created.includes('.codesteward/config.json'));
-		assert.ok(first.created.includes('.codesteward/tags.md'));
-		assert.ok(first.created.includes('.codesteward/drs/retired'));
+		assert.ok(first.created.includes('.sundial/config.json'));
+		assert.ok(first.created.includes('.sundial/tags.md'));
+		assert.ok(first.created.includes('.sundial/drs/retired'));
 		assert.equal(first.created.includes('AGENTS.md'), false);
-		assert.ok(second.existing.includes('.codesteward/config.json'));
+		assert.ok(second.existing.includes('.sundial/config.json'));
 
 		await fs.mkdir(path.join(root, 'src', 'nested'), { recursive: true });
 		const discovered = await discoverStore(path.join(root, 'src', 'nested'));
 		assert.equal(discovered?.root, root);
 		assert.equal(await countDecisionRecords(first.paths, 'accepted'), 0);
-		assert.rejects(fs.access(path.join(root, '.codesteward', 'agent')));
+		assert.rejects(fs.access(path.join(root, '.sundial', 'agent')));
 	});
 
 	test('bootstraps Claude Code assets in .claude when opted in', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-claude-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-claude-'));
 		const first = await initStore(root, { claude: true });
 		const second = await initStore(root, { claude: true });
 
@@ -39,15 +39,15 @@ describe('store bootstrap', () => {
 		const instructions = await fs.readFile(path.join(root, '.claude', 'CLAUDE.md'), 'utf8');
 		const designSkill = await fs.readFile(path.join(root, '.claude', 'skills', 'decision-aware-design', 'SKILL.md'), 'utf8');
 		const implementSkill = await fs.readFile(path.join(root, '.claude', 'skills', 'decision-aware-implement', 'SKILL.md'), 'utf8');
-		assert.match(instructions, /codesteward:agent-instructions/);
-		assert.match(instructions, /codesteward candidate create/);
+		assert.match(instructions, /sundial:agent-instructions/);
+		assert.match(instructions, /sundial candidate create/);
 		assert.equal(designSkill, await readTemplate('skills/claude/decision-aware-design/SKILL.md'));
 		assert.equal(implementSkill, await readTemplate('skills/claude/decision-aware-implement/SKILL.md'));
 		assert.doesNotMatch(instructions, /\{\{crHowTo\}\}/);
 	});
 
 	test('bootstraps Codex assets in .agents when opted in', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-codex-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-codex-'));
 		const first = await initStore(root, { codex: true });
 		const second = await initStore(root, { codex: true });
 
@@ -61,8 +61,8 @@ describe('store bootstrap', () => {
 		const instructions = await fs.readFile(path.join(root, 'AGENTS.md'), 'utf8');
 		const designSkill = await fs.readFile(path.join(root, '.agents', 'skills', 'decision-aware-design', 'SKILL.md'), 'utf8');
 		const implementSkill = await fs.readFile(path.join(root, '.agents', 'skills', 'decision-aware-implement', 'SKILL.md'), 'utf8');
-		assert.match(instructions, /codesteward:agent-instructions/);
-		assert.match(instructions, /codesteward candidate create/);
+		assert.match(instructions, /sundial:agent-instructions/);
+		assert.match(instructions, /sundial candidate create/);
 		assert.equal(designSkill, await readTemplate('skills/codex/decision-aware-design/SKILL.md'));
 		assert.equal(implementSkill, await readTemplate('skills/codex/decision-aware-implement/SKILL.md'));
 		assert.doesNotMatch(designSkill, /\{\{crHowTo\}\}/);
@@ -70,7 +70,7 @@ describe('store bootstrap', () => {
 	});
 
 	test('can bootstrap Claude Code and Codex assets together', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-both-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-both-'));
 		const result = await initStore(root, { claude: true, codex: true });
 
 		assert.ok(result.created.includes('.claude/skills/decision-aware-design/SKILL.md'));
@@ -80,7 +80,7 @@ describe('store bootstrap', () => {
 	});
 
 	test('updates all generated skill assets from templates', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-update-assets-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-update-assets-'));
 		await initStore(root, { codex: true });
 		const designSkillPath = path.join(root, '.agents', 'skills', 'decision-aware-design', 'SKILL.md');
 		const implementSkillPath = path.join(root, '.agents', 'skills', 'decision-aware-implement', 'SKILL.md');
@@ -97,11 +97,11 @@ describe('store bootstrap', () => {
 		assert.equal(result.updated.includes('.agents/agents/decision-aware-code-review.md'), false);
 		assert.equal(designSkillContents, await readTemplate('skills/codex/decision-aware-design/SKILL.md'));
 		assert.equal(implementSkillContents, await readTemplate('skills/codex/decision-aware-implement/SKILL.md'));
-		assert.match(instructions, /codesteward:agent-instructions/);
+		assert.match(instructions, /sundial:agent-instructions/);
 	});
 
 	test('repairs legacy managed instruction blocks on update', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-update-instructions-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-update-instructions-'));
 		await initStore(root, { codex: true });
 		const instructionsPath = path.join(root, 'AGENTS.md');
 		await fs.writeFile(instructionsPath, [
@@ -109,9 +109,9 @@ describe('store bootstrap', () => {
 			'',
 			'User-owned guidance.',
 			'',
-			'<!-- codesteward:correction-feedback-loop -->',
+			'<!-- sundial:correction-feedback-loop -->',
 			'old generated guidance',
-			'<!-- /codesteward:correction-feedback-loop -->',
+			'<!-- /sundial:correction-feedback-loop -->',
 			'',
 		].join('\n'), 'utf8');
 
@@ -120,13 +120,13 @@ describe('store bootstrap', () => {
 
 		assert.ok(result.updated.includes('AGENTS.md'));
 		assert.match(instructions, /User-owned guidance\./);
-		assert.match(instructions, /codesteward:agent-instructions/);
-		assert.doesNotMatch(instructions, /codesteward:correction-feedback-loop/);
+		assert.match(instructions, /sundial:agent-instructions/);
+		assert.doesNotMatch(instructions, /sundial:correction-feedback-loop/);
 		assert.doesNotMatch(instructions, /old generated guidance/);
 	});
 
 	test('handles Claude and Codex instruction files that share one symlink target', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-symlinked-instructions-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-symlinked-instructions-'));
 		await fs.mkdir(path.join(root, '.claude'), { recursive: true });
 		await fs.writeFile(path.join(root, 'AGENTS.md'), '# Shared Instructions\n', 'utf8');
 		await fs.symlink(path.join('..', 'AGENTS.md'), path.join(root, '.claude', 'CLAUDE.md'));
@@ -135,12 +135,12 @@ describe('store bootstrap', () => {
 		const sharedInstructions = await fs.readFile(path.join(root, 'AGENTS.md'), 'utf8');
 
 		assert.ok(result.updated.includes('.claude/CLAUDE.md') || result.updated.includes('AGENTS.md'));
-		assert.equal((sharedInstructions.match(/<!-- codesteward:agent-instructions -->/g) ?? []).length, 1);
-		assert.match(sharedInstructions, /codesteward candidate create/);
+		assert.equal((sharedInstructions.match(/<!-- sundial:agent-instructions -->/g) ?? []).length, 1);
+		assert.match(sharedInstructions, /sundial candidate create/);
 	});
 
 	test('uses generic skill templates when Claude and Codex share skill files by symlink', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-symlinked-skills-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-symlinked-skills-'));
 		await fs.mkdir(path.join(root, '.agents', 'skills'), { recursive: true });
 		await fs.mkdir(path.join(root, '.claude'), { recursive: true });
 		await fs.symlink(path.join('..', '.agents', 'skills'), path.join(root, '.claude', 'skills'));

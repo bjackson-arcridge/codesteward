@@ -1,13 +1,13 @@
 ---
 name: decision-aware-design
-description: Consult accepted CodeSteward Decision Records before consequential design work. Trigger for architecture, workflow, API, UI, or governance design choices that need project precedent; propose terse DR candidates when the design establishes durable guidance.
+description: Consult accepted Sundial Decision Records before consequential design work. Trigger for architecture, workflow, API, UI, or governance design choices that need project precedent; propose terse DR candidates when the design establishes durable guidance.
 ---
 
 # decision-aware-design
 
-1. Run `codesteward tags` to get the list of tags and domains.
+1. Run `sundial tags` to get the list of tags and domains.
 2. Select the narrowest applicable domain and one or more applicable tags.
-3. Retrieve accepted DRs with `codesteward dr retrieve [--domain <domain>] [--tag <tag1>] [--tag <tag2>] ...`.
+3. Retrieve accepted DRs with `sundial dr retrieve [--domain <domain>] [--tag <tag1>] [--tag <tag2>] ...`.
  * Retrieval logic is domain AND (tag1 OR tag2 OR tag3).
  * Domain retrieval matches ancestors, the exact domain, and descendants. Excluding the domain matches all domains.
  * No-tag DRs may still appear because they match any tag query within their matching domain.

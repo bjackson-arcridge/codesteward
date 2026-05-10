@@ -63,7 +63,7 @@ suite('Scenario: bootstrap-selector', () => {
 			bootstrapProvider: 'claude',
 		});
 
-		await vscode.commands.executeCommand('codesteward.internal.candidates.selectProvider', 'codex');
+		await vscode.commands.executeCommand('sundial.internal.candidates.selectProvider', 'codex');
 		await waitForCandidatesRender({
 			emptyVisible: true,
 			bootstrapAction: 'audit',
@@ -71,7 +71,7 @@ suite('Scenario: bootstrap-selector', () => {
 			bootstrapProvider: 'codex',
 		});
 
-		await vscode.commands.executeCommand('codesteward.internal.candidates.selectProvider', 'claude');
+		await vscode.commands.executeCommand('sundial.internal.candidates.selectProvider', 'claude');
 		await waitForCandidatesRender({
 			emptyVisible: true,
 			bootstrapAction: 'audit',
@@ -90,7 +90,7 @@ async function waitForCandidatesRender(
 
 	while (Date.now() - started < timeoutMs) {
 		await focusCandidatesView();
-		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('codesteward.internal.webviewDiagnostics');
+		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('sundial.internal.webviewDiagnostics');
 		const rendered = last.candidatesLastRendered;
 		if (
 			rendered !== undefined
@@ -109,7 +109,7 @@ async function waitForCandidatesRender(
 }
 
 async function refreshCandidates(): Promise<void> {
-	await vscode.commands.executeCommand('codesteward.internal.candidates.refresh');
+	await vscode.commands.executeCommand('sundial.internal.candidates.refresh');
 }
 
 function workspaceRoot(): string {

@@ -1,20 +1,20 @@
 {
-  "name": "codesteward",
+  "name": "@arcridge/sundial",
   "version": "0.0.1",
-  "description": "CodeSteward project-local CLI and Decision Record store logic.",
+  "description": "Sundial project-local CLI and Decision Record store logic.",
   "license": "Apache-2.0",
   "author": "arcridge",
-  "homepage": "https://github.com/bjackson-arcridge/codesteward/tree/main/packages/cli#readme",
+  "homepage": "https://github.com/bjackson-arcridge/sundial/tree/main/packages/cli#readme",
   "bugs": {
-    "url": "https://github.com/bjackson-arcridge/codesteward/issues"
+    "url": "https://github.com/bjackson-arcridge/sundial/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bjackson-arcridge/codesteward.git",
+    "url": "git+https://github.com/bjackson-arcridge/sundial.git",
     "directory": "packages/cli"
   },
   "keywords": [
-    "codesteward",
+    "sundial",
     "decision-records",
     "cli",
     "ai",
@@ -30,7 +30,7 @@
     "LICENSE"
   ],
   "bin": {
-    "codesteward": "dist/main.js"
+    "sundial": "dist/main.js"
   },
   "publishConfig": {
     "access": "public"

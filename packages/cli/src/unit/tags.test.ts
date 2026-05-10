@@ -5,7 +5,7 @@ import { parseTagVocabulary } from '../core/tags';
 describe('parseTagVocabulary', () => {
 	test('reads structured domain and tag headings with descriptions', () => {
 		const vocabulary = parseTagVocabulary([
-			'# CodeSteward Vocabulary',
+			'# Sundial Vocabulary',
 			'',
 			'## Domains',
 			'',
@@ -38,7 +38,7 @@ describe('parseTagVocabulary', () => {
 
 	test('reports invalid and duplicate structured vocabulary names', () => {
 		const vocabulary = parseTagVocabulary([
-			'# CodeSteward Vocabulary',
+			'# Sundial Vocabulary',
 			'',
 			'## Domains',
 			'',
@@ -80,7 +80,7 @@ describe('parseTagVocabulary', () => {
 
 	test('continues to read legacy tag-only vocabulary files', () => {
 		const vocabulary = parseTagVocabulary([
-			'# CodeSteward Tags',
+			'# Sundial Tags',
 			'',
 			'## architecture',
 			'',

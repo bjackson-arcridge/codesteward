@@ -1,6 +1,6 @@
 {
-  "name": "codesteward-vscode",
-  "displayName": "CodeSteward",
+  "name": "sundial",
+  "displayName": "Sundial",
   "description": "Markdown-backed Decision Records and agent skills for AI coding workflows.",
   "version": "0.0.1",
   "publisher": "arcridge",
@@ -23,150 +23,150 @@
   "contributes": {
     "commands": [
       {
-        "command": "codesteward.installCli",
-        "title": "CodeSteward: Install CLI",
+        "command": "sundial.installCli",
+        "title": "Sundial: Install CLI",
         "icon": "$(cloud-download)",
-        "enablement": "!codesteward.cliAvailable"
+        "enablement": "!sundial.cliAvailable"
       },
       {
-        "command": "codesteward.bootstrap",
-        "title": "CodeSteward: Bootstrap Decisions",
+        "command": "sundial.bootstrap",
+        "title": "Sundial: Bootstrap Decisions",
         "icon": "$(search)",
-        "enablement": "codesteward.workspaceInitialized"
+        "enablement": "sundial.workspaceInitialized"
       },
       {
-        "command": "codesteward.showDiagnostics",
-        "title": "CodeSteward: Show Diagnostics",
+        "command": "sundial.showDiagnostics",
+        "title": "Sundial: Show Diagnostics",
         "icon": "$(output)"
       },
       {
-        "command": "codesteward.candidates.open",
-        "title": "CodeSteward: Open Candidate Preview",
+        "command": "sundial.candidates.open",
+        "title": "Sundial: Open Candidate Preview",
         "icon": "$(open-preview)"
       },
       {
-        "command": "codesteward.candidates.editSource",
-        "title": "CodeSteward: Edit Candidate Source",
+        "command": "sundial.candidates.editSource",
+        "title": "Sundial: Edit Candidate Source",
         "icon": "$(edit)"
       },
       {
-        "command": "codesteward.records.filterByDomain",
-        "title": "CodeSteward: Filter Decision Records by Domain",
+        "command": "sundial.records.filterByDomain",
+        "title": "Sundial: Filter Decision Records by Domain",
         "icon": "$(filter)",
-        "enablement": "codesteward.workspaceInitialized"
+        "enablement": "sundial.workspaceInitialized"
       },
       {
-        "command": "codesteward.records.filterByTag",
-        "title": "CodeSteward: Filter Decision Records by Tag",
+        "command": "sundial.records.filterByTag",
+        "title": "Sundial: Filter Decision Records by Tag",
         "icon": "$(filter)",
-        "enablement": "codesteward.workspaceInitialized"
+        "enablement": "sundial.workspaceInitialized"
       },
       {
-        "command": "codesteward.records.clearTagFilter",
-        "title": "CodeSteward: Clear Decision Record Filters",
+        "command": "sundial.records.clearTagFilter",
+        "title": "Sundial: Clear Decision Record Filters",
         "icon": "$(clear-all)",
-        "enablement": "codesteward.workspaceInitialized"
+        "enablement": "sundial.workspaceInitialized"
       },
       {
-        "command": "codesteward.records.openPreview",
-        "title": "CodeSteward: Open Decision Record Preview",
+        "command": "sundial.records.openPreview",
+        "title": "Sundial: Open Decision Record Preview",
         "icon": "$(open-preview)"
       },
       {
-        "command": "codesteward.records.editSource",
-        "title": "CodeSteward: Edit Decision Record Source",
+        "command": "sundial.records.editSource",
+        "title": "Sundial: Edit Decision Record Source",
         "icon": "$(edit)"
       },
       {
-        "command": "codesteward.candidates.accept",
-        "title": "CodeSteward: Accept Candidate",
+        "command": "sundial.candidates.accept",
+        "title": "Sundial: Accept Candidate",
         "icon": "$(check)"
       },
       {
-        "command": "codesteward.candidates.reject",
-        "title": "CodeSteward: Reject Candidate",
+        "command": "sundial.candidates.reject",
+        "title": "Sundial: Reject Candidate",
         "icon": "$(close)"
       },
       {
-        "command": "codesteward.candidates.retire",
-        "title": "CodeSteward: Retire Candidate",
+        "command": "sundial.candidates.retire",
+        "title": "Sundial: Retire Candidate",
         "icon": "$(archive)"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "codesteward",
-          "title": "CodeSteward",
-          "icon": "media/codesteward.svg"
+          "id": "sundial",
+          "title": "Sundial",
+          "icon": "media/sundial.svg"
         }
       ]
     },
     "views": {
-      "codesteward": [
+      "sundial": [
         {
-          "id": "codesteward.welcome",
-          "name": "CodeSteward",
+          "id": "sundial.welcome",
+          "name": "Sundial",
           "type": "webview",
-          "when": "codesteward.workspaceUninitialized"
+          "when": "sundial.workspaceUninitialized"
         },
         {
-          "id": "codesteward.records",
+          "id": "sundial.records",
           "name": "DECISION RECORDS",
           "type": "webview",
-          "when": "codesteward.workspaceInitialized"
+          "when": "sundial.workspaceInitialized"
         },
         {
-          "id": "codesteward.candidates",
+          "id": "sundial.candidates",
           "name": "CANDIDATES",
           "type": "webview",
-          "when": "codesteward.workspaceInitialized"
+          "when": "sundial.workspaceInitialized"
         },
         {
-          "id": "codesteward.records.rejected",
+          "id": "sundial.records.rejected",
           "name": "REJECTED DRS",
           "type": "webview",
-          "when": "codesteward.workspaceInitialized",
+          "when": "sundial.workspaceInitialized",
           "visibility": "collapsed"
         },
         {
-          "id": "codesteward.records.retired",
+          "id": "sundial.records.retired",
           "name": "RETIRED DRS",
           "type": "webview",
-          "when": "codesteward.workspaceInitialized",
+          "when": "sundial.workspaceInitialized",
           "visibility": "collapsed"
         }
       ]
     },
     "configuration": {
-      "title": "CodeSteward",
+      "title": "Sundial",
       "properties": {
-        "codesteward.cliPath": {
+        "sundial.cliPath": {
           "type": "string",
-          "default": "codesteward",
-          "description": "Path to the CodeSteward CLI executable."
+          "default": "sundial",
+          "description": "Path to the Sundial CLI executable."
         }
       }
     },
     "menus": {
       "view/title": [
         {
-          "command": "codesteward.installCli",
-          "when": "view == codesteward.welcome && !codesteward.cliAvailable",
+          "command": "sundial.installCli",
+          "when": "view == sundial.welcome && !sundial.cliAvailable",
           "group": "navigation"
         }
       ],
       "commandPalette": [
         {
-          "command": "codesteward.installCli",
-          "when": "!codesteward.cliAvailable"
+          "command": "sundial.installCli",
+          "when": "!sundial.cliAvailable"
         },
         {
-          "command": "codesteward.bootstrap",
-          "when": "codesteward.workspaceInitialized"
+          "command": "sundial.bootstrap",
+          "when": "sundial.workspaceInitialized"
         },
         {
-          "command": "codesteward.showDiagnostics"
+          "command": "sundial.showDiagnostics"
         }
       ]
     }

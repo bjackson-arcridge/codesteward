@@ -23,13 +23,13 @@ export class WelcomeWebviewProvider implements vscode.WebviewViewProvider {
 			localResourceRoots: [this.extensionUri],
 		};
 		view.webview.html = renderWebviewHtml({
-			title: 'CodeSteward',
+			title: 'Sundial',
 			bodyTagId: 'cs-welcome-app',
 			scriptUri: view.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'dist', 'webviews', 'welcome.js')),
 			codiconUri: view.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media', 'codicon.css')),
 			cspSource: view.webview.cspSource,
 			initialState: await this.buildState(),
-			fallbackText: 'Loading CodeSteward...',
+			fallbackText: 'Loading Sundial...',
 		});
 
 		const router = attachMessageRouter<WebviewToHost, HostToWebview>(

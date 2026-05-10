@@ -1,15 +1,15 @@
-<!-- codesteward:agent-instructions -->
-## CodeSteward Candidate Decision Record Submission
+<!-- sundial:agent-instructions -->
+## Sundial Candidate Decision Record Submission
 
 Decison Record discipline: Decision Records record rules that will guide future implementation and design. Any user suggested DR is valid.
 DRs should be proposed if a pattern should be remembered and stored for future refernce. Check rejected DRs before proposing new DRs:
 
-`codesteward dr list --status rejected`.
+`sundial dr list --status rejected`.
 
 Create candidate records through the CLI; do not write candidate markdown files by hand.
 
 ```bash
-codesteward candidate create \
+sundial candidate create \
   --title "<candidate title>" \
   --domain "<domain>" \
   --decision "<terse governing guidance>" \
@@ -37,9 +37,9 @@ Use either `--domain <known-domain>` or `--proposed-domain <domain> "<descriptio
 ## Tags
 Repeat `tag`, `affected`, and `ref` when useful. Use `--proposed-tag <tag> "<description>"` for a new tag or tags.
 
-Tagging discipline: domain is the broad hierarchy, and tags are concern filters inside that hierarchy. To ensure broad matching, apply every applicable tag [from `codesteward tags` command] to a candidate DR when useful; omit tags when the DR should match every query (missing tag is treated as wildcard match).
+Tagging discipline: domain is the broad hierarchy, and tags are concern filters inside that hierarchy. To ensure broad matching, apply every applicable tag [from `sundial tags` command] to a candidate DR when useful; omit tags when the DR should match every query (missing tag is treated as wildcard match).
 
-## CodeSteward Correction Feedback Loop
+## Sundial Correction Feedback Loop
 
 If you make a mistake and are corrected by the user, either in design, patterns, implementation choices, or structure, check for a Decision Record that would have covered that mistake. If no DR exists, propose a new DR candidate to cover it.
-<!-- /codesteward:agent-instructions -->
+<!-- /sundial:agent-instructions -->

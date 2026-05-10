@@ -14,7 +14,7 @@ import { initStore } from '../core/store';
 import { parseTagVocabulary } from '../core/tags';
 
 const vocabulary = parseTagVocabulary([
-	'# CodeSteward Vocabulary',
+	'# Sundial Vocabulary',
 	'',
 	'## Domains',
 	'',
@@ -44,7 +44,7 @@ const vocabulary = parseTagVocabulary([
 
 describe('candidate lifecycle', () => {
 	test('creates candidates with known tags and proposed tags', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-candidate-create-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-create-'));
 		const init = await initStore(root);
 
 		const result = await createCandidate(init.paths, vocabulary, {
@@ -69,7 +69,7 @@ describe('candidate lifecycle', () => {
 		});
 
 	test('accepts DR candidates as accepted DRs and removes the candidate file', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-candidate-accept-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-accept-'));
 		const init = await initStore(root);
 		const created = await createCandidate(init.paths, vocabulary, {
 			title: 'Validation error response shape',
@@ -96,7 +96,7 @@ describe('candidate lifecycle', () => {
 	});
 
 	test('accepts legacy DR candidates that still include kind metadata', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-candidate-legacy-kind-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-legacy-kind-'));
 		const init = await initStore(root);
 		const created = await createCandidate(init.paths, vocabulary, {
 			title: 'Legacy kind candidate',
@@ -118,7 +118,7 @@ describe('candidate lifecycle', () => {
 	});
 
 	test('creates no-tag candidates as tag wildcards for their domain', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-candidate-no-tags-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-no-tags-'));
 		const init = await initStore(root);
 
 		const result = await createCandidate(init.paths, vocabulary, {
@@ -140,10 +140,10 @@ describe('candidate lifecycle', () => {
 	});
 
 	test('accepts proposed tags and domains into the vocabulary', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-candidate-vocabulary-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-vocabulary-'));
 		const init = await initStore(root);
 		await fs.writeFile(init.paths.tags, [
-			'# CodeSteward Vocabulary',
+			'# Sundial Vocabulary',
 			'',
 			'## Domains',
 			'',
@@ -187,7 +187,7 @@ describe('candidate lifecycle', () => {
 	});
 
 	test('rejects and retires candidates into lifecycle folders', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-candidate-move-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-move-'));
 		const init = await initStore(root);
 		const rejected = await createCandidate(init.paths, vocabulary, {
 			title: 'Temporary decision',

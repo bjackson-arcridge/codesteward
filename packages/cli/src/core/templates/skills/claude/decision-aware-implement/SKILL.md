@@ -1,15 +1,15 @@
 ---
 name: decision-aware-implement
-description: Use in Claude Code during implementation, when writing non-trivial code, or when establishing new patterns to stay aligned with accepted CodeSteward Decision Records and capture new reusable decisions.
+description: Use in Claude Code during implementation, when writing non-trivial code, or when establishing new patterns to stay aligned with accepted Sundial Decision Records and capture new reusable decisions.
 ---
 
 # decision-aware-implement
 
 ## Available tags and domains
-!`codesteward tags`
+!`sundial tags`
 
 ## Retrieval syntax
-!`codesteward dr retrieve --help`
+!`sundial dr retrieve --help`
 
 ## Steps
 1. Narrow the domain; include all useful tags from above.

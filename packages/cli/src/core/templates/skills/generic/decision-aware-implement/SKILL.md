@@ -1,13 +1,13 @@
 ---
 name: decision-aware-implement
-description: Apply accepted CodeSteward Decision Records during implementation work. Trigger when editing code, tests, templates, docs with behavior impact, or project structure; propose terse DR candidates when implementation establishes durable guidance.
+description: Apply accepted Sundial Decision Records during implementation work. Trigger when editing code, tests, templates, docs with behavior impact, or project structure; propose terse DR candidates when implementation establishes durable guidance.
 ---
 
 # decision-aware-implement
 
-1. Run `codesteward tags` to get the list of tags and domains.
+1. Run `sundial tags` to get the list of tags and domains.
 2. Select the narrowest applicable domain and one or more applicable tags.
-3. Retrieve accepted DRs with `codesteward dr retrieve [--domain <domain>] [--tag <tag1>] [--tag <tag2>] ...`.
+3. Retrieve accepted DRs with `sundial dr retrieve [--domain <domain>] [--tag <tag1>] [--tag <tag2>] ...`.
  * Retrieval logic is domain AND (tag1 OR tag2 OR tag3).
  * Domain retrieval matches ancestors, the exact domain, and descendants. Excluding the domain matches all domains.
  * No-tag DRs may still appear because they match any tag query within their matching domain.

@@ -1,15 +1,15 @@
 ---
 name: decision-aware-design
-description: Use in Claude Code before consequential design work, architecture decisions, or non-trivial planning to consult accepted CodeSteward Decision Records and propose new DR candidates afterward.
+description: Use in Claude Code before consequential design work, architecture decisions, or non-trivial planning to consult accepted Sundial Decision Records and propose new DR candidates afterward.
 ---
 
 # decision-aware-design
 
 ## Available tags and domains
-!`codesteward tags`
+!`sundial tags`
 
 ## Retrieval syntax
-!`codesteward dr retrieve --help`
+!`sundial dr retrieve --help`
 
 ## Steps
 1. Narrow the domain; include all useful tags from above.

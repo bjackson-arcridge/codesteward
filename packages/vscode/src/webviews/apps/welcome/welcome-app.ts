@@ -79,7 +79,7 @@ export class WelcomeApp extends LitElement {
 	private readonly host = getHost<WebviewToHost, HostToWebview>();
 	private stopRefreshTriggers?: () => void;
 	@state() private cliAvailable = false;
-	@state() private cliPath = 'codesteward';
+	@state() private cliPath = 'sundial';
 	@state() private claudeSelected = false;
 	@state() private codexSelected = false;
 	@state() private diagnosticsEnabled = false;
@@ -127,16 +127,16 @@ export class WelcomeApp extends LitElement {
 		const agentSelected = this.claudeSelected || this.codexSelected;
 		const initDisabled = !this.cliAvailable || !agentSelected;
 		const initTooltip = !this.cliAvailable
-			? 'Install the CodeSteward CLI first'
+			? 'Install the Sundial CLI first'
 			: !agentSelected
 				? 'Select Claude Code, Codex, or both'
 				: '';
 		return html`
-			<h1>CodeSteward</h1>
-			<p>Initialize this project to create the CodeSteward store and its Decision Record directories at the project root.</p>
+			<h1>Sundial</h1>
+			<p>Initialize this project to create the Sundial store and its Decision Record directories at the project root.</p>
 			<div class="status">CLI: ${this.cliAvailable ? `${this.cliPath} available` : `${this.cliPath} not found`}</div>
 			<cs-button variant="secondary" ?disabled=${this.cliAvailable} @click=${this.installCli}>
-				${this.cliAvailable ? 'CodeSteward CLI Installed' : 'Install CodeSteward CLI'}
+				${this.cliAvailable ? 'Sundial CLI Installed' : 'Install Sundial CLI'}
 			</cs-button>
 			<fieldset class="agents">
 				<legend>Agent harnesses</legend>

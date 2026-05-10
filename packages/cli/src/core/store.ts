@@ -9,11 +9,11 @@ import {
 	type SkillTemplateSet,
 } from './harnesses';
 
-export const storeDirectoryName = '.codesteward';
-const codestewardInstructionStartMarker = '<!-- codesteward:agent-instructions -->';
-const codestewardInstructionEndMarker = '<!-- /codesteward:agent-instructions -->';
-const legacyCodestewardInstructionStartMarker = '<!-- codesteward:correction-feedback-loop -->';
-const legacyCodestewardInstructionEndMarker = '<!-- /codesteward:correction-feedback-loop -->';
+export const storeDirectoryName = '.sundial';
+const sundialInstructionStartMarker = '<!-- sundial:agent-instructions -->';
+const sundialInstructionEndMarker = '<!-- /sundial:agent-instructions -->';
+const legacySundialInstructionStartMarker = '<!-- sundial:correction-feedback-loop -->';
+const legacySundialInstructionEndMarker = '<!-- /sundial:correction-feedback-loop -->';
 
 const directoryLayout = [
 	'drs/candidates',
@@ -190,7 +190,7 @@ function defaultConfig(): string {
 
 function defaultTags(): string {
 	return [
-		'# CodeSteward Vocabulary',
+		'# Sundial Vocabulary',
 		'',
 		'Domains are broad applicability scopes. Use lowercase dot-separated hierarchy paths. A domain query matches ancestors, the exact domain, and descendants, but not sibling branches.',
 		'',
@@ -325,14 +325,14 @@ function repairManagedInstructionBlock(current: string, rule: string): string {
 }
 
 function findManagedInstructionMarker(current: string): { readonly start: number; readonly endMarker: string } {
-	const start = current.indexOf(codestewardInstructionStartMarker);
+	const start = current.indexOf(sundialInstructionStartMarker);
 	if (start !== -1) {
-		return { start, endMarker: codestewardInstructionEndMarker };
+		return { start, endMarker: sundialInstructionEndMarker };
 	}
 
 	return {
-		start: current.indexOf(legacyCodestewardInstructionStartMarker),
-		endMarker: legacyCodestewardInstructionEndMarker,
+		start: current.indexOf(legacySundialInstructionStartMarker),
+		endMarker: legacySundialInstructionEndMarker,
 	};
 }
 
@@ -422,7 +422,7 @@ const templateIncludes: Readonly<Record<string, string>> = {
 
 async function renderTemplate(relativePath: string, seen: readonly string[] = []): Promise<string> {
 	if (seen.includes(relativePath)) {
-		throw new Error(`Circular CodeSteward template include: ${[...seen, relativePath].join(' -> ')}`);
+		throw new Error(`Circular Sundial template include: ${[...seen, relativePath].join(' -> ')}`);
 	}
 
 	let contents = await readTemplate(relativePath);
@@ -452,7 +452,7 @@ async function readTemplate(relativePath: string): Promise<string> {
 		}
 	}
 
-	throw new Error(`CodeSteward template not found: ${relativePath} (searched ${errors.join(', ')})`);
+	throw new Error(`Sundial template not found: ${relativePath} (searched ${errors.join(', ')})`);
 }
 
 function templatePathCandidates(relativePath: string): readonly string[] {

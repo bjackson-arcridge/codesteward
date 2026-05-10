@@ -61,22 +61,22 @@ export interface ExtensionDiagnostics {
 }
 
 export async function activateExtension(): Promise<void> {
-	const extension = vscode.extensions.getExtension('arcridge.codesteward-vscode');
+	const extension = vscode.extensions.getExtension('arcridge.sundial');
 	if (extension === undefined) {
-		throw new Error('Expected CodeSteward VS Code extension to be loaded');
+		throw new Error('Expected Sundial VS Code extension to be loaded');
 	}
 
 	await extension.activate();
 }
 
-export async function useLocalCodeStewardCli(): Promise<void> {
-	const extension = vscode.extensions.getExtension('arcridge.codesteward-vscode');
+export async function useLocalSundialCli(): Promise<void> {
+	const extension = vscode.extensions.getExtension('arcridge.sundial');
 	if (extension === undefined) {
-		throw new Error('Expected CodeSteward VS Code extension to be loaded');
+		throw new Error('Expected Sundial VS Code extension to be loaded');
 	}
 
 	const cliPath = path.resolve(extension.extensionPath, '..', 'cli', 'dist', 'main.js');
-	await vscode.workspace.getConfiguration('codesteward').update('cliPath', cliPath, vscode.ConfigurationTarget.Global);
+	await vscode.workspace.getConfiguration('sundial').update('cliPath', cliPath, vscode.ConfigurationTarget.Global);
 }
 
 export async function waitForWebviewDiagnostics(timeoutMs = 15000): Promise<ExtensionDiagnostics> {
@@ -86,7 +86,7 @@ export async function waitForWebviewDiagnostics(timeoutMs = 15000): Promise<Exte
 	while (Date.now() - started < timeoutMs) {
 		await focusRecordsView();
 		await focusCandidatesView();
-		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('codesteward.internal.webviewDiagnostics');
+		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('sundial.internal.webviewDiagnostics');
 		if (
 			last.recordsLastState !== undefined
 			&& last.recordsLastRendered !== undefined
@@ -109,7 +109,7 @@ export async function waitForHistoricalRecordWebviewDiagnostics(timeoutMs = 1500
 	while (Date.now() - started < timeoutMs) {
 		await focusRejectedRecordsView();
 		await focusRetiredRecordsView();
-		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('codesteward.internal.webviewDiagnostics');
+		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('sundial.internal.webviewDiagnostics');
 		if (
 			last.rejectedRecordsLastState !== undefined
 			&& last.rejectedRecordsLastRendered !== undefined
@@ -126,23 +126,23 @@ export async function waitForHistoricalRecordWebviewDiagnostics(timeoutMs = 1500
 }
 
 export async function focusWelcomeView(): Promise<void> {
-	await focusView('codesteward.welcome.focus');
+	await focusView('sundial.welcome.focus');
 }
 
 export async function focusRecordsView(): Promise<void> {
-	await focusView('codesteward.records.focus');
+	await focusView('sundial.records.focus');
 }
 
 export async function focusRejectedRecordsView(): Promise<void> {
-	await focusView('codesteward.records.rejected.focus');
+	await focusView('sundial.records.rejected.focus');
 }
 
 export async function focusRetiredRecordsView(): Promise<void> {
-	await focusView('codesteward.records.retired.focus');
+	await focusView('sundial.records.retired.focus');
 }
 
 export async function focusCandidatesView(): Promise<void> {
-	await focusView('codesteward.candidates.focus');
+	await focusView('sundial.candidates.focus');
 }
 
 export async function waitForActiveMarkdownPreview(filePath: string, timeoutMs = 5000): Promise<vscode.Tab> {
@@ -188,7 +188,7 @@ function describeTab(tab: vscode.Tab | undefined): string {
 
 async function focusView(command: string): Promise<void> {
 	try {
-		await vscode.commands.executeCommand('workbench.view.extension.codesteward');
+		await vscode.commands.executeCommand('workbench.view.extension.sundial');
 		await vscode.commands.executeCommand(command);
 	} catch {
 		// Contexts and contributed views can become available shortly after activation in the test host.

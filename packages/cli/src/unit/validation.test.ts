@@ -8,7 +8,7 @@ import { initStore } from '../core/store';
 
 describe('validateStore', () => {
 	test('includes validation failures in the validation result', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-validation-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-validation-'));
 		const init = await initStore(root);
 		await fs.writeFile(path.join(init.paths.store, 'drs', 'accepted', 'DR-0001-invalid.md'), [
 			'---',
@@ -31,7 +31,7 @@ describe('validateStore', () => {
 	});
 
 	test('warns about broken local reference pointers', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-validation-references-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-validation-references-'));
 		const init = await initStore(root);
 		await fs.writeFile(path.join(init.paths.store, 'drs', 'accepted', 'DR-0001-reference.md'), [
 			'---',

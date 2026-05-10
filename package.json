@@ -1,5 +1,5 @@
 {
-  "name": "codesteward-workspace",
+  "name": "sundial-workspace",
   "private": true,
   "version": "0.0.1",
   "description": "Agentic workflows that focus on human in the loop.",
@@ -14,11 +14,11 @@
     "package:vscode": "npm --workspace packages/vscode run package:vsix",
     "test:unit": "npm run test:unit --workspaces --if-present",
     "test": "npm --workspace packages/vscode run test",
-    "cli": "npm --workspace codesteward run cli --",
-    "pack:cli": "npm --workspace codesteward pack --pack-destination .",
-    "install:cli:local": "npm run pack:cli && npm install -g \"./$(ls -t codesteward-*.tgz | head -n1)\"",
-    "uninstall:cli:local": "npm uninstall -g codesteward",
-    "publish:cli": "npm --workspace codesteward publish"
+    "cli": "npm --workspace @arcridge/sundial run cli --",
+    "pack:cli": "npm --workspace @arcridge/sundial pack --pack-destination .",
+    "install:cli:local": "npm run pack:cli && npm install -g \"./$(ls -t arcridge-sundial-*.tgz | head -n1)\"",
+    "uninstall:cli:local": "npm uninstall -g @arcridge/sundial",
+    "publish:cli": "npm --workspace @arcridge/sundial publish"
   },
   "devDependencies": {
     "@types/vscode": "^1.109.0",

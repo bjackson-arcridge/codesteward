@@ -1,4 +1,4 @@
-# CodeSteward Vocabulary
+# Sundial Vocabulary
 
 ## Domains
 

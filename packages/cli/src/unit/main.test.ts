@@ -65,11 +65,11 @@ describe('bootstrapCommand', () => {
 	});
 
 	test('retrieves accepted DRs by tag and hierarchical domain together', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-domain-retrieve-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-domain-retrieve-'));
 		const init = await initStore(root);
 		const accepted = path.join(init.paths.store, 'drs', 'accepted');
 		await fs.writeFile(init.paths.tags, [
-			'# CodeSteward Vocabulary',
+			'# Sundial Vocabulary',
 			'',
 			'## Domains',
 			'',
@@ -202,7 +202,7 @@ describe('bootstrapCommand', () => {
 	});
 
 	test('does not expose the removed context command', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-context-removed-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-context-removed-'));
 
 		const result = await runCli(root, ['context', '--tag', 'architecture']);
 
@@ -213,7 +213,7 @@ describe('bootstrapCommand', () => {
 	});
 
 	test('does not expose the removed domains command', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-domain-removed-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-domain-removed-'));
 		await initStore(root);
 
 		const result = await runCli(root, ['domains', 'list']);
@@ -225,7 +225,7 @@ describe('bootstrapCommand', () => {
 	});
 
 	test('does not expose the removed gate command', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-gate-removed-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-gate-removed-'));
 		await initStore(root);
 
 		const result = await runCli(root, ['gate', 'status']);
@@ -237,7 +237,7 @@ describe('bootstrapCommand', () => {
 	});
 
 	test('lists known domains and tags from the vocabulary', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-tags-list-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-tags-list-'));
 		await initStore(root);
 
 		const result = await runCli(root, ['tags']);
@@ -252,7 +252,7 @@ describe('bootstrapCommand', () => {
 	});
 
 	test('reports validation state from the status command', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-status-validation-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-status-validation-'));
 		const init = await initStore(root);
 		await fs.writeFile(path.join(init.paths.store, 'drs', 'accepted', 'DR-0001-invalid-domain.md'), acceptedRecord({
 			id: 'DR-0001',
@@ -262,7 +262,7 @@ describe('bootstrapCommand', () => {
 
 		const result = await runCli(root, ['status']);
 
-		assert.match(result.stdout, /CodeSteward store:/);
+		assert.match(result.stdout, /Sundial store:/);
 		assert.match(result.stdout, /Accepted DRs: 1/);
 		assert.match(result.stdout, /DR-0001-invalid-domain\.md/);
 		assert.match(result.stdout, /error: Unknown domain "api"\./);
@@ -272,7 +272,7 @@ describe('bootstrapCommand', () => {
 	});
 
 	test('does not expose removed validation, audit, and tag subcommands', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-command-surface-removed-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-command-surface-removed-'));
 		await initStore(root);
 
 		const validate = await runCli(root, ['validate']);
@@ -291,17 +291,17 @@ describe('bootstrapCommand', () => {
 		assert.match(auditBootstrap.stderr, /Unknown command: audit/);
 		assert.equal(auditBootstrap.exitCode, 64);
 		assert.equal(tagsList.stdout, '');
-		assert.match(tagsList.stderr, /Usage: codesteward tags/);
+		assert.match(tagsList.stderr, /Usage: sundial tags/);
 		assert.doesNotMatch(tagsList.stderr, /tags list/);
 		assert.equal(tagsList.exitCode, 64);
 		assert.equal(drValidate.stdout, '');
-		assert.match(drValidate.stderr, /Usage: codesteward dr \(retrieve \| get \| list \| enable \| disable \| retire \| promote \| delete\)/);
+		assert.match(drValidate.stderr, /Usage: sundial dr \(retrieve \| get \| list \| enable \| disable \| retire \| promote \| delete\)/);
 		assert.doesNotMatch(drValidate.stderr, /dr validate/);
 		assert.equal(drValidate.exitCode, 64);
 	});
 
 	test('updates generated skill files with one command', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-update-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-update-'));
 		await initStore(root, { codex: true });
 		const designSkillPath = path.join(root, '.agents', 'skills', 'decision-aware-design', 'SKILL.md');
 		const implementSkillPath = path.join(root, '.agents', 'skills', 'decision-aware-implement', 'SKILL.md');
@@ -312,7 +312,7 @@ describe('bootstrapCommand', () => {
 		const designSkillContents = await fs.readFile(designSkillPath, 'utf8');
 		const implementSkillContents = await fs.readFile(implementSkillPath, 'utf8');
 
-		assert.match(result.stdout, /Updated CodeSteward skill files/);
+		assert.match(result.stdout, /Updated Sundial skill files/);
 		assert.match(result.stdout, /\.agents\/skills\/decision-aware-design\/SKILL\.md/);
 		assert.match(result.stdout, /\.agents\/skills\/decision-aware-implement\/SKILL\.md/);
 		assert.doesNotMatch(result.stdout, /\.agents\/agents\/decision-aware-design-review\.md/);
@@ -322,7 +322,7 @@ describe('bootstrapCommand', () => {
 	});
 
 	test('updates generated skill files from a nested project directory', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-update-nested-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-update-nested-'));
 		await initStore(root, { codex: true });
 		const nested = path.join(root, 'src', 'nested');
 		await fs.mkdir(nested, { recursive: true });
@@ -332,14 +332,14 @@ describe('bootstrapCommand', () => {
 		const result = await runCli(nested, ['update', '--codex']);
 		const designSkillContents = await fs.readFile(designSkillPath, 'utf8');
 
-		assert.match(result.stdout, /Updated CodeSteward skill files/);
+		assert.match(result.stdout, /Updated Sundial skill files/);
 		assert.match(result.stdout, /\.agents\/skills\/decision-aware-design\/SKILL\.md/);
 		assert.match(designSkillContents, /name: decision-aware-design/);
 		assert.equal(result.stderr, '');
 	});
 
 	test('disables accepted DRs from retrieval and can enable them again', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-disable-retrieve-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-disable-retrieve-'));
 		const init = await initStore(root);
 		const accepted = path.join(init.paths.store, 'drs', 'accepted');
 		await fs.writeFile(path.join(accepted, 'DR-0001-toggle.md'), acceptedRecord({
@@ -362,7 +362,7 @@ describe('bootstrapCommand', () => {
 	});
 
 	test('groups DR lists by lifecycle state with domain and tags on each row', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-dr-list-groups-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-dr-list-groups-'));
 		const init = await initStore(root);
 		const drs = path.join(init.paths.store, 'drs');
 		await fs.writeFile(path.join(drs, 'rejected', 'DR-0001-rejected.md'), acceptedRecord({
@@ -410,7 +410,7 @@ describe('bootstrapCommand', () => {
 	});
 
 	test('retires and promotes accepted DRs', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-dr-promote-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-dr-promote-'));
 		const init = await initStore(root);
 		const accepted = path.join(init.paths.store, 'drs', 'accepted');
 		await fs.writeFile(path.join(accepted, 'DR-0001-retired.md'), acceptedRecord({
@@ -447,7 +447,7 @@ describe('bootstrapCommand', () => {
 	});
 
 	test('promotes rejected DR candidates as accepted DRs', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-rejected-promote-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-rejected-promote-'));
 		await initStore(root);
 
 		await runCli(root, [
@@ -474,7 +474,7 @@ describe('bootstrapCommand', () => {
 	});
 
 	test('deletes rejected and retired DR files', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-dr-delete-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-dr-delete-'));
 		const init = await initStore(root);
 		const rejected = path.join(init.paths.store, 'drs', 'rejected');
 		const retired = path.join(init.paths.store, 'drs', 'retired');
@@ -497,7 +497,7 @@ describe('bootstrapCommand', () => {
 		const retiredList = await runCli(root, ['dr', 'list', '--status', 'retired']);
 
 		assert.match(deletedRejected.stdout, /Deleted DR-0001 Rejected record \(rejected\)/);
-		assert.match(deletedRejected.stdout, /\.codesteward\/drs\/rejected\/DR-0001-rejected\.md/);
+		assert.match(deletedRejected.stdout, /\.sundial\/drs\/rejected\/DR-0001-rejected\.md/);
 		assert.match(deletedRetired.stdout, /Deleted DR-0002 Retired record \(retired\)/);
 		assert.equal(rejectedList.stdout, '');
 		assert.equal(retiredList.stdout, '');
@@ -506,7 +506,7 @@ describe('bootstrapCommand', () => {
 	});
 
 	test('cats raw DR markdown by id', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-appendix-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-appendix-'));
 		const init = await initStore(root);
 		const accepted = path.join(init.paths.store, 'drs', 'accepted');
 		const markdown = acceptedRecord({
@@ -528,12 +528,12 @@ describe('bootstrapCommand', () => {
 		assert.equal(broken.stdout, malformed);
 		assert.equal(broken.stderr, '');
 		assert.equal(detail.stdout, '');
-		assert.match(detail.stderr, /Usage: codesteward dr get <id> \[<id>\]/);
+		assert.match(detail.stderr, /Usage: sundial dr get <id> \[<id>\]/);
 		assert.equal(detail.exitCode, 64);
 	});
 
 	test('rejects removed candidate section file flags', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-candidate-removed-section-files-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-removed-section-files-'));
 		await initStore(root);
 
 		const rationale = await runCli(root, [
@@ -557,8 +557,8 @@ describe('bootstrapCommand', () => {
 			'appendix.md',
 		]);
 
-		assert.match(rationale.stderr, /Usage: codesteward candidate create/);
-		assert.match(appendix.stderr, /Usage: codesteward candidate create/);
+		assert.match(rationale.stderr, /Usage: sundial candidate create/);
+		assert.match(appendix.stderr, /Usage: sundial candidate create/);
 		assert.doesNotMatch(rationale.stderr, /rationale-file/);
 		assert.doesNotMatch(appendix.stderr, /appendix-file/);
 		assert.equal(rationale.exitCode, 64);
@@ -566,7 +566,7 @@ describe('bootstrapCommand', () => {
 	});
 
 	test('creates candidates with proposed domain syntax parallel to proposed tags', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codesteward-candidate-proposed-domain-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-proposed-domain-'));
 		await initStore(root);
 
 		const created = await runCli(root, [

@@ -6,10 +6,10 @@ import { isHostToWebview as isRecordsHost, isWebviewToHost as isRecordsClient } 
 
 describe('welcome message guards', () => {
 	test('accept well-formed host -> webview state', () => {
-		assert.equal(isWelcomeHost({ kind: 'state', state: { cliAvailable: true, cliPath: 'codesteward' } }), true);
+		assert.equal(isWelcomeHost({ kind: 'state', state: { cliAvailable: true, cliPath: 'sundial' } }), true);
 		assert.equal(isWelcomeHost({
 			kind: 'state',
-			state: { cliAvailable: true, cliPath: 'codesteward' },
+			state: { cliAvailable: true, cliPath: 'sundial' },
 			diagnosticsEnabled: true,
 		}), true);
 	});
@@ -21,7 +21,7 @@ describe('welcome message guards', () => {
 		assert.equal(isWelcomeHost(null), false);
 		assert.equal(isWelcomeHost({
 			kind: 'state',
-			state: { cliAvailable: true, cliPath: 'codesteward' },
+			state: { cliAvailable: true, cliPath: 'sundial' },
 			diagnosticsEnabled: 'yes',
 		}), false);
 	});
@@ -85,7 +85,7 @@ describe('candidates message guards', () => {
 	test('accept host state with candidate entries and providers', () => {
 		assert.equal(isCandidatesHost({
 			kind: 'state',
-			candidates: [{ id: 'CAND-1', title: 'Foo', filePath: '/repo/.codesteward/drs/candidates/CAND-1.md' }],
+			candidates: [{ id: 'CAND-1', title: 'Foo', filePath: '/repo/.sundial/drs/candidates/CAND-1.md' }],
 			installedProviders: ['claude'],
 			hasAcceptedRecords: true,
 		}), true);
@@ -137,8 +137,8 @@ describe('candidates message guards', () => {
 	});
 
 	test('accept all defined client commands', () => {
-		assert.equal(isCandidatesClient({ kind: 'preview', id: 'CAND-1', filePath: '/repo/.codesteward/drs/candidates/CAND-1.md' }), true);
-		assert.equal(isCandidatesClient({ kind: 'edit', id: 'CAND-1', filePath: '/repo/.codesteward/drs/candidates/CAND-1.md' }), true);
+		assert.equal(isCandidatesClient({ kind: 'preview', id: 'CAND-1', filePath: '/repo/.sundial/drs/candidates/CAND-1.md' }), true);
+		assert.equal(isCandidatesClient({ kind: 'edit', id: 'CAND-1', filePath: '/repo/.sundial/drs/candidates/CAND-1.md' }), true);
 		assert.equal(isCandidatesClient({ kind: 'open', id: 'CAND-1' }), true);
 		assert.equal(isCandidatesClient({ kind: 'accept', id: 'CAND-1' }), true);
 		assert.equal(isCandidatesClient({ kind: 'reject', id: 'CAND-1', reason: '' }), true);

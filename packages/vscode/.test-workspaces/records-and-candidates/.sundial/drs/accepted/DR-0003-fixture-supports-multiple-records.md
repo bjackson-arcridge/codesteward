@@ -7,7 +7,7 @@ created: 2026-05-05
 tags:
   - fixtures
 affected_files:
-  - codesteward/packages/vscode/src/test/fixtures/states/records-and-candidates
+  - sundial/packages/vscode/src/test/fixtures/states/records-and-candidates
 references: []
 updated: 2026-05-05
 author: integration-fixture

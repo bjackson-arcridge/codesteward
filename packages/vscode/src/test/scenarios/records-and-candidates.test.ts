@@ -7,7 +7,7 @@ import {
 	focusRecordsView,
 	focusRetiredRecordsView,
 	type ExtensionDiagnostics,
-	useLocalCodeStewardCli,
+	useLocalSundialCli,
 	waitForActiveMarkdownPreview,
 	waitForHistoricalRecordWebviewDiagnostics,
 	waitForWebviewDiagnostics,
@@ -44,8 +44,8 @@ suite('Scenario: records-and-candidates', () => {
 			expectedRetiredRecordCount,
 			`Expected ${expectedRetiredRecordCount} retired records: ${JSON.stringify(diagnostics)}`,
 		);
-		assert.equal(getSidebarViewVisibility('codesteward.records.rejected'), 'collapsed');
-		assert.equal(getSidebarViewVisibility('codesteward.records.retired'), 'collapsed');
+		assert.equal(getSidebarViewVisibility('sundial.records.rejected'), 'collapsed');
+		assert.equal(getSidebarViewVisibility('sundial.records.retired'), 'collapsed');
 		assert.equal(diagnostics.recordsLastRendered?.recordCount, diagnostics.recordsLastState?.recordCount);
 		assert.equal(diagnostics.recordsLastRendered?.cardCount, diagnostics.recordsLastState?.recordCount);
 		assert.equal(diagnostics.recordsLastRendered?.emptyVisible, false);
@@ -69,14 +69,14 @@ suite('Scenario: records-and-candidates', () => {
 		assert.equal(initialDiagnostics.recordsLastRendered?.domainSelectOptionCount, 7);
 		assert.equal(initialDiagnostics.recordsLastRendered?.tagSelectOptionCount, 4);
 
-		await vscode.commands.executeCommand('codesteward.internal.records.selectFilter', 'domain', 'vscode');
+		await vscode.commands.executeCommand('sundial.internal.records.selectFilter', 'domain', 'vscode');
 		const domainDiagnostics = await waitForRecordFilterDiagnostics({
 			recordCount: 2,
 			domainFilter: 'vscode',
 		});
 		assert.equal(domainDiagnostics.recordsLastRendered?.cardCount, 2);
 
-		await vscode.commands.executeCommand('codesteward.internal.records.selectFilter', 'tag', 'rendering');
+		await vscode.commands.executeCommand('sundial.internal.records.selectFilter', 'tag', 'rendering');
 		const combinedDiagnostics = await waitForRecordFilterDiagnostics({
 			recordCount: 1,
 			domainFilter: 'vscode',
@@ -84,8 +84,8 @@ suite('Scenario: records-and-candidates', () => {
 		});
 		assert.equal(combinedDiagnostics.recordsLastRendered?.cardCount, 1);
 
-		await vscode.commands.executeCommand('codesteward.internal.records.selectFilter', 'tag');
-		await vscode.commands.executeCommand('codesteward.internal.records.selectFilter', 'domain');
+		await vscode.commands.executeCommand('sundial.internal.records.selectFilter', 'tag');
+		await vscode.commands.executeCommand('sundial.internal.records.selectFilter', 'domain');
 		await waitForRecordFilterDiagnostics({ recordCount: expectedAcceptedRecordCount });
 	});
 
@@ -96,7 +96,7 @@ suite('Scenario: records-and-candidates', () => {
 		const candidatePath = getCandidateFixturePath('CAND-0001-fixture-candidate-renders.md');
 
 		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-		await vscode.commands.executeCommand('codesteward.internal.candidates.click', 'CAND-0001', 'title');
+		await vscode.commands.executeCommand('sundial.internal.candidates.click', 'CAND-0001', 'title');
 
 		await waitForActiveMarkdownPreview(candidatePath);
 	});
@@ -108,24 +108,24 @@ suite('Scenario: records-and-candidates', () => {
 		const candidatePath = getCandidateFixturePath('CAND-0001-fixture-candidate-renders.md');
 
 		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-		await vscode.commands.executeCommand('codesteward.internal.candidates.click', 'CAND-0001', 'preview');
+		await vscode.commands.executeCommand('sundial.internal.candidates.click', 'CAND-0001', 'preview');
 
 		await waitForActiveMarkdownPreview(candidatePath);
 	});
 
 	test('accepts and rejects candidates through the extension lifecycle', async () => {
-		await useLocalCodeStewardCli();
+		await useLocalSundialCli();
 		await activateExtension();
 		await waitForWebviewDiagnostics();
 
-		await vscode.commands.executeCommand('codesteward.internal.candidates.lifecycle', 'accept', 'CAND-0001');
+		await vscode.commands.executeCommand('sundial.internal.candidates.lifecycle', 'accept', 'CAND-0001');
 		await waitForGovernanceCounts({
 			acceptedRecordCount: expectedAcceptedRecordCount + 1,
 			activeCandidateCount: expectedActiveCandidateCount - 1,
 			rejectedRecordCount: expectedRejectedRecordCount,
 		});
 
-		await vscode.commands.executeCommand('codesteward.internal.candidates.lifecycle', 'reject', 'CAND-0002', 'Rejected by integration coverage.');
+		await vscode.commands.executeCommand('sundial.internal.candidates.lifecycle', 'reject', 'CAND-0002', 'Rejected by integration coverage.');
 		await waitForGovernanceCounts({
 			acceptedRecordCount: expectedAcceptedRecordCount + 1,
 			activeCandidateCount: 0,
@@ -134,13 +134,13 @@ suite('Scenario: records-and-candidates', () => {
 	});
 
 	test('refreshes lifecycle state after returning to sidebar views', async () => {
-		await useLocalCodeStewardCli();
+		await useLocalSundialCli();
 		await activateExtension();
 		const before = await waitForWebviewDiagnostics();
 		await waitForHistoricalRecordWebviewDiagnostics();
 		await focusRecordsView();
 
-		await vscode.commands.executeCommand('codesteward.internal.records.lifecycle', 'retire', 'DR-0001', 'DR-0002');
+		await vscode.commands.executeCommand('sundial.internal.records.lifecycle', 'retire', 'DR-0001', 'DR-0002');
 		const expectedAcceptedRecordCount = before.acceptedRecordCount - 1;
 		const expectedRetiredRecordCount = before.retiredRecordCount + 1;
 		await waitForGovernanceCounts({
@@ -156,10 +156,10 @@ suite('Scenario: records-and-candidates', () => {
 });
 
 function getSidebarViewVisibility(id: string): string | undefined {
-	const extension = vscode.extensions.getExtension('arcridge.codesteward-vscode');
-	const views = extension?.packageJSON?.contributes?.views?.codesteward;
+	const extension = vscode.extensions.getExtension('arcridge.sundial');
+	const views = extension?.packageJSON?.contributes?.views?.sundial;
 	if (!Array.isArray(views)) {
-		throw new Error('Expected CodeSteward sidebar view contributions');
+		throw new Error('Expected Sundial sidebar view contributions');
 	}
 
 	const view = views.find(item => typeof item === 'object' && item !== null && item.id === id);
@@ -176,7 +176,7 @@ function getCandidateFixturePath(filename: string): string {
 		throw new Error('Expected scenario workspace folder to be open');
 	}
 
-	return path.join(workspaceRoot, '.codesteward', 'drs', 'candidates', filename);
+	return path.join(workspaceRoot, '.sundial', 'drs', 'candidates', filename);
 }
 
 interface ExpectedRecordFilterDiagnostics {
@@ -194,7 +194,7 @@ async function waitForRecordFilterDiagnostics(
 
 	while (Date.now() - started < timeoutMs) {
 		await focusRecordsView();
-		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('codesteward.internal.webviewDiagnostics');
+		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('sundial.internal.webviewDiagnostics');
 		if (
 			last.recordsLastState?.recordCount === expected.recordCount
 			&& last.recordsLastRendered?.recordCount === expected.recordCount
@@ -228,7 +228,7 @@ async function waitForGovernanceCounts(
 	let last: ExtensionDiagnostics | undefined;
 
 	while (Date.now() - started < timeoutMs) {
-		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('codesteward.internal.webviewDiagnostics');
+		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('sundial.internal.webviewDiagnostics');
 		if (
 			last.acceptedRecordCount === expected.acceptedRecordCount
 			&& last.activeCandidateCount === expected.activeCandidateCount
@@ -277,7 +277,7 @@ async function waitForReturnedSidebarRender(
 	const started = Date.now();
 	let last: ExtensionDiagnostics | undefined;
 	while (Date.now() - started < timeoutMs) {
-		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('codesteward.internal.webviewDiagnostics');
+		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('sundial.internal.webviewDiagnostics');
 		if (readRenderedCount(last) === expectedRecordCount) {
 			return last;
 		}
