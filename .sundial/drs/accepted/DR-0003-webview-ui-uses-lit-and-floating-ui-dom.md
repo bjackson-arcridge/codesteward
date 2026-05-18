@@ -4,8 +4,6 @@ title: Webview UI uses Lit and @floating-ui/dom
 status: accepted
 domain: vscode.webview.ui
 created: 2026-05-04
-tags:
-  - dependencies
 affected_files:
   - packages/vscode/package.json
   - packages/vscode/src/webviews/apps/

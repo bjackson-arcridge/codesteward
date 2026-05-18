@@ -57,6 +57,8 @@ code --install-extension packages/vscode/sundial-0.0.1.vsix
 
 Use `--no-dependencies` because this package lives in an npm workspace and has no runtime npm dependencies. The extension id is `arcridge.sundial`. It expects the `sundial` CLI to be available on `PATH`; the welcome screen can install it with npm, and `Sundial: Cli Path` can be set if VS Code cannot find the npm-installed binary.
 
+To publish a new version of the VS Code extension, build the VSIX as above and upload it manually at <https://marketplace.visualstudio.com/manage/publishers/arcridge>. (Automated `vsce publish` requires an Azure DevOps PAT with Marketplace Manage scope; manual upload is the current path until that's set up.)
+
 ## CLI
 
 Implemented commands:
@@ -67,8 +69,8 @@ sundial update --claude --codex
 sundial status
 sundial bootstrap --provider claude
 sundial bootstrap --provider codex
-sundial tags
-sundial dr retrieve --domain vscode --tag ui-pattern
+sundial domains
+sundial dr retrieve --domain vscode
 sundial dr get DR-0001
 sundial dr list --status accepted
 sundial dr disable DR-0001
@@ -76,7 +78,7 @@ sundial dr enable DR-0001
 sundial dr retire DR-0001 --by DR-0002
 sundial dr retire DR-0001
 sundial dr promote CAND-0003 --from rejected
-sundial candidate create --title "Decision title" --domain cli --decision "Do the thing" --tag subprocess
+sundial candidate create --title "Decision title" --domain cli --decision "Do the thing"
 sundial candidate list
 sundial candidate show CAND-0001
 sundial candidate accept CAND-0001
@@ -85,7 +87,7 @@ sundial candidate retire CAND-0001 --by DR-0001
 sundial candidate retire CAND-0001
 ```
 
-`init` always creates `.sundial/` and starter tags. Runtime assets are opt-in:
+`init` always creates `.sundial/` and starter domains. Runtime assets are opt-in:
 
 - `--claude` writes missing Claude Code project assets to `.claude/skills/` and `.claude/CLAUDE.md` from CLI templates.
 - `--codex` writes missing Codex project assets to `.agents/skills/` and `AGENTS.md` from CLI templates.
@@ -100,5 +102,5 @@ The extension contributes a `Sundial` activity bar view with a Candidate Inbox, 
 ## Notes
 
 - Enabled accepted DRs are the only precedent retrieved by `dr retrieve`.
-- Candidate DRs can include proposed tags and domains with descriptions; accepting the DR appends those proposals to `.sundial/tags.md`.
+- Candidate DRs can include a proposed domain with a description; accepting the DR appends that proposal to `.sundial/domains.md`.
 - DRs can include a `## Appendix` section for human-facing explanatory context; short and medium retrieval omit it.

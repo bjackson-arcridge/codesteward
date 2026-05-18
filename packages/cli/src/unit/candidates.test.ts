@@ -9,12 +9,12 @@ import {
 	rejectCandidate,
 	retireCandidate,
 } from '../core/candidates';
-import { getRecordDomain, getRecordId, getRecordSection, getRecordStatus, getRecordTags, listDecisionRecords } from '../core/dr';
+import { getRecordDomain, getRecordId, getRecordSection, getRecordStatus, listDecisionRecords } from '../core/dr';
 import { initStore } from '../core/store';
-import { parseTagVocabulary } from '../core/tags';
+import { parseDomainVocabulary } from '../core/domains';
 
-const vocabulary = parseTagVocabulary([
-	'# Sundial Vocabulary',
+const vocabulary = parseDomainVocabulary([
+	'# Sundial Domains',
 	'',
 	'## Domains',
 	'',
@@ -30,20 +30,10 @@ const vocabulary = parseTagVocabulary([
 	'',
 	'CLI validation guidance.',
 	'',
-	'## Tags',
-	'',
-	'### architecture',
-	'',
-	'Architecture choices.',
-	'',
-	'### validation',
-	'',
-	'Validation choices.',
-	'',
 ].join('\n'));
 
 describe('candidate lifecycle', () => {
-	test('creates candidates with known tags and proposed tags', async () => {
+	test('creates candidates with known domain', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-create-'));
 		const init = await initStore(root);
 
@@ -52,21 +42,18 @@ describe('candidate lifecycle', () => {
 			domain: 'cli.validation',
 			decision: 'Return field-keyed validation errors.',
 			affectedFiles: ['src/api/orders.ts'],
-			tags: ['validation', 'field-keyed-errors'],
 			references: ['src/api/errors.ts#formatValidationErrors'],
 			author: 'codex',
 			created: '2026-05-03',
 		});
 
 		assert.equal(getRecordId(result.record), 'CAND-0001');
-		assert.deepEqual(result.knownTags, ['validation']);
-		assert.deepEqual(result.proposedTags, ['field-keyed-errors']);
 		assert.deepEqual(result.proposedDomains, []);
 		assert.equal(result.record.frontmatter.kind, undefined);
-			assert.equal(getRecordDomain(result.record), 'cli.validation');
-			assert.equal(getRecordSection(result.record, 'Rationale'), undefined);
-			assert.equal(getRecordSection(result.record, 'Appendix'), undefined);
-		});
+		assert.equal(getRecordDomain(result.record), 'cli.validation');
+		assert.equal(getRecordSection(result.record, 'Rationale'), undefined);
+		assert.equal(getRecordSection(result.record, 'Appendix'), undefined);
+	});
 
 	test('accepts DR candidates as accepted DRs and removes the candidate file', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-accept-'));
@@ -76,7 +63,6 @@ describe('candidate lifecycle', () => {
 			domain: 'cli.validation',
 			decision: 'Return field-keyed validation errors.',
 			affectedFiles: [],
-			tags: ['validation'],
 			references: [],
 			author: 'codex',
 			created: '2026-05-03',
@@ -89,7 +75,6 @@ describe('candidate lifecycle', () => {
 		assert.equal(getRecordId(accepted.record), 'DR-0001');
 		assert.equal(getRecordStatus(accepted.record), 'accepted');
 		assert.equal(getRecordDomain(accepted.record), 'cli.validation');
-		assert.deepEqual(getRecordTags(accepted.record), ['validation']);
 		assert.equal(accepted.record.frontmatter.kind, undefined);
 		assert.equal(candidates.length, 0);
 		assert.deepEqual(acceptedRecords.map(getRecordId), ['DR-0001']);
@@ -103,7 +88,6 @@ describe('candidate lifecycle', () => {
 			domain: 'cli',
 			decision: 'Accept legacy DR candidates.',
 			affectedFiles: [],
-			tags: ['architecture'],
 			references: [],
 			author: 'codex',
 			created: '2026-05-03',
@@ -117,33 +101,11 @@ describe('candidate lifecycle', () => {
 		assert.equal(accepted.record.frontmatter.kind, undefined);
 	});
 
-	test('creates no-tag candidates as tag wildcards for their domain', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-no-tags-'));
-		const init = await initStore(root);
-
-		const result = await createCandidate(init.paths, vocabulary, {
-			title: 'CLI-wide candidate',
-			domain: 'cli',
-			decision: 'Apply this across CLI work.',
-			affectedFiles: [],
-			tags: [],
-			references: [],
-			author: 'codex',
-			created: '2026-05-03',
-		});
-
-		assert.deepEqual(getRecordTags(result.record), []);
-		assert.deepEqual(result.knownTags, []);
-		assert.deepEqual(result.proposedTags, []);
-		assert.deepEqual(result.proposedDomains, []);
-		assert.equal(getRecordDomain(result.record), 'cli');
-	});
-
-	test('accepts proposed tags and domains into the vocabulary', async () => {
+	test('accepts proposed domains into the vocabulary', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-vocabulary-'));
 		const init = await initStore(root);
-		await fs.writeFile(init.paths.tags, [
-			'# Sundial Vocabulary',
+		await fs.writeFile(init.paths.domains, [
+			'# Sundial Domains',
 			'',
 			'## Domains',
 			'',
@@ -151,39 +113,26 @@ describe('candidate lifecycle', () => {
 			'',
 			'Global guidance.',
 			'',
-			'## Tags',
-			'',
-			'### validation',
-			'',
-			'Validation choices.',
-			'',
 		].join('\n'), 'utf8');
-		const initialVocabulary = parseTagVocabulary(await fs.readFile(init.paths.tags, 'utf8'));
+		const initialVocabulary = parseDomainVocabulary(await fs.readFile(init.paths.domains, 'utf8'));
 		const created = await createCandidate(init.paths, initialVocabulary, {
 			title: 'Field keyed API validation',
 			domain: 'api.validation',
 			proposedDomainDescription: 'API validation behavior.',
 			decision: 'Return field-keyed validation errors.',
 			affectedFiles: [],
-			tags: ['validation', 'field-keyed-errors'],
-			proposedTagDescriptions: {
-				'field-keyed-errors': 'Validation errors keyed by request field.',
-			},
 			references: [],
 			author: 'codex',
 			created: '2026-05-03',
 		});
 
 		assert.deepEqual(created.proposedDomains, ['api.validation']);
-		assert.deepEqual(created.proposedTags, ['field-keyed-errors']);
 
 		const accepted = await acceptCandidate(init.paths, initialVocabulary, getRecordId(created.record), '2026-05-04');
-		const updatedVocabulary = parseTagVocabulary(await fs.readFile(init.paths.tags, 'utf8'));
+		const updatedVocabulary = parseDomainVocabulary(await fs.readFile(init.paths.domains, 'utf8'));
 
 		assert.equal(getRecordDomain(accepted.record), 'api.validation');
-		assert.deepEqual(getRecordTags(accepted.record), ['validation', 'field-keyed-errors']);
 		assert.equal(updatedVocabulary.domains.find(domain => domain.name === 'api.validation')?.description, 'API validation behavior.');
-		assert.equal(updatedVocabulary.tags.find(tag => tag.name === 'field-keyed-errors')?.description, 'Validation errors keyed by request field.');
 	});
 
 	test('rejects and retires candidates into lifecycle folders', async () => {
@@ -194,7 +143,6 @@ describe('candidate lifecycle', () => {
 			domain: 'all',
 			decision: 'Try the temporary path.',
 			affectedFiles: [],
-			tags: ['architecture'],
 			references: [],
 			author: 'codex',
 			created: '2026-05-03',
@@ -204,7 +152,6 @@ describe('candidate lifecycle', () => {
 			domain: 'all',
 			decision: 'Use the covered path.',
 			affectedFiles: [],
-			tags: ['architecture'],
 			references: [],
 			author: 'codex',
 			created: '2026-05-03',
@@ -214,7 +161,6 @@ describe('candidate lifecycle', () => {
 			domain: 'all',
 			decision: 'Use no longer relevant path.',
 			affectedFiles: [],
-			tags: ['architecture'],
 			references: [],
 			author: 'codex',
 			created: '2026-05-03',

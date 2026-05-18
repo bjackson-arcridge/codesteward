@@ -4,9 +4,6 @@ title: Fixture records must render in the records webview
 status: accepted
 domain: vscode.webview.ui
 created: 2026-05-05
-tags:
-  - fixtures
-  - rendering
 affected_files:
   - sundial/packages/vscode/src/test/fixtures/states/records-and-candidates
 references: []

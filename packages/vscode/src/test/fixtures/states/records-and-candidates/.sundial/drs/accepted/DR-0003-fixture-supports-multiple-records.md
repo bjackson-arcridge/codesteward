@@ -4,8 +4,6 @@ title: Fixture supplies multiple accepted records
 status: accepted
 domain: vscode.extension
 created: 2026-05-05
-tags:
-  - fixtures
 affected_files:
   - sundial/packages/vscode/src/test/fixtures/states/records-and-candidates
 references: []

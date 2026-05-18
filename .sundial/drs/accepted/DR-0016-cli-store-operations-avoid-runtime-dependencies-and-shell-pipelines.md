@@ -4,9 +4,6 @@ title: CLI store operations avoid runtime dependencies and shell pipelines
 status: accepted
 domain: cli
 created: 2026-05-05
-tags:
-  - dependencies
-  - subprocess
 affected_files:
   - CLI_SPEC.md
   - packages/cli/package.json

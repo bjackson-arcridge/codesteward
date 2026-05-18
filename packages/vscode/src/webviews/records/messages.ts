@@ -2,7 +2,6 @@ export interface RecordSummary {
 	readonly id: string;
 	readonly title: string;
 	readonly domain: string;
-	readonly tags: readonly string[];
 	readonly enabled: boolean;
 	readonly workspace?: string;
 }
@@ -14,9 +13,7 @@ export interface RecordRenderDiagnostic {
 	readonly cardCount: number;
 	readonly emptyVisible: boolean;
 	readonly domainFilter?: string;
-	readonly tagFilter?: string;
 	readonly domainSelectOptionCount?: number;
-	readonly tagSelectOptionCount?: number;
 }
 
 export type HostToWebview =
@@ -24,26 +21,21 @@ export type HostToWebview =
 		kind: 'state';
 		records: readonly RecordSummary[];
 		domainFilter?: string;
-		tagFilter?: string;
 		domainOptions?: readonly string[];
-		tagOptions?: readonly string[];
 		actionMode?: RecordActionMode;
 		emptyText?: string;
 		diagnosticsEnabled?: boolean;
 	}
-	| { kind: 'diagnosticSelectFilter'; filter: 'domain' | 'tag'; value?: string };
+	| { kind: 'diagnosticSelectFilter'; filter: 'domain'; value?: string };
 
 export type WebviewToHost =
 	| { kind: 'preview'; id: string }
 	| { kind: 'edit'; id: string }
 	| { kind: 'setDomainFilter'; domainFilter?: string }
-	| { kind: 'setTagFilter'; tagFilter?: string }
 	| { kind: 'toggleEnabled'; id: string; enabled: boolean }
 	| { kind: 'retire'; id: string; retiredBy: string }
 	| { kind: 'promote'; id: string }
 	| { kind: 'delete'; id: string }
-	| { kind: 'filterByTag' }
-	| { kind: 'clearTagFilter' }
 	| { kind: 'clearFilters' }
 	| { kind: 'requestRefresh' }
 	| { kind: 'rendered'; diagnostic: RecordRenderDiagnostic };
@@ -57,9 +49,7 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 		kind?: unknown;
 		records?: unknown;
 		domainFilter?: unknown;
-		tagFilter?: unknown;
 		domainOptions?: unknown;
-		tagOptions?: unknown;
 		actionMode?: unknown;
 		emptyText?: unknown;
 		diagnosticsEnabled?: unknown;
@@ -68,7 +58,7 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 	};
 
 	if (message.kind === 'diagnosticSelectFilter') {
-		return (message.filter === 'domain' || message.filter === 'tag')
+		return message.filter === 'domain'
 			&& (message.value === undefined || typeof message.value === 'string');
 	}
 
@@ -80,15 +70,7 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 		return false;
 	}
 
-	if (message.tagFilter !== undefined && typeof message.tagFilter !== 'string') {
-		return false;
-	}
-
 	if (message.domainOptions !== undefined && !isStringArray(message.domainOptions)) {
-		return false;
-	}
-
-	if (message.tagOptions !== undefined && !isStringArray(message.tagOptions)) {
 		return false;
 	}
 
@@ -112,12 +94,10 @@ function isRecordSummary(value: unknown): value is RecordSummary {
 		return false;
 	}
 
-	const record = value as { id?: unknown; title?: unknown; domain?: unknown; tags?: unknown; enabled?: unknown; workspace?: unknown };
+	const record = value as { id?: unknown; title?: unknown; domain?: unknown; enabled?: unknown; workspace?: unknown };
 	return typeof record.id === 'string'
 		&& typeof record.title === 'string'
 		&& typeof record.domain === 'string'
-		&& Array.isArray(record.tags)
-		&& record.tags.every(tag => typeof tag === 'string')
 		&& typeof record.enabled === 'boolean'
 		&& (record.workspace === undefined || typeof record.workspace === 'string');
 }
@@ -132,7 +112,6 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 		id?: unknown;
 		diagnostic?: unknown;
 		domainFilter?: unknown;
-		tagFilter?: unknown;
 		enabled?: unknown;
 		retiredBy?: unknown;
 	};
@@ -156,17 +135,11 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 		return message.domainFilter === undefined || typeof message.domainFilter === 'string';
 	}
 
-	if (message.kind === 'setTagFilter') {
-		return message.tagFilter === undefined || typeof message.tagFilter === 'string';
-	}
-
 	if (message.kind === 'rendered') {
 		return isRecordRenderDiagnostic(message.diagnostic);
 	}
 
-	return message.kind === 'filterByTag'
-		|| message.kind === 'clearTagFilter'
-		|| message.kind === 'clearFilters'
+	return message.kind === 'clearFilters'
 		|| message.kind === 'requestRefresh';
 }
 
@@ -180,17 +153,13 @@ function isRecordRenderDiagnostic(value: unknown): value is RecordRenderDiagnost
 		cardCount?: unknown;
 		emptyVisible?: unknown;
 		domainFilter?: unknown;
-		tagFilter?: unknown;
 		domainSelectOptionCount?: unknown;
-		tagSelectOptionCount?: unknown;
 	};
 	return typeof diagnostic.recordCount === 'number'
 		&& typeof diagnostic.cardCount === 'number'
 		&& typeof diagnostic.emptyVisible === 'boolean'
 		&& (diagnostic.domainFilter === undefined || typeof diagnostic.domainFilter === 'string')
-		&& (diagnostic.tagFilter === undefined || typeof diagnostic.tagFilter === 'string')
-		&& (diagnostic.domainSelectOptionCount === undefined || typeof diagnostic.domainSelectOptionCount === 'number')
-		&& (diagnostic.tagSelectOptionCount === undefined || typeof diagnostic.tagSelectOptionCount === 'number');
+		&& (diagnostic.domainSelectOptionCount === undefined || typeof diagnostic.domainSelectOptionCount === 'number');
 }
 
 function isStringArray(value: unknown): value is readonly string[] {

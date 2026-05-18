@@ -62,12 +62,11 @@ suite('Scenario: records-and-candidates', () => {
 		assert.equal(historicalDiagnostics.retiredRecordsLastRendered?.emptyVisible, false);
 	});
 
-	test('records sidebar filter dropdowns render and apply domain and tag filters', async () => {
+	test('records sidebar filter dropdown renders and applies domain filters', async () => {
 		await activateExtension();
 
 		const initialDiagnostics = await waitForWebviewDiagnostics();
 		assert.equal(initialDiagnostics.recordsLastRendered?.domainSelectOptionCount, 7);
-		assert.equal(initialDiagnostics.recordsLastRendered?.tagSelectOptionCount, 4);
 
 		await vscode.commands.executeCommand('sundial.internal.records.selectFilter', 'domain', 'vscode');
 		const domainDiagnostics = await waitForRecordFilterDiagnostics({
@@ -76,15 +75,6 @@ suite('Scenario: records-and-candidates', () => {
 		});
 		assert.equal(domainDiagnostics.recordsLastRendered?.cardCount, 2);
 
-		await vscode.commands.executeCommand('sundial.internal.records.selectFilter', 'tag', 'rendering');
-		const combinedDiagnostics = await waitForRecordFilterDiagnostics({
-			recordCount: 1,
-			domainFilter: 'vscode',
-			tagFilter: 'rendering',
-		});
-		assert.equal(combinedDiagnostics.recordsLastRendered?.cardCount, 1);
-
-		await vscode.commands.executeCommand('sundial.internal.records.selectFilter', 'tag');
 		await vscode.commands.executeCommand('sundial.internal.records.selectFilter', 'domain');
 		await waitForRecordFilterDiagnostics({ recordCount: expectedAcceptedRecordCount });
 	});
@@ -182,7 +172,6 @@ function getCandidateFixturePath(filename: string): string {
 interface ExpectedRecordFilterDiagnostics {
 	readonly recordCount: number;
 	readonly domainFilter?: string;
-	readonly tagFilter?: string;
 }
 
 async function waitForRecordFilterDiagnostics(
@@ -201,8 +190,6 @@ async function waitForRecordFilterDiagnostics(
 			&& last.recordsLastRendered?.cardCount === expected.recordCount
 			&& last.recordsLastState?.domainFilter === expected.domainFilter
 			&& last.recordsLastRendered?.domainFilter === expected.domainFilter
-			&& last.recordsLastState?.tagFilter === expected.tagFilter
-			&& last.recordsLastRendered?.tagFilter === expected.tagFilter
 		) {
 			return last;
 		}

@@ -5,14 +5,14 @@ description: Use in Claude Code during implementation, when writing non-trivial 
 
 # decision-aware-implement
 
-## Available tags and domains
-!`sundial tags`
+## Available domains
+!`sundial domains`
 
 ## Retrieval syntax
 !`sundial dr retrieve --help`
 
 ## Steps
-1. Narrow the domain; include all useful tags from above.
+1. Narrow the domain.
 2. Retrieve accepted DRs.
 3. State which DRs apply.
 ---

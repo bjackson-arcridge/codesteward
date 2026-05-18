@@ -14,12 +14,11 @@ sundial candidate create \
   --domain "<domain>" \
   --decision "<terse governing guidance>" \
   --appendix "<human facing details>" \
-  --tag "<known-tag>" \
   --affected "<path>" \
   --ref "<path-or-symbol>"
 ```
 
-The goal of the DR domain and tagging system is to do useful filtering while also ensuring all relevant DRs are retreived in the appropriate context.
+The goal of the DR domain system is to do useful filtering while also ensuring all relevant DRs are retrieved in the appropriate context.
 
 Required CLI fields: `title` and `decision`
 
@@ -28,16 +27,11 @@ Decision discipline: Record directives that inform the LLM of the project constr
 Appendix discipline: For human-facing explanatory context. It is non-governing and short/medium retrieval usually omits it, so do not put agent instructions, applicability, constraints, or hidden requirements there.
 
 ## Domains
-`domain` defaults to `all`. 
+`domain` defaults to `all`.
 
 Domains filter DRs. When querying DRs, all ancestor domains and children are included in the result. `all` is the root of the domain taxonomy.
 
-Use either `--domain <known-domain>` or `--proposed-domain <domain> "<description>"` when proposing a new domain. 
-
-## Tags
-Repeat `tag`, `affected`, and `ref` when useful. Use `--proposed-tag <tag> "<description>"` for a new tag or tags.
-
-Tagging discipline: domain is the broad hierarchy, and tags are concern filters inside that hierarchy. To ensure broad matching, apply every applicable tag [from `sundial tags` command] to a candidate DR when useful; omit tags when the DR should match every query (missing tag is treated as wildcard match).
+Use either `--domain <known-domain>` or `--proposed-domain <domain> "<description>"` when proposing a new domain.
 
 ## Sundial Correction Feedback Loop
 

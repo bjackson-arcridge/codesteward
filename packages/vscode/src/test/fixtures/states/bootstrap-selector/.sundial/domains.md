@@ -1,4 +1,4 @@
-# Sundial Vocabulary
+# Sundial Domains
 
 ## Domains
 
@@ -13,9 +13,3 @@ VS Code extension work.
 ### vscode.webview.ui
 
 Webview user interface behavior.
-
-## Tags
-
-### fixtures
-
-Integration test fixtures.

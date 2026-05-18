@@ -8,7 +8,6 @@ import {
 	listCandidateSummaries,
 	listDecisionRecordSummaries,
 	listKnownDomains,
-	listKnownTags,
 	type DecisionRecordSummary,
 	type DecisionRecordSummaryStatus,
 } from './candidateInbox';
@@ -27,7 +26,6 @@ let activeMarkdownPreviewProvider: FrontmatterMarkdownPreviewProvider | undefine
 
 interface RecordsState {
 	domainFilter: string | undefined;
-	tagFilter: string | undefined;
 }
 
 interface WorkspaceStore {
@@ -39,7 +37,6 @@ interface RecordsDiagnostics {
 	lastState?: {
 		readonly recordCount: number;
 		readonly domainFilter?: string;
-		readonly tagFilter?: string;
 	};
 	lastRendered?: RecordRenderDiagnostic;
 	current?: {
@@ -62,7 +59,7 @@ interface WelcomeDiagnostics {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-	const recordsState: RecordsState = { domainFilter: undefined, tagFilter: undefined };
+	const recordsState: RecordsState = { domainFilter: undefined };
 	const recordsDiagnostics: RecordsDiagnostics = {};
 	const rejectedRecordsDiagnostics: RecordsDiagnostics = {};
 	const retiredRecordsDiagnostics: RecordsDiagnostics = {};
@@ -129,13 +126,11 @@ export function activate(context: vscode.ExtensionContext): void {
 			recordsDiagnostics.lastState = {
 				recordCount: records.length,
 				...(recordsState.domainFilter === undefined ? {} : { domainFilter: recordsState.domainFilter }),
-				...(recordsState.tagFilter === undefined ? {} : { tagFilter: recordsState.tagFilter }),
 			};
 			return records;
 		},
 		listFilterOptions: () => collectRecordFilterOptions(),
 		getDomainFilter: () => recordsState.domainFilter,
-		getTagFilter: () => recordsState.tagFilter,
 		actionMode: 'accepted',
 		diagnosticsEnabled: () => diagnosticsEnabled,
 		onCommand: async message => {
@@ -168,23 +163,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
 			if (message.kind === 'setDomainFilter') {
 				recordsState.domainFilter = normalizeFilterValue(message.domainFilter);
-				await recordsProvider.refresh();
-				return;
-			}
-
-			if (message.kind === 'setTagFilter') {
-				recordsState.tagFilter = normalizeFilterValue(message.tagFilter);
-				await recordsProvider.refresh();
-				return;
-			}
-
-			if (message.kind === 'filterByTag') {
-				await runFilterByTag(recordsState, recordsProvider);
-				return;
-			}
-
-			if (message.kind === 'clearTagFilter') {
-				recordsState.tagFilter = undefined;
 				await recordsProvider.refresh();
 				return;
 			}
@@ -281,8 +259,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.installCli', () => installCli(welcomeProvider)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.bootstrap', () => bootstrap(candidatesProvider)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.filterByDomain', () => runFilterByDomain(recordsState, recordsProvider)));
-	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.filterByTag', () => runFilterByTag(recordsState, recordsProvider)));
-	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.clearTagFilter', async () => {
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.clearFilters', async () => {
 		clearRecordFilters(recordsState);
 		await recordsProvider.refresh();
 	}));
@@ -378,7 +355,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'sundial.internal.records.selectFilter',
-			(filter: 'domain' | 'tag', value?: string) => recordsProvider.selectFilterForDiagnostics(filter, value),
+			(filter: 'domain', value?: string) => recordsProvider.selectFilterForDiagnostics(filter, value),
 		));
 	}
 	context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
@@ -436,7 +413,6 @@ function createLifecycleRecordsProvider(
 			diagnostics.lastState = { recordCount: records.length };
 			return records;
 		},
-		getTagFilter: () => undefined,
 		actionMode: status,
 		emptyText,
 		diagnosticsEnabled,
@@ -599,7 +575,6 @@ async function collectRecords(
 				id: record.id,
 				title: record.title,
 				domain: record.domain,
-				tags: [...record.tags],
 				enabled: record.enabled,
 				...(stores.length > 1 ? { workspace: store.name } : {}),
 			} satisfies RecordSummary));
@@ -608,30 +583,26 @@ async function collectRecords(
 	return all.flat();
 }
 
-async function collectRecordFilterOptions(): Promise<{ domains: readonly string[]; tags: readonly string[] }> {
+async function collectRecordFilterOptions(): Promise<{ domains: readonly string[] }> {
 	const stores = await collectWorkspaceStores();
 	const all = await Promise.all(stores.map(async store => {
-		const [knownDomains, knownTags, records] = await Promise.all([
+		const [knownDomains, records] = await Promise.all([
 			listKnownDomains(store.root),
-			listKnownTags(store.root),
 			listDecisionRecordSummaries(store.root, 'accepted'),
 		]);
 
 		return {
 			domains: [...knownDomains, ...records.map(record => record.domain)],
-			tags: [...knownTags, ...records.flatMap(record => record.tags)],
 		};
 	}));
 
 	return {
 		domains: sortedUnique(all.flatMap(item => item.domains)).filter(domain => domain !== 'all'),
-		tags: sortedUnique(all.flatMap(item => item.tags)),
 	};
 }
 
 function recordMatchesFilters(record: DecisionRecordSummary, filters: Partial<RecordsState> | undefined): boolean {
-	return recordMatchesDomain(record.domain, filters?.domainFilter)
-		&& recordMatchesTag(record.tags, filters?.tagFilter);
+	return recordMatchesDomain(record.domain, filters?.domainFilter);
 }
 
 function recordMatchesDomain(recordDomain: string, domainFilter: string | undefined): boolean {
@@ -646,14 +617,6 @@ function recordMatchesDomain(recordDomain: string, domainFilter: string | undefi
 	return recordDomain === domainFilter
 		|| recordDomain.startsWith(`${domainFilter}.`)
 		|| domainFilter.startsWith(`${recordDomain}.`);
-}
-
-function recordMatchesTag(recordTags: readonly string[], tagFilter: string | undefined): boolean {
-	if (tagFilter === undefined || recordTags.length === 0) {
-		return true;
-	}
-
-	return recordTags.includes(tagFilter);
 }
 
 function sortedUnique(values: readonly string[]): readonly string[] {
@@ -1435,25 +1398,6 @@ async function runFilterByDomain(state: RecordsState, recordsProvider: RecordsWe
 	}
 }
 
-async function runFilterByTag(state: RecordsState, recordsProvider: RecordsWebviewProvider): Promise<void> {
-	const root = await chooseWorkspaceRoot('initialized');
-	if (root === undefined) {
-		return;
-	}
-
-	const records = await listDecisionRecordSummaries(root, 'accepted');
-	const knownTags = await listKnownTags(root);
-	const tags = sortedUnique([...knownTags, ...records.flatMap(record => record.tags)]);
-	const picked = await vscode.window.showQuickPick(tags, {
-		placeHolder: 'Filter Decision Records by tag',
-	});
-
-	if (picked !== undefined) {
-		state.tagFilter = normalizeFilterValue(picked);
-		await recordsProvider.refresh();
-	}
-}
-
 function normalizeFilterValue(value: string | undefined): string | undefined {
 	if (value === undefined || value.length === 0 || value === 'all') {
 		return undefined;
@@ -1464,7 +1408,6 @@ function normalizeFilterValue(value: string | undefined): string | undefined {
 
 function clearRecordFilters(state: RecordsState): void {
 	state.domainFilter = undefined;
-	state.tagFilter = undefined;
 }
 
 function shellQuote(value: string): string {

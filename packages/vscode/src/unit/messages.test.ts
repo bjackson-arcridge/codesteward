@@ -208,37 +208,33 @@ describe('records message guards', () => {
 			kind: 'state',
 			records: [],
 			domainFilter: 'vscode',
-			tagFilter: 'architecture',
 			domainOptions: ['vscode'],
-			tagOptions: ['architecture'],
 		}), true);
 		assert.equal(isRecordsHost({ kind: 'state', records: [], diagnosticsEnabled: true }), true);
 		assert.equal(isRecordsHost({ kind: 'diagnosticSelectFilter', filter: 'domain', value: 'vscode' }), true);
 		assert.equal(isRecordsHost({
 			kind: 'state',
-			records: [{ id: 'DR-1', title: 'Decision', domain: 'vscode.webview', tags: ['ui-pattern'], enabled: true }],
+			records: [{ id: 'DR-1', title: 'Decision', domain: 'vscode.webview', enabled: true }],
 			actionMode: 'accepted',
 		}), true);
 	});
 
 	test('reject host state with malformed records metadata', () => {
 		assert.equal(isRecordsHost({ kind: 'state', records: [], domainFilter: 5 }), false);
-		assert.equal(isRecordsHost({ kind: 'state', records: [], tagFilter: 5 }), false);
 		assert.equal(isRecordsHost({ kind: 'state', records: [], domainOptions: ['vscode', 5] }), false);
-		assert.equal(isRecordsHost({ kind: 'state', records: [], tagOptions: ['architecture', 5] }), false);
 		assert.equal(isRecordsHost({ kind: 'state', records: [], diagnosticsEnabled: 'true' }), false);
 		assert.equal(isRecordsHost({ kind: 'diagnosticSelectFilter', filter: 'status', value: 'accepted' }), false);
 		assert.equal(isRecordsHost({
 			kind: 'state',
-			records: [{ id: 'DR-1', title: 'Decision', tags: ['ui-pattern'] }],
+			records: [{ id: 'DR-1', title: 'Decision' }],
 		}), false);
 		assert.equal(isRecordsHost({
 			kind: 'state',
-			records: [{ id: 'DR-1', title: 'Decision', domain: 'vscode.webview', tags: ['ui-pattern'] }],
+			records: [{ id: 'DR-1', title: 'Decision', domain: 'vscode.webview' }],
 		}), false);
 		assert.equal(isRecordsHost({
 			kind: 'state',
-			records: [{ id: 'DR-1', title: 'Decision', domain: 42, tags: ['ui-pattern'], enabled: true }],
+			records: [{ id: 'DR-1', title: 'Decision', domain: 42, enabled: true }],
 		}), false);
 		assert.equal(isRecordsHost({
 			kind: 'state',
@@ -251,15 +247,11 @@ describe('records message guards', () => {
 		assert.equal(isRecordsClient({ kind: 'preview', id: 'DR-1' }), true);
 		assert.equal(isRecordsClient({ kind: 'edit', id: 'DR-1' }), true);
 		assert.equal(isRecordsClient({ kind: 'setDomainFilter', domainFilter: 'vscode' }), true);
-		assert.equal(isRecordsClient({ kind: 'setTagFilter', tagFilter: 'ui-pattern' }), true);
-		assert.equal(isRecordsClient({ kind: 'setTagFilter' }), true);
 		assert.equal(isRecordsClient({ kind: 'toggleEnabled', id: 'DR-1', enabled: false }), true);
 		assert.equal(isRecordsClient({ kind: 'retire', id: 'DR-1', retiredBy: 'DR-2' }), true);
 		assert.equal(isRecordsClient({ kind: 'retire', id: 'DR-1', retiredBy: '' }), true);
 		assert.equal(isRecordsClient({ kind: 'promote', id: 'CAND-1' }), true);
 		assert.equal(isRecordsClient({ kind: 'delete', id: 'CAND-1' }), true);
-		assert.equal(isRecordsClient({ kind: 'filterByTag' }), true);
-		assert.equal(isRecordsClient({ kind: 'clearTagFilter' }), true);
 		assert.equal(isRecordsClient({ kind: 'clearFilters' }), true);
 		assert.equal(isRecordsClient({ kind: 'requestRefresh' }), true);
 		assert.equal(isRecordsClient({
@@ -269,9 +261,7 @@ describe('records message guards', () => {
 				cardCount: 1,
 				emptyVisible: false,
 				domainFilter: 'vscode',
-				tagFilter: 'ui-pattern',
 				domainSelectOptionCount: 2,
-				tagSelectOptionCount: 2,
 			},
 		}), true);
 	});
@@ -279,7 +269,6 @@ describe('records message guards', () => {
 	test('reject malformed render diagnostics', () => {
 		assert.equal(isRecordsClient({ kind: 'rendered' }), false);
 		assert.equal(isRecordsClient({ kind: 'setDomainFilter', domainFilter: 5 }), false);
-		assert.equal(isRecordsClient({ kind: 'setTagFilter', tagFilter: 5 }), false);
 		assert.equal(isRecordsClient({ kind: 'toggleEnabled', id: 'DR-1', enabled: 'false' }), false);
 		assert.equal(isRecordsClient({ kind: 'retire', id: 'DR-1' }), false);
 		assert.equal(isRecordsClient({

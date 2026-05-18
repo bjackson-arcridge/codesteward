@@ -1,4 +1,4 @@
-# Sundial Vocabulary
+# Sundial Domains
 
 ## Domains
 
@@ -29,17 +29,3 @@ Webview behavior.
 ### vscode.webview.ui
 
 Webview user interface behavior.
-
-## Tags
-
-### fixtures
-
-Integration test fixtures.
-
-### rendering
-
-Rendering behavior.
-
-### tagging
-
-Tag filtering behavior.

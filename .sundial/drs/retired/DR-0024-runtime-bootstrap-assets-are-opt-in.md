@@ -4,8 +4,6 @@ title: Runtime bootstrap assets are opt-in
 status: retired
 domain: cli
 created: 2026-05-05
-tags:
-  - file-layout
 affected_files:
   - CLI_SPEC.md
   - packages/cli/src/core/store.ts

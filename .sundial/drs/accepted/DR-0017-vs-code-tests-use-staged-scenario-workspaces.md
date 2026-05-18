@@ -4,8 +4,6 @@ title: VS Code tests use staged scenario workspaces
 status: accepted
 domain: vscode.extension
 created: 2026-05-05
-tags:
-  - testing
 affected_files:
   - .vscode-test.mjs
   - packages/vscode/src/test/prepare-workspaces.mjs

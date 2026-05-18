@@ -4,8 +4,6 @@ title: Managed agent instructions remain baseline alongside plugins
 status: accepted
 domain: cli
 created: 2026-05-08
-tags:
-  - file-layout
 affected_files:
   - packages/cli/src/core/store.ts
   - packages/cli/src/core/templates/instructions/agent-instructions.md

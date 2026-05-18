@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { getRecordReferences, listDecisionRecords, validateDecisionRecord, ValidationResult } from './dr';
 import { StorePaths } from './store';
-import { readTagVocabulary } from './tags';
+import { readDomainVocabulary } from './domains';
 
 export interface StoreValidationResult {
 	readonly validationResults: readonly ValidationResult[];
@@ -10,7 +10,7 @@ export interface StoreValidationResult {
 }
 
 export async function validateStore(paths: StorePaths): Promise<StoreValidationResult> {
-	const vocabulary = await readTagVocabulary(paths.tags);
+	const vocabulary = await readDomainVocabulary(paths.domains);
 	const records = await listDecisionRecords(paths);
 	const validationResults = await Promise.all(records.map(async record => {
 		const validation = validateDecisionRecord(record, vocabulary);

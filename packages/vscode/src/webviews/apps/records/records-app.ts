@@ -161,9 +161,7 @@ export class RecordsApp extends LitElement {
 	private promptReturnTarget?: HTMLElement;
 	@state() private records: readonly RecordSummary[] = [];
 	@state() private domainFilter?: string;
-	@state() private tagFilter?: string;
 	@state() private domainOptions: readonly string[] = [];
-	@state() private tagOptions: readonly string[] = [];
 	@state() private filtersEnabled = false;
 	@state() private actionMode: RecordActionMode = 'accepted';
 	@state() private emptyText = 'No accepted decision records yet.';
@@ -204,10 +202,8 @@ export class RecordsApp extends LitElement {
 				cardCount: this.renderRoot.querySelectorAll('cs-card').length,
 				emptyVisible: this.renderRoot.querySelector('.empty') !== null,
 				...(this.domainFilter === undefined ? {} : { domainFilter: this.domainFilter }),
-				...(this.tagFilter === undefined ? {} : { tagFilter: this.tagFilter }),
 				...(this.filtersEnabled ? {
 					domainSelectOptionCount: this.renderRoot.querySelector<HTMLSelectElement>('select[data-filter="domain"]')?.options.length ?? 0,
-					tagSelectOptionCount: this.renderRoot.querySelector<HTMLSelectElement>('select[data-filter="tag"]')?.options.length ?? 0,
 				} : {}),
 			},
 		});
@@ -236,17 +232,6 @@ export class RecordsApp extends LitElement {
 						${this.domainOptions.map(domain => html`<option value=${domain}>${domain}</option>`)}
 					</select>
 				</label>
-				<label class="filter-field">
-					<span>Tags</span>
-					<select
-						data-filter="tag"
-						.value=${this.tagFilter ?? ''}
-						@change=${this.handleTagFilterChange}
-					>
-						<option value="">All tags</option>
-						${this.tagOptions.map(tag => html`<option value=${tag}>${tag}</option>`)}
-					</select>
-				</label>
 			</div>
 		`;
 	}
@@ -266,7 +251,6 @@ export class RecordsApp extends LitElement {
 					<span class="id">${record.id}</span>
 					<cs-badge variant="inverse">${record.domain}</cs-badge>
 					${record.enabled ? nothing : html`<cs-badge>disabled</cs-badge>`}
-					${record.tags.map(tag => html`<cs-badge>${tag}</cs-badge>`)}
 					${record.workspace === undefined ? nothing : html`<span>${record.workspace}</span>`}
 				</span>
 				<div slot="actions">${this.renderActions(record)}</div>
@@ -433,10 +417,8 @@ export class RecordsApp extends LitElement {
 				this.host.setState(message);
 				this.records = message.records;
 				this.domainFilter = message.domainFilter;
-				this.tagFilter = message.tagFilter;
 				this.domainOptions = message.domainOptions ?? [];
-				this.tagOptions = message.tagOptions ?? [];
-				this.filtersEnabled = message.domainOptions !== undefined || message.tagOptions !== undefined;
+				this.filtersEnabled = message.domainOptions !== undefined;
 				this.actionMode = message.actionMode ?? 'accepted';
 				this.emptyText = message.emptyText ?? 'No accepted decision records yet.';
 				this.diagnosticsEnabled = message.diagnosticsEnabled === true;
@@ -465,14 +447,7 @@ export class RecordsApp extends LitElement {
 		});
 	};
 
-	private handleTagFilterChange = (event: Event): void => {
-		this.send({
-			kind: 'setTagFilter',
-			...filterValue((event.currentTarget as HTMLSelectElement).value, 'tagFilter'),
-		});
-	};
-
-	private selectFilterForDiagnostics(filter: 'domain' | 'tag', value: string | undefined): void {
+	private selectFilterForDiagnostics(filter: 'domain', value: string | undefined): void {
 		const select = this.renderRoot.querySelector<HTMLSelectElement>(`select[data-filter="${filter}"]`);
 		if (select === null) {
 			return;
@@ -492,7 +467,7 @@ export class RecordsApp extends LitElement {
 	}
 }
 
-function filterValue<Key extends 'domainFilter' | 'tagFilter'>(
+function filterValue<Key extends 'domainFilter'>(
 	value: string,
 	key: Key,
 ): Partial<Record<Key, string>> {

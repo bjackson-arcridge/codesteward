@@ -4,9 +4,6 @@ title: Webview file layout follows the apps/providers split
 status: accepted
 domain: vscode.webview
 created: 2026-05-04
-tags:
-  - file-layout
-  - boundary-types
 affected_files:
   - packages/vscode/src/webviews/
   - packages/vscode/esbuild.js

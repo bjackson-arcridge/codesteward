@@ -10,7 +10,7 @@ Sundial initializes a project-local Decision Record repository backed by plain M
 
 - `.sundial/drs/accepted/` stores reviewed decisions agents should follow.
 - `.sundial/drs/candidates/` stores proposed decisions waiting for human review.
-- `.sundial/tags.md` keeps the decision vocabulary reviewable in source control.
+- `.sundial/domains.md` keeps the domain vocabulary reviewable in source control.
 
 During initialization, Sundial can also install agent runtime assets:
 

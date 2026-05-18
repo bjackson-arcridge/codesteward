@@ -11,7 +11,7 @@ export function renderMarkdownPreviewSource(markdown: string): string {
 
 	const [, frontmatter, body] = match;
 	const entries = parseFrontmatterEntries(frontmatter);
-	const remainingEntries = entries.filter(entry => !['title', 'domain', 'tags'].includes(entry.field));
+	const remainingEntries = entries.filter(entry => !['title', 'domain'].includes(entry.field));
 	const parts = [
 		...renderFrontmatterSummary(entries),
 		'',
@@ -28,10 +28,9 @@ export function renderMarkdownPreviewSource(markdown: string): string {
 function renderFrontmatterSummary(entries: readonly FrontmatterEntry[]): readonly string[] {
 	const title = firstEntryValue(entries, 'title') ?? 'Untitled';
 	const domain = firstEntryValue(entries, 'domain') ?? 'all';
-	const tags = entryValues(entries, 'tags').join(',');
 	return [
 		`# ${escapeInlineMarkdown(title)}`,
-		`**domain:** ${escapeInlineMarkdown(domain)} **tags:** ${escapeInlineMarkdown(tags)}`,
+		`**domain:** ${escapeInlineMarkdown(domain)}`,
 	];
 }
 

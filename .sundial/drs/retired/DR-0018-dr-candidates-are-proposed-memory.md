@@ -4,7 +4,6 @@ title: DR candidates are proposed memory
 status: retired
 domain: governance.dr-lifecycle
 created: 2026-05-04
-tags:
 affected_files:
   - DR_SPEC.md
   - packages/cli/src/core/candidates.ts

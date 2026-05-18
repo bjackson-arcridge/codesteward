@@ -64,12 +64,12 @@ describe('bootstrapCommand', () => {
 		assert.equal(stderr, 'done\n');
 	});
 
-	test('retrieves accepted DRs by tag and hierarchical domain together', async () => {
+	test('retrieves accepted DRs by hierarchical domain', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-domain-retrieve-'));
 		const init = await initStore(root);
 		const accepted = path.join(init.paths.store, 'drs', 'accepted');
-		await fs.writeFile(init.paths.tags, [
-			'# Sundial Vocabulary',
+		await fs.writeFile(init.paths.domains, [
+			'# Sundial Domains',
 			'',
 			'## Domains',
 			'',
@@ -97,16 +97,6 @@ describe('bootstrapCommand', () => {
 			'',
 			'VS Code webview UI guidance.',
 			'',
-			'## Tags',
-			'',
-			'### architecture',
-			'',
-			'Architecture choices.',
-			'',
-			'### testing',
-			'',
-			'Testing choices.',
-			'',
 		].join('\n'), 'utf8');
 
 		await fs.writeFile(path.join(accepted, 'DR-0001-global.md'), acceptedRecord({
@@ -123,18 +113,6 @@ describe('bootstrapCommand', () => {
 			id: 'DR-0003',
 			title: 'UI architecture',
 			domain: 'ui',
-		}), 'utf8');
-		await fs.writeFile(path.join(accepted, 'DR-0004-cli-wildcard.md'), acceptedRecord({
-			id: 'DR-0004',
-			title: 'CLI wildcard',
-			domain: 'cli',
-			tags: [],
-		}), 'utf8');
-		await fs.writeFile(path.join(accepted, 'DR-0005-ui-wildcard.md'), acceptedRecord({
-			id: 'DR-0005',
-			title: 'UI wildcard',
-			domain: 'ui',
-			tags: [],
 		}), 'utf8');
 		await fs.writeFile(path.join(accepted, 'DR-0006-vscode.md'), acceptedRecord({
 			id: 'DR-0006',
@@ -156,12 +134,6 @@ describe('bootstrapCommand', () => {
 			title: 'VS Code extension',
 			domain: 'vscode.extension',
 		}), 'utf8');
-		await fs.writeFile(path.join(accepted, 'DR-0010-cli-testing.md'), acceptedRecord({
-			id: 'DR-0010',
-			title: 'CLI testing',
-			domain: 'cli',
-			tags: ['testing'],
-		}), 'utf8');
 
 		const result = await runCli(root, ['dr', 'retrieve', '--domain', 'cli']);
 
@@ -169,32 +141,25 @@ describe('bootstrapCommand', () => {
 		assert.match(result.stdout, /Domain: all/);
 		assert.match(result.stdout, /Decision:\nFollow Global architecture\./);
 		assert.match(result.stdout, /DR-0002 CLI retrieve/);
-		assert.match(result.stdout, /DR-0004 CLI wildcard/);
-		assert.match(result.stdout, /DR-0010 CLI testing/);
 		assert.doesNotMatch(result.stdout, /DR-0003 UI architecture/);
-		assert.doesNotMatch(result.stdout, /DR-0005 UI wildcard/);
 		assert.doesNotMatch(result.stdout, /^Status:/m);
 		assert.doesNotMatch(result.stdout, /^Path:/m);
 		assert.equal(result.stderr, '');
 		assert.equal(result.exitCode, undefined);
 
-		const taggedResult = await runCli(root, ['dr', 'retrieve', '--domain', 'cli', '--tag', 'architecture']);
-		assert.match(taggedResult.stdout, /DR-0002 CLI retrieve/);
-		assert.doesNotMatch(taggedResult.stdout, /DR-0010 CLI testing/);
-
-		const parentDomainResult = await runCli(root, ['dr', 'retrieve', '--tag', 'architecture', '--domain', 'vscode']);
+		const parentDomainResult = await runCli(root, ['dr', 'retrieve', '--domain', 'vscode']);
 		assert.match(parentDomainResult.stdout, /DR-0006 VS Code broad/);
 		assert.match(parentDomainResult.stdout, /DR-0007 VS Code webview/);
 		assert.match(parentDomainResult.stdout, /DR-0008 VS Code webview UI/);
 		assert.match(parentDomainResult.stdout, /DR-0009 VS Code extension/);
 
-		const childDomainResult = await runCli(root, ['dr', 'retrieve', '--tag', 'architecture', '--domain', 'vscode.webview']);
+		const childDomainResult = await runCli(root, ['dr', 'retrieve', '--domain', 'vscode.webview']);
 		assert.match(childDomainResult.stdout, /DR-0006 VS Code broad/);
 		assert.match(childDomainResult.stdout, /DR-0007 VS Code webview/);
 		assert.match(childDomainResult.stdout, /DR-0008 VS Code webview UI/);
 		assert.doesNotMatch(childDomainResult.stdout, /DR-0009 VS Code extension/);
 
-		const grandchildDomainResult = await runCli(root, ['dr', 'retrieve', '--tag', 'architecture', '--domain', 'vscode.webview.ui']);
+		const grandchildDomainResult = await runCli(root, ['dr', 'retrieve', '--domain', 'vscode.webview.ui']);
 		assert.match(grandchildDomainResult.stdout, /DR-0006 VS Code broad/);
 		assert.match(grandchildDomainResult.stdout, /DR-0007 VS Code webview/);
 		assert.match(grandchildDomainResult.stdout, /DR-0008 VS Code webview UI/);
@@ -204,7 +169,7 @@ describe('bootstrapCommand', () => {
 	test('does not expose the removed context command', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-context-removed-'));
 
-		const result = await runCli(root, ['context', '--tag', 'architecture']);
+		const result = await runCli(root, ['context', '--domain', 'cli']);
 
 		assert.equal(result.stdout, '');
 		assert.match(result.stderr, /Unknown command: context/);
@@ -212,41 +177,33 @@ describe('bootstrapCommand', () => {
 		assert.equal(result.exitCode, 64);
 	});
 
-	test('does not expose the removed domains command', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-domain-removed-'));
+	test('does not expose the removed tags command or tag flags', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-tags-removed-'));
 		await initStore(root);
 
-		const result = await runCli(root, ['domains', 'list']);
+		const tags = await runCli(root, ['tags']);
+		const retrieveTag = await runCli(root, ['dr', 'retrieve', '--tag', 'architecture']);
+		const listTag = await runCli(root, ['dr', 'list', '--tag', 'architecture']);
 
-		assert.equal(result.stdout, '');
-		assert.match(result.stderr, /Unknown command: domains/);
-		assert.doesNotMatch(result.stderr, /domains list/);
-		assert.equal(result.exitCode, 64);
+		assert.equal(tags.stdout, '');
+		assert.match(tags.stderr, /Unknown command: tags/);
+		assert.equal(tags.exitCode, 64);
+		assert.match(retrieveTag.stderr, /Usage: sundial dr retrieve/);
+		assert.equal(retrieveTag.exitCode, 64);
+		assert.match(listTag.stderr, /Usage: sundial dr list/);
+		assert.equal(listTag.exitCode, 64);
 	});
 
-	test('does not expose the removed gate command', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-gate-removed-'));
+	test('lists known domains from the vocabulary', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-domains-list-'));
 		await initStore(root);
 
-		const result = await runCli(root, ['gate', 'status']);
-
-		assert.equal(result.stdout, '');
-		assert.match(result.stderr, /Unknown command: gate/);
-		assert.doesNotMatch(result.stderr, /gate\s+status/);
-		assert.equal(result.exitCode, 64);
-	});
-
-	test('lists known domains and tags from the vocabulary', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-tags-list-'));
-		await initStore(root);
-
-		const result = await runCli(root, ['tags']);
+		const result = await runCli(root, ['domains']);
 
 		assert.match(result.stdout, /Domains:\n/);
 		assert.match(result.stdout, /all - Global guidance/);
 		assert.match(result.stdout, /cli - Command-line behavior/);
-		assert.match(result.stdout, /\nTags:\n/);
-		assert.match(result.stdout, /architecture - Project-level architecture choices/);
+		assert.doesNotMatch(result.stdout, /Tags:/);
 		assert.equal(result.stderr, '');
 		assert.equal(result.exitCode, undefined);
 	});
@@ -267,18 +224,17 @@ describe('bootstrapCommand', () => {
 		assert.match(result.stdout, /DR-0001-invalid-domain\.md/);
 		assert.match(result.stdout, /error: Unknown domain "api"\./);
 		assert.match(result.stdout, /Validation: 1 error, 0 warnings\./);
+		assert.doesNotMatch(result.stdout, /^Tags:/m);
 		assert.equal(result.stderr, '');
 		assert.equal(result.exitCode, 1);
 	});
 
-	test('does not expose removed validation, audit, and tag subcommands', async () => {
+	test('does not expose removed validation and audit subcommands', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-command-surface-removed-'));
 		await initStore(root);
 
 		const validate = await runCli(root, ['validate']);
 		const audit = await runCli(root, ['audit']);
-		const auditBootstrap = await runCli(root, ['audit', 'bootstrap', '--provider', 'codex']);
-		const tagsList = await runCli(root, ['tags', 'list']);
 		const drValidate = await runCli(root, ['dr', 'validate', '--all']);
 
 		assert.equal(validate.stdout, '');
@@ -287,13 +243,6 @@ describe('bootstrapCommand', () => {
 		assert.equal(audit.stdout, '');
 		assert.match(audit.stderr, /Unknown command: audit/);
 		assert.equal(audit.exitCode, 64);
-		assert.equal(auditBootstrap.stdout, '');
-		assert.match(auditBootstrap.stderr, /Unknown command: audit/);
-		assert.equal(auditBootstrap.exitCode, 64);
-		assert.equal(tagsList.stdout, '');
-		assert.match(tagsList.stderr, /Usage: sundial tags/);
-		assert.doesNotMatch(tagsList.stderr, /tags list/);
-		assert.equal(tagsList.exitCode, 64);
 		assert.equal(drValidate.stdout, '');
 		assert.match(drValidate.stderr, /Usage: sundial dr \(retrieve \| get \| list \| enable \| disable \| retire \| promote \| delete\)/);
 		assert.doesNotMatch(drValidate.stderr, /dr validate/);
@@ -349,10 +298,10 @@ describe('bootstrapCommand', () => {
 		}), 'utf8');
 
 		const disabled = await runCli(root, ['dr', 'disable', 'DR-0001']);
-		const disabledRetrieve = await runCli(root, ['dr', 'retrieve', '--domain', 'cli', '--tag', 'architecture']);
+		const disabledRetrieve = await runCli(root, ['dr', 'retrieve', '--domain', 'cli']);
 		const disabledGet = await runCli(root, ['dr', 'get', 'DR-0001']);
 		const enabled = await runCli(root, ['dr', 'enable', 'DR-0001']);
-		const enabledRetrieve = await runCli(root, ['dr', 'retrieve', '--domain', 'cli', '--tag', 'architecture']);
+		const enabledRetrieve = await runCli(root, ['dr', 'retrieve', '--domain', 'cli']);
 
 		assert.match(disabled.stdout, /Disabled DR-0001/);
 		assert.doesNotMatch(disabledRetrieve.stdout, /DR-0001 Toggle retrieval/);
@@ -361,7 +310,7 @@ describe('bootstrapCommand', () => {
 		assert.match(enabledRetrieve.stdout, /DR-0001 Toggle retrieval/);
 	});
 
-	test('groups DR lists by lifecycle state with domain and tags on each row', async () => {
+	test('groups DR lists by lifecycle state with domain on each row', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-dr-list-groups-'));
 		const init = await initStore(root);
 		const drs = path.join(init.paths.store, 'drs');
@@ -379,7 +328,6 @@ describe('bootstrapCommand', () => {
 			id: 'DR-0002',
 			title: 'Retired record',
 			domain: 'cli',
-			tags: [],
 		}).replace('status: accepted', 'status: retired'), 'utf8');
 		await fs.writeFile(path.join(drs, 'accepted', 'DR-0003-active.md'), acceptedRecord({
 			id: 'DR-0003',
@@ -395,11 +343,12 @@ describe('bootstrapCommand', () => {
 
 		const result = await runCli(root, ['dr', 'list']);
 
-		assert.match(result.stdout, /Rejected:\nDR-0001 Rejected record Domain: cli Tags: architecture/);
-		assert.match(result.stdout, /Candidate:\nCAND-0001 Candidate record Domain: governance Tags: architecture/);
-		assert.match(result.stdout, /Retired:\nDR-0002 Retired record Domain: cli Tags: \(wildcard\)/);
-		assert.match(result.stdout, /Active:\nDR-0003 Active record Domain: cli Tags: architecture/);
-		assert.match(result.stdout, /Active\(hidden\):\nDR-0004 Hidden record Domain: cli Tags: architecture/);
+		assert.match(result.stdout, /Rejected:\nDR-0001 Rejected record Domain: cli/);
+		assert.match(result.stdout, /Candidate:\nCAND-0001 Candidate record Domain: governance/);
+		assert.match(result.stdout, /Retired:\nDR-0002 Retired record Domain: cli/);
+		assert.match(result.stdout, /Active:\nDR-0003 Active record Domain: cli/);
+		assert.match(result.stdout, /Active\(hidden\):\nDR-0004 Hidden record Domain: cli/);
+		assert.doesNotMatch(result.stdout, /Tags:/);
 		assert.ok(result.stdout.indexOf('Rejected:') < result.stdout.indexOf('Candidate:'));
 		assert.ok(result.stdout.indexOf('Candidate:') < result.stdout.indexOf('Retired:'));
 		assert.ok(result.stdout.indexOf('Retired:') < result.stdout.indexOf('Active:'));
@@ -422,7 +371,6 @@ describe('bootstrapCommand', () => {
 			id: 'DR-0002',
 			title: 'No replacement',
 			domain: 'cli',
-			tags: [],
 		}), 'utf8');
 
 		const retired = await runCli(root, ['dr', 'retire', 'DR-0001', '--by', 'DR-0003']);
@@ -437,12 +385,12 @@ describe('bootstrapCommand', () => {
 		assert.match(retiredWithoutReplacement.stdout, /Retired DR-0002/);
 		assert.doesNotMatch(acceptedAfterRetire.stdout, /DR-0001/);
 		assert.doesNotMatch(acceptedAfterRetire.stdout, /DR-0002/);
-		assert.match(retiredList.stdout, /Retired:\nDR-0001 Retired record Domain: cli Tags: architecture/);
-		assert.match(retiredList.stdout, /DR-0002 No replacement Domain: cli Tags: \(wildcard\)/);
+		assert.match(retiredList.stdout, /Retired:\nDR-0001 Retired record Domain: cli/);
+		assert.match(retiredList.stdout, /DR-0002 No replacement Domain: cli/);
 		assert.doesNotMatch(retiredList.stdout, /\(retired\)/);
 		assert.doesNotMatch(retiredWithoutReplacementMarkdown, /retired_by/);
 		assert.match(promoted.stdout, /Promoted DR-0001 as DR-0001/);
-		assert.match(acceptedAfterPromote.stdout, /Active:\nDR-0001 Retired record Domain: cli Tags: architecture/);
+		assert.match(acceptedAfterPromote.stdout, /Active:\nDR-0001 Retired record Domain: cli/);
 		assert.doesNotMatch(acceptedAfterPromote.stdout, /\(accepted\)/);
 	});
 
@@ -459,8 +407,6 @@ describe('bootstrapCommand', () => {
 			'cli',
 			'--decision',
 			'Accepted after rejection.',
-			'--tag',
-			'architecture',
 		]);
 		await runCli(root, ['candidate', 'reject', 'CAND-0001', '--reason', 'Deferred.']);
 		const promoted = await runCli(root, ['dr', 'promote', 'CAND-0001', '--from', 'rejected']);
@@ -468,7 +414,7 @@ describe('bootstrapCommand', () => {
 		const rejected = await runCli(root, ['dr', 'list', '--status', 'rejected']);
 
 		assert.match(promoted.stdout, /Promoted CAND-0001 as DR-0001/);
-		assert.match(accepted.stdout, /Active:\nDR-0001 Rejected candidate Domain: cli Tags: architecture/);
+		assert.match(accepted.stdout, /Active:\nDR-0001 Rejected candidate Domain: cli/);
 		assert.doesNotMatch(accepted.stdout, /\(accepted\)/);
 		assert.doesNotMatch(rejected.stdout, /CAND-0001/);
 	});
@@ -565,7 +511,7 @@ describe('bootstrapCommand', () => {
 		assert.equal(appendix.exitCode, 64);
 	});
 
-	test('creates candidates with proposed domain syntax parallel to proposed tags', async () => {
+	test('creates candidates with proposed domain syntax', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-proposed-domain-'));
 		await initStore(root);
 
@@ -581,18 +527,14 @@ describe('bootstrapCommand', () => {
 			'Return field-keyed validation errors.',
 			'--appendix',
 			'For human reviewers: field-keyed means the response object is keyed by input field name.',
-			'--proposed-tag',
-			'field-keyed-errors',
-			'Validation errors keyed by request field.',
 		]);
 		const shown = await runCli(root, ['candidate', 'show', 'CAND-0001']);
 
 		assert.match(created.stdout, /Created CAND-0001 Field keyed validation/);
-		assert.match(created.stdout, /Proposed tags: field-keyed-errors/);
 		assert.match(created.stdout, /Proposed domains: api\.validation/);
+		assert.doesNotMatch(created.stdout, /Proposed tags/);
 		assert.match(shown.stdout, /domain: api\.validation/);
 		assert.match(shown.stdout, /proposed_domains:\n  api\.validation: API validation behavior\./);
-		assert.match(shown.stdout, /proposed_tags:\n  field-keyed-errors: Validation errors keyed by request field\./);
 		assert.match(shown.stdout, /## Appendix\n\nFor human reviewers: field-keyed means the response object is keyed by input field name\./);
 		assert.equal(created.stderr, '');
 	});
@@ -602,12 +544,9 @@ function acceptedRecord(input: {
 	readonly id: string;
 	readonly title: string;
 	readonly domain: string | undefined;
-	readonly tags?: readonly string[];
 	readonly enabled?: boolean;
 	readonly appendix?: string;
 }): string {
-	const tags = input.tags ?? ['architecture'];
-
 	return [
 		'---',
 		`id: ${input.id}`,
@@ -618,12 +557,6 @@ function acceptedRecord(input: {
 		'created: 2026-05-03',
 		'updated: 2026-05-03',
 		'author: codex',
-		...(tags.length === 0
-			? []
-			: [
-				'tags:',
-				...tags.map(tag => `  - ${tag}`),
-			]),
 		'---',
 		'',
 		'## Decision',

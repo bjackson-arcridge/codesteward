@@ -9,16 +9,13 @@ export interface ExtensionDiagnostics {
 	readonly recordsLastState?: {
 		readonly recordCount: number;
 		readonly domainFilter?: string;
-		readonly tagFilter?: string;
 	};
 	readonly recordsLastRendered?: {
 		readonly recordCount: number;
 		readonly cardCount: number;
 		readonly emptyVisible: boolean;
 		readonly domainFilter?: string;
-		readonly tagFilter?: string;
 		readonly domainSelectOptionCount?: number;
-		readonly tagSelectOptionCount?: number;
 	};
 	readonly rejectedRecordsLastState?: {
 		readonly recordCount: number;

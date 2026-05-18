@@ -22,13 +22,12 @@ import {
 	getRecordReferences,
 	getRecordSection,
 	getRecordStatus,
-	getRecordTags,
 	getRecordTitle,
 	isValidRecordDomain,
 	listDecisionRecords,
 	ValidationResult,
 } from './core/dr';
-import { readTagVocabulary, type DomainDefinition, type TagDefinition } from './core/tags';
+import { readDomainVocabulary, type DomainDefinition } from './core/domains';
 import {
 	countDecisionRecords,
 	decisionRecordDirectory,
@@ -59,10 +58,10 @@ Commands:
   update      Update installed skill files for the discovered or explicit project root
   status      Report store health, counts, and validation state
   bootstrap   Run an LLM-backed bootstrap that creates candidates via the CLI
-  tags        List known domains and tags from .sundial/tags.md
-  dr retrieve Retrieve visible accepted DRs by domain and optional tag
+  domains     List known domains from .sundial/domains.md
+  dr retrieve Retrieve visible accepted DRs by domain
   dr get      Cat DR markdown files by id
-  dr list     List DRs by status or tag
+  dr list     List DRs by status
   dr enable   Include an accepted DR in retrieval results
   dr disable  Suppress an accepted DR from retrieval results
   dr retire   Move an accepted DR to retired history
@@ -105,8 +104,8 @@ export async function main(argv: readonly string[], io: Pick<NodeJS.Process, 'cw
 		return;
 	}
 
-	if (command === 'tags') {
-		await runTags(parsed, commandArgs, io);
+	if (command === 'domains') {
+		await runDomains(parsed, commandArgs, io);
 		return;
 	}
 
@@ -238,7 +237,7 @@ async function runCandidateCreate(
 		return;
 	}
 
-	const vocabulary = await readTagVocabulary(paths.tags);
+	const vocabulary = await readDomainVocabulary(paths.domains);
 	const result = await createCandidate(paths, vocabulary, {
 		...parsed,
 		author: defaultAuthor(),
@@ -251,10 +250,6 @@ async function runCandidateCreate(
 
 	write(io.stdout, `Created ${getRecordId(result.record)} ${getRecordTitle(result.record)}\n`);
 	write(io.stdout, `Path: ${formatRecordPath(paths, result.record)}\n`);
-
-	if (result.proposedTags.length > 0) {
-		write(io.stdout, `Proposed tags: ${result.proposedTags.join(', ')}\n`);
-	}
 
 	if (result.proposedDomains.length > 0) {
 		write(io.stdout, `Proposed domains: ${result.proposedDomains.join(', ')}\n`);
@@ -334,7 +329,7 @@ async function runCandidateAccept(
 	}
 
 	try {
-		const result = await acceptCandidate(paths, await readTagVocabulary(paths.tags), args[0], today());
+		const result = await acceptCandidate(paths, await readDomainVocabulary(paths.domains), args[0], today());
 		if (!options.quiet) {
 			write(io.stdout, `Accepted ${args[0]} as ${getRecordId(result.record)}\n`);
 			write(io.stdout, `Path: ${formatRecordPath(paths, result.record)}\n`);
@@ -467,26 +462,17 @@ async function runDrRetrieve(
 		return;
 	}
 
-	const vocabulary = await readTagVocabulary(paths.tags);
-	const knownTags = new Set(vocabulary.tags.map(tag => tag.name));
-	const unknownTags = parsed.tags.filter(tag => !knownTags.has(tag));
+	const vocabulary = await readDomainVocabulary(paths.domains);
 	const unknownDomain = unknownQueryDomain(vocabulary.domains, parsed.domain);
 
-	if (unknownDomain !== undefined || unknownTags.length > 0) {
-		if (unknownDomain !== undefined) {
-			write(io.stderr, `Unknown domain "${unknownDomain}".\n`);
-		}
-
-		for (const tag of unknownTags) {
-			write(io.stderr, `Unknown tag "${tag}".\n`);
-		}
-
+	if (unknownDomain !== undefined) {
+		write(io.stderr, `Unknown domain "${unknownDomain}".\n`);
 		io.exitCode = 1;
 		return;
 	}
 
 	const records = await listDecisionRecords(paths, 'accepted');
-	const matches = records.filter(record => recordMatches(record, parsed.tags, parsed.domain));
+	const matches = records.filter(record => recordMatches(record, parsed.domain));
 
 	if (options.quiet) {
 		return;
@@ -582,15 +568,12 @@ async function runDrList(
 	}
 
 	const records = await listDecisionRecords(paths, parsed.status);
-	const matches = parsed.tag === undefined
-		? records
-		: records.filter(record => getRecordTags(record).includes(parsed.tag ?? ''));
 
 	if (options.quiet) {
 		return;
 	}
 
-	renderRecordList(matches, io);
+	renderRecordList(records, io);
 }
 
 async function runDrSetEnabled(
@@ -670,7 +653,7 @@ async function runDrPromote(
 	}
 
 	try {
-		const result = await promoteDecisionRecord(paths, await readTagVocabulary(paths.tags), parsed.id, from, today());
+		const result = await promoteDecisionRecord(paths, await readDomainVocabulary(paths.domains), parsed.id, from, today());
 		if (!options.quiet) {
 			write(io.stdout, `Promoted ${parsed.id} as ${getRecordId(result.record)}\n`);
 			write(io.stdout, `Path: ${formatRecordPath(paths, result.record)}\n`);
@@ -747,23 +730,11 @@ function renderStoreValidationResult(
 function parseRetrieveArgs(
 	args: readonly string[],
 	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
-): { readonly tags: readonly string[]; readonly domain: string | undefined } | undefined {
-	const tags: string[] = [];
+): { readonly domain: string | undefined } | undefined {
 	let domain: string | undefined;
 
 	for (let index = 0; index < args.length; index += 1) {
 		const arg = args[index];
-
-		if (arg === '--tag') {
-			const value = args[index + 1];
-			if (value === undefined) {
-				return usageError(retrieveUsage(), io);
-			}
-
-			tags.push(value);
-			index += 1;
-			continue;
-		}
 
 		if (arg === '--domain') {
 			const value = args[index + 1];
@@ -779,7 +750,7 @@ function parseRetrieveArgs(
 		return usageError(retrieveUsage(), io);
 	}
 
-	return { tags, domain };
+	return { domain };
 }
 
 function parseGetArgs(
@@ -806,9 +777,8 @@ function parseGetArgs(
 function parseListArgs(
 	args: readonly string[],
 	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
-): { readonly status: DecisionRecordStatus | undefined; readonly tag: string | undefined } | undefined {
+): { readonly status: DecisionRecordStatus | undefined } | undefined {
 	let status: DecisionRecordStatus | undefined;
-	let tag: string | undefined;
 
 	for (let index = 0; index < args.length; index += 1) {
 		const arg = args[index];
@@ -816,7 +786,7 @@ function parseListArgs(
 		if (arg === '--status') {
 			const value = args[index + 1];
 			if (!isDecisionRecordStatus(value)) {
-				return usageError('Usage: sundial dr list [--status candidate|accepted|rejected|retired] [--tag <tag>]\n', io);
+				return usageError('Usage: sundial dr list [--status candidate|accepted|rejected|retired]\n', io);
 			}
 
 			status = value;
@@ -824,21 +794,10 @@ function parseListArgs(
 			continue;
 		}
 
-		if (arg === '--tag') {
-			const value = args[index + 1];
-			if (value === undefined) {
-				return usageError('Usage: sundial dr list [--status candidate|accepted|rejected|retired] [--tag <tag>]\n', io);
-			}
-
-			tag = value;
-			index += 1;
-			continue;
-		}
-
-		return usageError('Usage: sundial dr list [--status candidate|accepted|rejected|retired] [--tag <tag>]\n', io);
+		return usageError('Usage: sundial dr list [--status candidate|accepted|rejected|retired]\n', io);
 	}
 
-	return { status, tag };
+	return { status };
 }
 
 function parseCandidateCreateArgs(
@@ -850,8 +809,6 @@ function parseCandidateCreateArgs(
 	readonly decision: string;
 	readonly appendix: string | undefined;
 	readonly affectedFiles: readonly string[];
-	readonly tags: readonly string[];
-	readonly proposedTagDescriptions: Readonly<Record<string, string>>;
 	readonly proposedDomainDescription: string | undefined;
 	readonly references: readonly string[];
 } | undefined {
@@ -861,8 +818,6 @@ function parseCandidateCreateArgs(
 	let decision: string | undefined;
 	let appendix: string | undefined;
 	const affectedFiles: string[] = [];
-	const tags: string[] = [];
-	const proposedTagDescriptions: Record<string, string> = {};
 	let proposedDomainDescription: string | undefined;
 	const references: string[] = [];
 
@@ -934,28 +889,6 @@ function parseCandidateCreateArgs(
 			continue;
 		}
 
-		if (arg === '--tag') {
-			if (value === undefined) {
-				return usageError(candidateCreateUsage(), io);
-			}
-
-			tags.push(value);
-			index += 1;
-			continue;
-		}
-
-		if (arg === '--proposed-tag') {
-			const description = args[index + 2];
-			if (value === undefined || description === undefined) {
-				return usageError(candidateCreateUsage(), io);
-			}
-
-			tags.push(value);
-			proposedTagDescriptions[value] = description;
-			index += 2;
-			continue;
-		}
-
 		if (arg === '--ref') {
 			if (value === undefined) {
 				return usageError(candidateCreateUsage(), io);
@@ -979,8 +912,6 @@ function parseCandidateCreateArgs(
 		decision,
 		appendix: appendix?.trim() || undefined,
 		affectedFiles,
-		tags,
-		proposedTagDescriptions,
 		proposedDomainDescription,
 		references,
 	};
@@ -1187,7 +1118,7 @@ export function bootstrapCommand(
 					'Glob',
 					'Grep',
 					'Bash(sundial --cwd * candidate create *)',
-					'Bash(sundial --cwd * tags)',
+					'Bash(sundial --cwd * domains)',
 					'Bash(sundial --cwd * dr list *)',
 				].join(','),
 				prompt,
@@ -1282,12 +1213,10 @@ function bootstrapPrompt(paths: StorePaths): string {
 		'',
 		'Important candidate creation contract:',
 		`- Use this command shape: sundial --cwd ${shellQuote(root)} candidate create --title "<title>" --domain "<domain>" --decision "<terse guidance>"`,
-		'- Use --proposed-domain <domain> "<description>" instead of --domain when the domain is not already listed in .sundial/tags.md.',
-		'- Add --tag <known-tag> when a known tag applies.',
-		'- Use --proposed-tag <tag> "<description>" when a new tag is truly useful.',
+		'- Use --proposed-domain <domain> "<description>" instead of --domain when the domain is not already listed in .sundial/domains.md.',
 		'- Add --appendix "<human-facing context>" only when explanatory background helps reviewers; do not put governing guidance there.',
 		'- Add --affected <path> and --ref <path-or-symbol> when useful.',
-		'- Use existing domains and tags from .sundial/tags.md when possible. Proposed vocabulary is for truly useful missing terms.',
+		'- Use existing domains from .sundial/domains.md when possible. Proposed domains are for truly useful missing terms.',
 		'- Every DR candidate must go through `sundial candidate create`; do not create markdown files manually.',
 		'',
 		'What to inspect:',
@@ -1298,7 +1227,7 @@ function bootstrapPrompt(paths: StorePaths): string {
 		'',
 		'What to avoid:',
 		'- Do not create candidates for generic best practices, obvious framework behavior, style preferences with no architectural consequence, or speculation.',
-		'- Do not edit application source, docs, tags, or accepted DRs.',
+		'- Do not edit application source, docs, domains, or accepted DRs.',
 		'- Prefer fewer, high-signal candidates.',
 		'',
 		'After creating candidates, summarize what you created. If no DR-worthy decisions exist, say that and create nothing.',
@@ -1310,21 +1239,20 @@ function shellQuote(value: string): string {
 }
 
 function candidateCreateUsage(): string {
-	return 'Usage: sundial candidate create --title <title> [--domain <domain> | --proposed-domain <domain> <description>] --decision <text> [--appendix <text>] [--tag <tag>] [--proposed-tag <tag> <description>] [--affected <path>] [--ref <ref>]\n';
+	return 'Usage: sundial candidate create --title <title> [--domain <domain> | --proposed-domain <domain> <description>] --decision <text> [--appendix <text>] [--affected <path>] [--ref <ref>]\n';
 }
 
 function retrieveUsage(): string {
-	return 'Usage: sundial dr retrieve [--domain <domain>] [--tag <tag>...]\n';
+	return 'Usage: sundial dr retrieve [--domain <domain>]\n';
 }
 
 function retrieveHelp(): string {
-	return `Usage: sundial dr retrieve [--domain <domain>] [--tag <tag>...]
+	return `Usage: sundial dr retrieve [--domain <domain>]
 
 Retrieve visible accepted Decision Records.
 
 Options:
   --domain <domain>  Filter by domain. Matches the exact domain, its ancestors, and its descendants. Omit to match every domain.
-  --tag <tag>        Filter by tag. Repeat for multiple tags. A DR matches when any provided tag is on it; DRs with no tags always match.
 `;
 }
 
@@ -1370,7 +1298,6 @@ function renderRecord(
 		write(io.stdout, 'Enabled: false\n');
 	}
 	write(io.stdout, `Domain: ${getRecordDomain(record)}\n`);
-	write(io.stdout, `Tags: ${formatRecordTags(record)}\n`);
 
 	if (detail === 'medium') {
 		write(io.stdout, `Decision:\n${getRecordDecision(record)}\n`);
@@ -1405,22 +1332,8 @@ function renderOptionalSection(
 	write(io.stdout, `${outputTitle}:\n${section}\n`);
 }
 
-function recordMatches(record: DecisionRecord, tags: readonly string[], domain: string | undefined): boolean {
-	return getRecordEnabled(record) && recordMatchesTags(record, tags) && recordMatchesDomain(record, domain);
-}
-
-function recordMatchesTags(record: DecisionRecord, tags: readonly string[]): boolean {
-	if (tags.length === 0) {
-		return true;
-	}
-
-	const recordTagsList = getRecordTags(record);
-	if (recordTagsList.length === 0) {
-		return true;
-	}
-
-	const recordTags = new Set(recordTagsList);
-	return tags.some(tag => recordTags.has(tag));
+function recordMatches(record: DecisionRecord, domain: string | undefined): boolean {
+	return getRecordEnabled(record) && recordMatchesDomain(record, domain);
 }
 
 function recordMatchesDomain(record: DecisionRecord, domain: string | undefined): boolean {
@@ -1438,13 +1351,8 @@ function recordMatchesDomain(record: DecisionRecord, domain: string | undefined)
 		|| domain.startsWith(`${recordDomain}.`);
 }
 
-function formatRecordTags(record: DecisionRecord): string {
-	const tags = getRecordTags(record);
-	return tags.length === 0 ? '(wildcard)' : tags.join(', ');
-}
-
 function formatRecordListItem(record: DecisionRecord): string {
-	return `${getRecordId(record)} ${getRecordTitle(record)} Domain: ${getRecordDomain(record)} Tags: ${formatRecordTags(record)}`;
+	return `${getRecordId(record)} ${getRecordTitle(record)} Domain: ${getRecordDomain(record)}`;
 }
 
 function renderRecordList(
@@ -1543,7 +1451,7 @@ async function runStatus(
 		return;
 	}
 
-	const vocabulary = await readTagVocabulary(paths.tags);
+	const vocabulary = await readDomainVocabulary(paths.domains);
 	const validation = await validateStore(paths);
 	const errorCount = validationErrorCount(validation);
 	const warningCount = validationWarningCount(validation);
@@ -1564,7 +1472,6 @@ async function runStatus(
 
 	write(io.stdout, `Sundial store: ${paths.store}\n`);
 	write(io.stdout, `Domains: ${vocabulary.domains.length}\n`);
-	write(io.stdout, `Tags: ${vocabulary.tags.length}\n`);
 
 	for (const item of counts) {
 		write(io.stdout, `${formatStatusLabel(item.status)} DRs: ${item.count}\n`);
@@ -1811,13 +1718,13 @@ function initUsageError(io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>): undefi
 	return undefined;
 }
 
-async function runTags(
+async function runDomains(
 	options: CliOptions,
 	args: readonly string[],
 	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
 ): Promise<void> {
 	if (args.length > 0) {
-		write(io.stderr, `Usage: sundial tags\n`);
+		write(io.stderr, `Usage: sundial domains\n`);
 		io.exitCode = 64;
 		return;
 	}
@@ -1827,7 +1734,7 @@ async function runTags(
 		return;
 	}
 
-	const vocabulary = await readTagVocabulary(paths.tags);
+	const vocabulary = await readDomainVocabulary(paths.domains);
 	if (!validateVocabularyForListing(vocabulary.errors, io)) {
 		return;
 	}
@@ -1837,9 +1744,7 @@ async function runTags(
 	}
 
 	write(io.stdout, 'Domains:\n');
-	renderVocabularyDefinitions(vocabulary.domains, 'domains', io);
-	write(io.stdout, '\nTags:\n');
-	renderVocabularyDefinitions(vocabulary.tags, 'tags', io);
+	renderDomainDefinitions(vocabulary.domains, io);
 }
 
 function validateVocabularyForListing(
@@ -1858,13 +1763,12 @@ function validateVocabularyForListing(
 	return false;
 }
 
-function renderVocabularyDefinitions(
-	definitions: readonly (DomainDefinition | TagDefinition)[],
-	label: 'domains' | 'tags',
+function renderDomainDefinitions(
+	definitions: readonly DomainDefinition[],
 	io: Pick<NodeJS.Process, 'stdout'>,
 ): void {
 	if (definitions.length === 0) {
-		write(io.stdout, `No ${label} defined.\n`);
+		write(io.stdout, 'No domains defined.\n');
 		return;
 	}
 

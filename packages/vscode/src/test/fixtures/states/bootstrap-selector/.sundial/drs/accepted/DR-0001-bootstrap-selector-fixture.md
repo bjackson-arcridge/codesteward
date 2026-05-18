@@ -4,8 +4,6 @@ title: Bootstrap selector fixture establishes audit-eligible state
 status: accepted
 domain: vscode.webview.ui
 created: 2026-05-08
-tags:
-  - fixtures
 references: []
 updated: 2026-05-08
 author: integration-fixture

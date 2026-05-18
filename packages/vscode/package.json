@@ -76,13 +76,7 @@
         "enablement": "sundial.workspaceInitialized"
       },
       {
-        "command": "sundial.records.filterByTag",
-        "title": "Sundial: Filter Decision Records by Tag",
-        "icon": "$(filter)",
-        "enablement": "sundial.workspaceInitialized"
-      },
-      {
-        "command": "sundial.records.clearTagFilter",
+        "command": "sundial.records.clearFilters",
         "title": "Sundial: Clear Decision Record Filters",
         "icon": "$(clear-all)",
         "enablement": "sundial.workspaceInitialized"

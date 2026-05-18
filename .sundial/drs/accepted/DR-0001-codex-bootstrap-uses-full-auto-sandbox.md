@@ -4,9 +4,6 @@ title: Codex bootstrap uses full-auto sandbox
 status: accepted
 domain: cli.bootstrap
 created: 2026-05-04
-tags:
-  - subprocess
-  - security
 affected_files:
   - packages/cli/src/main.ts
 references:

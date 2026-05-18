@@ -12,7 +12,7 @@ describe('store bootstrap', () => {
 		const second = await initStore(root);
 
 		assert.ok(first.created.includes('.sundial/config.json'));
-		assert.ok(first.created.includes('.sundial/tags.md'));
+		assert.ok(first.created.includes('.sundial/domains.md'));
 		assert.ok(first.created.includes('.sundial/drs/retired'));
 		assert.equal(first.created.includes('AGENTS.md'), false);
 		assert.ok(second.existing.includes('.sundial/config.json'));

@@ -4,8 +4,6 @@ title: Agent harness installs use staged harness modules
 status: accepted
 domain: cli
 created: 2026-05-08
-tags:
-  - file-layout
 affected_files:
   - packages/cli/src/core/harnesses.ts
   - packages/cli/src/core/store.ts

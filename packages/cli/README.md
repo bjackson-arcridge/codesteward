@@ -25,7 +25,7 @@ Initialize a project:
 sundial init --root /path/to/project --claude --codex
 ```
 
-`init` always creates `.sundial/` and starter tags. Runtime assets are opt-in:
+`init` always creates `.sundial/` and starter domains. Runtime assets are opt-in:
 
 - `--claude` writes missing Claude Code project assets to `.claude/skills/` and `.claude/CLAUDE.md` from CLI templates.
 - `--codex` writes missing Codex project assets to `.agents/skills/` and `AGENTS.md` from CLI templates.
@@ -49,7 +49,7 @@ The update command discovers the nearest ancestor `.sundial` store by default; p
 ```text
 project/
   .sundial/
-    tags.md
+    domains.md
     drs/
       accepted/
         adr-001-testing-strategy.md
@@ -68,17 +68,17 @@ sundial update --claude --codex
 sundial status
 sundial bootstrap --provider claude
 sundial bootstrap --provider codex
-sundial tags
+sundial domains
 
 sundial dr list [--status accepted]
 sundial dr get DR-0001
-sundial dr retrieve --domain <domain> --tag <tag>
+sundial dr retrieve --domain <domain>
 sundial dr disable DR-0001
 sundial dr enable DR-0001
 sundial dr retire DR-0001 [--by DR-0002]
 sundial dr promote CAND-0003 --from rejected
 
-sundial candidate create --title "Decision title" --domain <domain> --decision "Do the thing" --tag <tag>
+sundial candidate create --title "Decision title" --domain <domain> --decision "Do the thing"
 sundial candidate list
 sundial candidate show CAND-0001
 sundial candidate accept CAND-0001
@@ -89,7 +89,7 @@ sundial candidate retire CAND-0001 [--by DR-0001]
 Notes:
 
 - Enabled accepted DRs are the only precedent retrieved by `dr retrieve`.
-- Candidate DRs can include proposed tags and domains with descriptions; accepting the DR appends those proposals to `.sundial/tags.md`.
+- Candidate DRs can include a proposed domain with a description; accepting the DR appends that proposal to `.sundial/domains.md`.
 - DRs can include a `## Appendix` section for human-facing explanatory context; short and medium retrieval omit it.
 
 ## VS Code

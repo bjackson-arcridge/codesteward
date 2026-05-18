@@ -9,13 +9,12 @@ import {
 	getRecordId,
 	getRecordReferences,
 	getRecordSection,
-	getRecordTags,
 	listDecisionRecords,
 	parseDecisionRecord,
 	validateDecisionRecord,
 } from '../core/dr';
 import { initStore } from '../core/store';
-import { parseTagVocabulary } from '../core/tags';
+import { parseDomainVocabulary } from '../core/domains';
 
 const acceptedDr = [
 	'---',
@@ -26,9 +25,6 @@ const acceptedDr = [
 	'created: 2026-05-03',
 	'updated: 2026-05-03',
 	'author: codex',
-	'tags:',
-	'  - repositories',
-	'  - transactions',
 	'references:',
 	'  - src/application/orders/CreateOrderService.ts#CreateOrderService',
 	'---',
@@ -49,22 +45,19 @@ describe('decision record parsing and validation', () => {
 
 		assert.equal(getRecordId(record), 'DR-0001');
 		assert.equal(getRecordDomain(record), 'cli');
-		assert.deepEqual(getRecordTags(record), ['repositories', 'transactions']);
 		assert.deepEqual(getRecordReferences(record), ['src/application/orders/CreateOrderService.ts#CreateOrderService']);
 		assert.equal(getRecordSection(record, 'Decision'), 'Repositories do not open or commit transactions.');
 	});
 
-	test('validates accepted DRs against required fields, status folder, and known tags', () => {
-		const vocabulary = parseTagVocabulary([
-			'# Sundial Tags',
+	test('validates accepted DRs against required fields and status folder', () => {
+		const vocabulary = parseDomainVocabulary([
+			'# Sundial Domains',
 			'',
-			'## repositories',
+			'## Domains',
 			'',
-			'Repository choices.',
+			'### cli',
 			'',
-			'## transactions',
-			'',
-			'Transaction choices.',
+			'CLI.',
 			'',
 		].join('\n'));
 		const record = parseDecisionRecord(acceptedDr, '/repo/.sundial/drs/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
@@ -75,7 +68,7 @@ describe('decision record parsing and validation', () => {
 		assert.deepEqual(result.warnings, []);
 	});
 
-	test('reports missing accepted decision section and unknown accepted tags as errors', () => {
+	test('reports missing accepted decision section as an error', () => {
 		const record = parseDecisionRecord([
 			'---',
 			'id: DR-0002',
@@ -85,16 +78,20 @@ describe('decision record parsing and validation', () => {
 			'created: 2026-05-03',
 			'updated: 2026-05-03',
 			'author: codex',
-			'tags:',
-			'  - unknown-tag',
 			'---',
 			'',
 		].join('\n'), '/repo/.sundial/drs/accepted/DR-0002-missing-decision.md', 'accepted');
 
-		const result = validateDecisionRecord(record, parseTagVocabulary('# Sundial Tags\n'));
+		const result = validateDecisionRecord(record, parseDomainVocabulary([
+			'## Domains',
+			'',
+			'### cli',
+			'',
+			'CLI.',
+			'',
+		].join('\n')));
 
 		assert.deepEqual(result.errors, [
-			'Unknown tag "unknown-tag".',
 			'Missing required "## Decision" section.',
 		]);
 	});
@@ -109,8 +106,6 @@ describe('decision record parsing and validation', () => {
 			'created: 2026-05-03',
 			'updated: 2026-05-03',
 			'author: codex',
-			'tags:',
-			'  - repositories',
 			'---',
 			'',
 			'## Decision',
@@ -119,41 +114,10 @@ describe('decision record parsing and validation', () => {
 			'',
 		].join('\n'), '/repo/.sundial/drs/accepted/DR-0003-legacy-dimension.md', 'accepted');
 
-		const result = validateDecisionRecord(record, parseTagVocabulary([
-			'# Sundial Tags',
-			'',
-			'## repositories',
-			'',
-			'Repository choices.',
-			'',
-		].join('\n')));
+		const result = validateDecisionRecord(record, parseDomainVocabulary(''));
 
 		assert.equal(getRecordDomain(record), 'all');
 		assert.deepEqual(result.errors, ['Field "dimension" is no longer supported; use "domain".']);
-	});
-
-	test('allows accepted DRs with missing tags as tag wildcards', () => {
-		const record = parseDecisionRecord([
-			'---',
-			'id: DR-0004',
-			'title: Untagged domain guidance',
-			'status: accepted',
-			'domain: cli',
-			'created: 2026-05-03',
-			'updated: 2026-05-03',
-			'author: codex',
-			'---',
-			'',
-			'## Decision',
-			'',
-			'Apply this for CLI work.',
-			'',
-		].join('\n'), '/repo/.sundial/drs/accepted/DR-0004-untagged-domain-guidance.md', 'accepted');
-
-		const result = validateDecisionRecord(record, parseTagVocabulary('# Sundial Tags\n'));
-
-		assert.deepEqual(getRecordTags(record), []);
-		assert.deepEqual(result.errors, []);
 	});
 
 	test('rejects removed summary and guidance frontmatter fields', () => {
@@ -175,7 +139,7 @@ describe('decision record parsing and validation', () => {
 			'',
 		].join('\n'), '/repo/.sundial/drs/accepted/DR-0005-removed-fields.md', 'accepted');
 
-		const result = validateDecisionRecord(record, parseTagVocabulary('# Sundial Tags\n'));
+		const result = validateDecisionRecord(record, parseDomainVocabulary(''));
 
 		assert.deepEqual(result.errors, [
 			'Field "summary" is no longer supported; short detail uses "title".',
@@ -192,16 +156,12 @@ describe('decision record parsing and validation', () => {
 			'status: accepted\n',
 			'status: accepted\nenabled: no\n',
 		), '/repo/.sundial/drs/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
-		const vocabulary = parseTagVocabulary([
-			'# Sundial Tags',
+		const vocabulary = parseDomainVocabulary([
+			'## Domains',
 			'',
-			'## repositories',
+			'### cli',
 			'',
-			'Repository choices.',
-			'',
-			'## transactions',
-			'',
-			'Transaction choices.',
+			'CLI.',
 			'',
 		].join('\n'));
 

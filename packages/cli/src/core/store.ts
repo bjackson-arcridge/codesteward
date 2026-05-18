@@ -32,7 +32,7 @@ export interface StorePaths {
 	readonly root: string;
 	readonly store: string;
 	readonly config: string;
-	readonly tags: string;
+	readonly domains: string;
 }
 
 export type DecisionRecordStatus = 'candidate' | 'accepted' | 'rejected' | 'retired';
@@ -59,7 +59,7 @@ export function getStorePaths(projectRoot: string): StorePaths {
 		root,
 		store,
 		config: path.join(store, 'config.json'),
-		tags: path.join(store, 'tags.md'),
+		domains: path.join(store, 'domains.md'),
 	};
 }
 
@@ -94,7 +94,7 @@ export async function initStore(projectRoot: string, options: InitOptions = {}):
 	}
 
 	await ensureFile(paths.config, defaultConfig(), created, existing, paths.root);
-	await ensureFile(paths.tags, defaultTags(), created, existing, paths.root);
+	await ensureFile(paths.domains, defaultDomains(), created, existing, paths.root);
 
 	const harnessInstallers = selectedHarnessInstallers(options);
 	const context = createHarnessInstallContext(paths, harnessInstallers, created, existing, updated);
@@ -188,13 +188,11 @@ function defaultConfig(): string {
 	}, undefined, 2)}\n`;
 }
 
-function defaultTags(): string {
+function defaultDomains(): string {
 	return [
-		'# Sundial Vocabulary',
+		'# Sundial Domains',
 		'',
 		'Domains are broad applicability scopes. Use lowercase dot-separated hierarchy paths. A domain query matches ancestors, the exact domain, and descendants, but not sibling branches.',
-		'',
-		'Tags are concern filters used within matching domains. Apply every applicable tag when it helps retrieval; omit tags only when a DR should match every tag query in its domain.',
 		'',
 		'## Domains',
 		'',
@@ -205,12 +203,6 @@ function defaultTags(): string {
 		'### cli',
 		'',
 		'Command-line behavior and CLI-owned workflows.',
-		'',
-		'## Tags',
-		'',
-		'### architecture',
-		'',
-		'Project-level architecture choices and system boundaries.',
 		'',
 	].join('\n');
 }

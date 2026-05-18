@@ -5,14 +5,12 @@ import { type HostToWebview, type WebviewToHost, isWebviewToHost, type RecordAct
 
 export interface RecordFilterOptions {
 	readonly domains: readonly string[];
-	readonly tags: readonly string[];
 }
 
 export interface RecordsServices {
 	readonly listRecords: () => Promise<readonly RecordSummary[]>;
 	readonly listFilterOptions?: () => Promise<RecordFilterOptions>;
 	readonly getDomainFilter?: () => string | undefined;
-	readonly getTagFilter: () => string | undefined;
 	readonly actionMode?: RecordActionMode;
 	readonly emptyText?: string;
 	readonly diagnosticsEnabled?: () => boolean;
@@ -61,7 +59,7 @@ export class RecordsWebviewProvider implements vscode.WebviewViewProvider {
 		}
 	}
 
-	selectFilterForDiagnostics(filter: 'domain' | 'tag', value: string | undefined): void {
+	selectFilterForDiagnostics(filter: 'domain', value: string | undefined): void {
 		for (const router of this.routers) {
 			router.post({
 				kind: 'diagnosticSelectFilter',
@@ -77,16 +75,13 @@ export class RecordsWebviewProvider implements vscode.WebviewViewProvider {
 			this.services.listFilterOptions?.(),
 		]);
 		const domainFilter = this.services.getDomainFilter?.();
-		const tagFilter = this.services.getTagFilter();
 		const diagnosticsEnabled = this.services.diagnosticsEnabled?.() === true;
 		return {
 			kind: 'state',
 			records,
 			...(domainFilter === undefined ? {} : { domainFilter }),
-			...(tagFilter === undefined ? {} : { tagFilter }),
 			...(filterOptions === undefined ? {} : {
 				domainOptions: filterOptions.domains,
-				tagOptions: filterOptions.tags,
 			}),
 			...(this.services.actionMode === undefined ? {} : { actionMode: this.services.actionMode }),
 			...(this.services.emptyText === undefined ? {} : { emptyText: this.services.emptyText }),

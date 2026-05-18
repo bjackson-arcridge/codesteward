@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { describe, test } from 'node:test';
-import { discoverSundialRoot, listCandidateSummaries, listDecisionRecordSummaries, listKnownDomains, listKnownTags } from '../candidateInbox';
+import { discoverSundialRoot, listCandidateSummaries, listDecisionRecordSummaries, listKnownDomains } from '../candidateInbox';
 
 describe('listCandidateSummaries', () => {
 	test('returns empty list when the candidate folder does not exist', async () => {
@@ -32,12 +32,12 @@ describe('listCandidateSummaries', () => {
 		assert.equal(candidate?.filePath.endsWith('CAND-0001-test.md'), true);
 	});
 
-	test('reads accepted decision records and known tags', async () => {
+	test('reads accepted decision records and known domains', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-vscode-records-'));
 		const accepted = path.join(root, '.sundial', 'drs', 'accepted');
 		await fs.mkdir(accepted, { recursive: true });
-		await fs.writeFile(path.join(root, '.sundial', 'tags.md'), [
-			'# Sundial Vocabulary',
+		await fs.writeFile(path.join(root, '.sundial', 'domains.md'), [
+			'# Sundial Domains',
 			'',
 			'## Domains',
 			'',
@@ -47,14 +47,6 @@ describe('listCandidateSummaries', () => {
 			'### vscode.webview',
 			'Webview work.',
 			'',
-			'## Tags',
-			'',
-			'### architecture',
-			'Project-level architecture.',
-			'',
-			'### testing',
-			'Test strategy.',
-			'',
 		].join('\n'), 'utf8');
 		await fs.writeFile(path.join(accepted, 'DR-0001-test.md'), [
 			'---',
@@ -63,9 +55,6 @@ describe('listCandidateSummaries', () => {
 			'status: accepted',
 			'enabled: false',
 			'domain: vscode.webview',
-			'tags:',
-			'  - architecture',
-			'  - testing',
 			'---',
 			'',
 		].join('\n'), 'utf8');
@@ -76,8 +65,6 @@ describe('listCandidateSummaries', () => {
 		assert.equal(record?.title, 'Test decision');
 		assert.equal(record?.domain, 'vscode.webview');
 		assert.equal(record?.enabled, false);
-		assert.deepEqual(record?.tags, ['architecture', 'testing']);
-		assert.deepEqual(await listKnownTags(root), ['architecture', 'testing']);
 		assert.deepEqual(await listKnownDomains(root), ['all', 'vscode.webview']);
 	});
 
@@ -87,10 +74,12 @@ describe('listCandidateSummaries', () => {
 		const accepted = path.join(root, '.sundial', 'drs', 'accepted');
 		await fs.mkdir(nested, { recursive: true });
 		await fs.mkdir(accepted, { recursive: true });
-		await fs.writeFile(path.join(root, '.sundial', 'tags.md'), [
-			'# Tags',
+		await fs.writeFile(path.join(root, '.sundial', 'domains.md'), [
+			'# Sundial Domains',
 			'',
-			'## vscode',
+			'## Domains',
+			'',
+			'### vscode',
 			'VS Code extension work.',
 			'',
 		].join('\n'), 'utf8');
@@ -99,8 +88,6 @@ describe('listCandidateSummaries', () => {
 			'id: DR-0002',
 			'title: Nested workspace decision',
 			'status: accepted',
-			'tags:',
-			'  - vscode',
 			'---',
 			'',
 		].join('\n'), 'utf8');
@@ -111,7 +98,6 @@ describe('listCandidateSummaries', () => {
 		assert.equal(record?.id, 'DR-0002');
 		assert.equal(record?.domain, 'all');
 		assert.equal(record?.enabled, true);
-		assert.deepEqual(record?.tags, ['vscode']);
-		assert.deepEqual(await listKnownTags(nested), ['vscode']);
+		assert.deepEqual(await listKnownDomains(nested), ['vscode']);
 	});
 });

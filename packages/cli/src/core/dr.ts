@@ -2,7 +2,7 @@ import { Dirent } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { decisionRecordDirectory, decisionRecordStatuses, DecisionRecordStatus, StorePaths } from './store';
-import { TagVocabulary } from './tags';
+import { DomainVocabulary } from './domains';
 
 export interface DecisionRecord {
 	readonly filePath: string;
@@ -77,7 +77,7 @@ export async function listDecisionRecords(paths: StorePaths, status?: DecisionRe
 	return records.sort((left, right) => getRequiredString(left, 'id').localeCompare(getRequiredString(right, 'id')));
 }
 
-export function validateDecisionRecord(record: DecisionRecord, vocabulary: TagVocabulary): ValidationResult {
+export function validateDecisionRecord(record: DecisionRecord, vocabulary: DomainVocabulary): ValidationResult {
 	const errors: string[] = [];
 	const warnings: string[] = [];
 	const frontmatter = record.frontmatter;
@@ -102,7 +102,6 @@ export function validateDecisionRecord(record: DecisionRecord, vocabulary: TagVo
 	validateDate(record, 'updated', errors);
 	validateBoolean(record, 'enabled', errors);
 	validateDomain(record, vocabulary, errors, warnings);
-	validateTags(record, vocabulary, errors, warnings);
 	validateRemovedRetrievalFields(record, errors);
 
 	if (status === 'accepted') {
@@ -122,10 +121,6 @@ export function validateDecisionRecord(record: DecisionRecord, vocabulary: TagVo
 		errors,
 		warnings,
 	};
-}
-
-export function getRecordTags(record: DecisionRecord): readonly string[] {
-	return getStringList(record, 'tags');
 }
 
 export function getRecordId(record: DecisionRecord): string {
@@ -292,7 +287,7 @@ function validateBoolean(record: DecisionRecord, field: string, errors: string[]
 	}
 }
 
-function validateDomain(record: DecisionRecord, vocabulary: TagVocabulary, errors: string[], warnings: string[]): void {
+function validateDomain(record: DecisionRecord, vocabulary: DomainVocabulary, errors: string[], warnings: string[]): void {
 	if (Object.prototype.hasOwnProperty.call(record.frontmatter, 'dimension')) {
 		errors.push('Field "dimension" is no longer supported; use "domain".');
 	}
@@ -325,23 +320,6 @@ function validateDomain(record: DecisionRecord, vocabulary: TagVocabulary, error
 			warnings.push(message);
 		} else {
 			errors.push(message);
-		}
-	}
-}
-
-function validateTags(record: DecisionRecord, vocabulary: TagVocabulary, errors: string[], warnings: string[]): void {
-	const tags = getStringList(record, 'tags');
-	const status = getRequiredString(record, 'status');
-	const knownTags = new Set(vocabulary.tags.map(tag => tag.name));
-
-	for (const tag of tags) {
-		if (!knownTags.has(tag)) {
-			const message = `Unknown tag "${tag}".`;
-			if (status === 'candidate') {
-				warnings.push(message);
-			} else {
-				errors.push(message);
-			}
 		}
 	}
 }

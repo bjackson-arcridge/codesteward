@@ -4,7 +4,6 @@ title: Governance lives in the CLI-backed store
 status: accepted
 domain: governance
 created: 2026-05-04
-tags: []
 affected_files:
   - CLI_SPEC.md
   - packages/cli/src/main.ts

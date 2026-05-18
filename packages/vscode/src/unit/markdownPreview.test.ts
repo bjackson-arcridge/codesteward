@@ -3,17 +3,14 @@ import { describe, test } from 'node:test';
 import { renderMarkdownPreviewSource } from '../markdownPreview';
 
 describe('renderMarkdownPreviewSource', () => {
-	test('renders title, domain, and tags above the body and remaining fields below', () => {
+	test('renders title and domain above the body and remaining fields below', () => {
 		const rendered = renderMarkdownPreviewSource([
 			'---',
 			'id: CAND-0001',
 			'title: Fixture candidate',
 			'domain: vscode.webview',
-			'tags:',
-			'  - fixtures',
-			'  - rendering',
-			'proposed_tags:',
-			'  preview-rendering: Preview rendering behavior.',
+			'proposed_domains:',
+			'  vscode.webview: Preview rendering behavior.',
 			'---',
 			'',
 			'## Decision',
@@ -24,7 +21,7 @@ describe('renderMarkdownPreviewSource', () => {
 
 		assert.equal(rendered, [
 			'# Fixture candidate',
-			'**domain:** vscode.webview **tags:** fixtures,rendering',
+			'**domain:** vscode.webview',
 			'',
 			'## Decision',
 			'',
@@ -35,7 +32,7 @@ describe('renderMarkdownPreviewSource', () => {
 			'<table style="border-collapse: collapse; border-spacing: 0;">',
 			'<tbody>',
 			'<tr><td align="right" style="border: none; padding-right: 0.75em; vertical-align: top;"><strong>id</strong></td><td align="left" style="border: none; border-left: 1px solid currentColor; padding-left: 0.75em; vertical-align: top;">CAND-0001</td></tr>',
-			'<tr><td align="right" style="border: none; padding-right: 0.75em; vertical-align: top;"><strong>proposed_tags</strong></td><td align="left" style="border: none; border-left: 1px solid currentColor; padding-left: 0.75em; vertical-align: top;">preview-rendering: Preview rendering behavior.</td></tr>',
+			'<tr><td align="right" style="border: none; padding-right: 0.75em; vertical-align: top;"><strong>proposed_domains</strong></td><td align="left" style="border: none; border-left: 1px solid currentColor; padding-left: 0.75em; vertical-align: top;">vscode.webview: Preview rendering behavior.</td></tr>',
 			'</tbody>',
 			'</table>',
 			'',
@@ -47,8 +44,6 @@ describe('renderMarkdownPreviewSource', () => {
 		const rendered = renderMarkdownPreviewSource([
 			'---',
 			'title: A | B < C > D',
-			'tags:',
-			'  - alpha|beta',
 			'status: accepted | pending < done',
 			'---',
 			'',
@@ -58,7 +53,7 @@ describe('renderMarkdownPreviewSource', () => {
 
 		assert.equal(rendered, [
 			'# A | B &lt; C &gt; D',
-			'**domain:** all **tags:** alpha|beta',
+			'**domain:** all',
 			'',
 			'Body.',
 			'',

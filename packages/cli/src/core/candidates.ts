@@ -10,7 +10,7 @@ import {
 	validateDecisionRecord,
 } from './dr';
 import { decisionRecordDirectory, DecisionRecordStatus, StorePaths } from './store';
-import { acceptVocabularyProposals, TagVocabulary } from './tags';
+import { acceptDomainProposals, DomainVocabulary } from './domains';
 
 export interface CandidateCreateInput {
 	readonly title: string;
@@ -18,8 +18,6 @@ export interface CandidateCreateInput {
 	readonly decision: string;
 	readonly appendix?: string | undefined;
 	readonly affectedFiles: readonly string[];
-	readonly tags: readonly string[];
-	readonly proposedTagDescriptions?: Readonly<Record<string, string>>;
 	readonly proposedDomainDescription?: string;
 	readonly references: readonly string[];
 	readonly author: string;
@@ -28,8 +26,6 @@ export interface CandidateCreateInput {
 
 export interface CandidateCreateResult {
 	readonly record: DecisionRecord;
-	readonly knownTags: readonly string[];
-	readonly proposedTags: readonly string[];
 	readonly proposedDomains: readonly string[];
 }
 
@@ -46,12 +42,9 @@ export interface DecisionRecordDeleteResult {
 	readonly status: 'rejected' | 'retired';
 }
 
-export async function createCandidate(paths: StorePaths, vocabulary: TagVocabulary, input: CandidateCreateInput): Promise<CandidateCreateResult> {
+export async function createCandidate(paths: StorePaths, vocabulary: DomainVocabulary, input: CandidateCreateInput): Promise<CandidateCreateResult> {
 	const knownDomainNames = new Set(vocabulary.domains.map(domain => domain.name));
 	knownDomainNames.add('all');
-	const knownTagNames = new Set(vocabulary.tags.map(tag => tag.name));
-	const knownTags = input.tags.filter(tag => knownTagNames.has(tag));
-	const proposedTags = input.tags.filter(tag => !knownTagNames.has(tag));
 	const proposedDomains = knownDomainNames.has(input.domain) || vocabulary.domains.length === 0 ? [] : [input.domain];
 	const id = await nextRecordId(paths, 'CAND');
 	const filePath = path.join(decisionRecordDirectory(paths, 'candidate'), `${id}-${slugify(input.title)}.md`);
@@ -62,15 +55,7 @@ export async function createCandidate(paths: StorePaths, vocabulary: TagVocabula
 		domain: input.domain,
 		created: input.created,
 		created_by: input.author,
-		tags: knownTags,
 	};
-
-	if (proposedTags.length > 0) {
-		frontmatter.proposed_tags = Object.fromEntries(proposedTags.map(tag => [
-			tag,
-			input.proposedTagDescriptions?.[tag] ?? `TODO: describe ${tag}.`,
-		]));
-	}
 
 	if (proposedDomains.length > 0) {
 		frontmatter.proposed_domains = {
@@ -102,8 +87,6 @@ export async function createCandidate(paths: StorePaths, vocabulary: TagVocabula
 
 	return {
 		record: await readDecisionRecord(filePath, 'candidate'),
-		knownTags,
-		proposedTags,
 		proposedDomains,
 	};
 }
@@ -113,14 +96,14 @@ export async function findCandidate(paths: StorePaths, id: string): Promise<Deci
 	return records.find(record => getRecordId(record) === id);
 }
 
-export async function acceptCandidate(paths: StorePaths, vocabulary: TagVocabulary, id: string, updated: string): Promise<CandidateMoveResult> {
+export async function acceptCandidate(paths: StorePaths, vocabulary: DomainVocabulary, id: string, updated: string): Promise<CandidateMoveResult> {
 	const candidate = await requireCandidateInFolder(paths, id, 'candidate');
 	return acceptCandidateRecord(paths, vocabulary, candidate, updated);
 }
 
 export async function promoteDecisionRecord(
 	paths: StorePaths,
-	vocabulary: TagVocabulary,
+	vocabulary: DomainVocabulary,
 	id: string,
 	from: 'rejected' | 'retired',
 	updated: string,
@@ -213,22 +196,17 @@ export async function setDecisionRecordEnabled(paths: StorePaths, id: string, en
 	};
 }
 
-async function acceptCandidateRecord(paths: StorePaths, vocabulary: TagVocabulary, candidate: DecisionRecord, updated: string): Promise<CandidateMoveResult> {
+async function acceptCandidateRecord(paths: StorePaths, vocabulary: DomainVocabulary, candidate: DecisionRecord, updated: string): Promise<CandidateMoveResult> {
 	const kind = getString(candidate, 'kind');
 
 	if (kind.length > 0 && kind !== 'dr') {
 		throw new Error(`Candidate ${getRecordId(candidate)} is kind "${kind}"; only kind "dr" can be accepted as precedent.`);
 	}
 
-	const proposedTags = getProposalRecord(candidate, 'proposed_tags');
 	const proposedDomains = getProposalRecord(candidate, 'proposed_domains');
-	const acceptedVocabulary = Object.keys(proposedTags).length === 0 && Object.keys(proposedDomains).length === 0
+	const acceptedVocabulary = Object.keys(proposedDomains).length === 0
 		? vocabulary
-		: await acceptVocabularyProposals(paths.tags, {
-			tags: proposedTags,
-			domains: proposedDomains,
-		});
-	const acceptedTags = uniqueStrings([...getStringList(candidate, 'tags'), ...Object.keys(proposedTags)]);
+		: await acceptDomainProposals(paths.domains, { domains: proposedDomains });
 
 	const nextId = await nextRecordId(paths, 'DR');
 	const frontmatter: Record<string, FrontmatterValue> = {
@@ -237,10 +215,10 @@ async function acceptCandidateRecord(paths: StorePaths, vocabulary: TagVocabular
 		status: 'accepted',
 		updated,
 		author: getString(candidate, 'author') || getString(candidate, 'created_by') || 'agent',
-		tags: acceptedTags,
 	};
 	delete frontmatter.kind;
 	delete frontmatter.created_by;
+	delete frontmatter.tags;
 	delete frontmatter.proposed_tags;
 	delete frontmatter.proposed_domains;
 	delete frontmatter.rejection_reason;
@@ -364,11 +342,6 @@ function getString(record: DecisionRecord, key: string): string {
 	return typeof value === 'string' ? value : '';
 }
 
-function getStringList(record: DecisionRecord, key: string): readonly string[] {
-	const value = record.frontmatter[key];
-	return Array.isArray(value) ? value : [];
-}
-
 function getProposalRecord(record: DecisionRecord, key: string): Record<string, string> {
 	const value = record.frontmatter[key];
 	if (isStringRecord(value)) {
@@ -380,10 +353,6 @@ function getProposalRecord(record: DecisionRecord, key: string): Record<string, 
 	}
 
 	return {};
-}
-
-function uniqueStrings(values: readonly string[]): readonly string[] {
-	return [...new Set(values)];
 }
 
 function slugify(title: string): string {
