@@ -15,9 +15,9 @@ import { acceptDomainProposals, DomainVocabulary } from './domains';
 export interface CandidateCreateInput {
 	readonly title: string;
 	readonly domain: string;
-	readonly decision: string;
+	readonly decision?: string | undefined;
+	readonly pitfalls?: string | undefined;
 	readonly appendix?: string | undefined;
-	readonly affectedFiles: readonly string[];
 	readonly proposedDomainDescription?: string;
 	readonly references: readonly string[];
 	readonly author: string;
@@ -63,20 +63,24 @@ export async function createCandidate(paths: StorePaths, vocabulary: DomainVocab
 		};
 	}
 
-	if (input.affectedFiles.length > 0) {
-		frontmatter.affected_files = input.affectedFiles;
-	}
-
 	if (input.references.length > 0) {
 		frontmatter.references = input.references;
 	}
 
+	const decision = input.decision?.trim();
+	const pitfalls = input.pitfalls?.trim();
+	if ((decision === undefined || decision.length === 0) && (pitfalls === undefined || pitfalls.length === 0)) {
+		throw new Error('Candidate must include a decision, pitfalls, or both.');
+	}
+
 	const markdown = [
 		renderFrontmatter(frontmatter),
-		'',
-		'## Decision',
-		'',
-		input.decision,
+		...(decision === undefined || decision.length === 0
+			? []
+			: ['', '## Decision', '', decision]),
+		...(pitfalls === undefined || pitfalls.length === 0
+			? []
+			: ['', '## Pitfalls', '', pitfalls]),
 		...(input.appendix === undefined
 			? []
 			: ['', '## Appendix', '', input.appendix]),

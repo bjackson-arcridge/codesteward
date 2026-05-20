@@ -4,13 +4,12 @@ title: Governance lives in the CLI-backed store
 status: accepted
 domain: governance
 created: 2026-05-04
-affected_files:
-  - CLI_SPEC.md
-  - packages/cli/src/main.ts
-  - packages/vscode/src/extension.ts
 references:
   - packages/vscode/src/extension.ts#runLifecycleCommand
   - packages/cli/src/main.ts#runCandidate
+  - CLI_SPEC.md
+  - packages/cli/src/main.ts
+  - packages/vscode/src/extension.ts
 updated: 2026-05-04
 author: bjackson
 ---

@@ -15,7 +15,6 @@ import {
 import { validateStore, validationErrorCount, validationWarningCount } from './core/validation';
 import {
 	DecisionRecord,
-	getRecordDecision,
 	getRecordDomain,
 	getRecordEnabled,
 	getRecordId,
@@ -806,9 +805,9 @@ function parseCandidateCreateArgs(
 ): {
 	readonly title: string;
 	readonly domain: string;
-	readonly decision: string;
+	readonly decision: string | undefined;
+	readonly pitfalls: string | undefined;
 	readonly appendix: string | undefined;
-	readonly affectedFiles: readonly string[];
 	readonly proposedDomainDescription: string | undefined;
 	readonly references: readonly string[];
 } | undefined {
@@ -816,8 +815,8 @@ function parseCandidateCreateArgs(
 	let domain = 'all';
 	let domainSetBy: 'domain' | 'proposed-domain' | undefined;
 	let decision: string | undefined;
+	let pitfalls: string | undefined;
 	let appendix: string | undefined;
-	const affectedFiles: string[] = [];
 	let proposedDomainDescription: string | undefined;
 	const references: string[] = [];
 
@@ -869,22 +868,22 @@ function parseCandidateCreateArgs(
 			continue;
 		}
 
+		if (arg === '--pitfalls') {
+			if (value === undefined) {
+				return usageError(candidateCreateUsage(), io);
+			}
+
+			pitfalls = value;
+			index += 1;
+			continue;
+		}
+
 		if (arg === '--appendix') {
 			if (value === undefined) {
 				return usageError(candidateCreateUsage(), io);
 			}
 
 			appendix = value;
-			index += 1;
-			continue;
-		}
-
-		if (arg === '--affected') {
-			if (value === undefined) {
-				return usageError(candidateCreateUsage(), io);
-			}
-
-			affectedFiles.push(value);
 			index += 1;
 			continue;
 		}
@@ -902,16 +901,21 @@ function parseCandidateCreateArgs(
 		return usageError(candidateCreateUsage(), io);
 	}
 
-	if (title === undefined || decision === undefined) {
+	const decisionTrimmed = decision?.trim();
+	const pitfallsTrimmed = pitfalls?.trim();
+	const hasDecision = decisionTrimmed !== undefined && decisionTrimmed.length > 0;
+	const hasPitfalls = pitfallsTrimmed !== undefined && pitfallsTrimmed.length > 0;
+
+	if (title === undefined || (!hasDecision && !hasPitfalls)) {
 		return usageError(candidateCreateUsage(), io);
 	}
 
 	return {
 		title,
 		domain,
-		decision,
+		decision: hasDecision ? decisionTrimmed : undefined,
+		pitfalls: hasPitfalls ? pitfallsTrimmed : undefined,
 		appendix: appendix?.trim() || undefined,
-		affectedFiles,
 		proposedDomainDescription,
 		references,
 	};
@@ -1214,8 +1218,10 @@ function bootstrapPrompt(paths: StorePaths): string {
 		'Important candidate creation contract:',
 		`- Use this command shape: sundial --cwd ${shellQuote(root)} candidate create --title "<title>" --domain "<domain>" --decision "<terse guidance>"`,
 		'- Use --proposed-domain <domain> "<description>" instead of --domain when the domain is not already listed in .sundial/domains.md.',
+		'- A candidate may have --decision, --pitfalls, or both. At least one is required.',
+		'- Pitfalls discipline: similar to decision, but some information is better conveyed as what not to do instead of what to do. CRITICAL: Pitfalls and Decisions do not repeat each other. All information should be net-new.',
 		'- Add --appendix "<human-facing context>" only when explanatory background helps reviewers; do not put governing guidance there.',
-		'- Add --affected <path> and --ref <path-or-symbol> when useful.',
+		'- Add --ref <path-or-symbol> when useful, repeated for each reference.',
 		'- Use existing domains from .sundial/domains.md when possible. Proposed domains are for truly useful missing terms.',
 		'- Every DR candidate must go through `sundial candidate create`; do not create markdown files manually.',
 		'',
@@ -1239,7 +1245,7 @@ function shellQuote(value: string): string {
 }
 
 function candidateCreateUsage(): string {
-	return 'Usage: sundial candidate create --title <title> [--domain <domain> | --proposed-domain <domain> <description>] --decision <text> [--appendix <text>] [--affected <path>] [--ref <ref>]\n';
+	return 'Usage: sundial candidate create --title <title> [--domain <domain> | --proposed-domain <domain> <description>] (--decision <text> | --pitfalls <text> | --decision <text> --pitfalls <text>) [--appendix <text>] [--ref <ref>]\n';
 }
 
 function retrieveUsage(): string {
@@ -1300,7 +1306,8 @@ function renderRecord(
 	write(io.stdout, `Domain: ${getRecordDomain(record)}\n`);
 
 	if (detail === 'medium') {
-		write(io.stdout, `Decision:\n${getRecordDecision(record)}\n`);
+		renderOptionalSection(record, 'Decision', 'Decision', io);
+		renderOptionalSection(record, 'Pitfalls', 'Pitfalls', io);
 		renderOptionalSection(record, 'Applies When', 'Applies when', io);
 		renderOptionalSection(record, 'Does Not Apply When', 'Does not apply when', io);
 

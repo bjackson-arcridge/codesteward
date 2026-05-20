@@ -4,7 +4,7 @@ title: Bundle Lit webviews with the webview tsconfig
 status: accepted
 domain: vscode.webview.ui
 created: 2026-05-05
-affected_files:
+references:
   - packages/vscode/esbuild.js
   - packages/vscode/tsconfig.webview.json
 updated: 2026-05-05

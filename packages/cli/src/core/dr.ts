@@ -111,8 +111,8 @@ export function validateDecisionRecord(record: DecisionRecord, vocabulary: Domai
 			}
 		}
 
-		if (!record.sections.has('decision')) {
-			errors.push('Missing required "## Decision" section.');
+		if (!record.sections.has('decision') && !record.sections.has('pitfalls')) {
+			errors.push('Missing required "## Decision" or "## Pitfalls" section.');
 		}
 	}
 
@@ -153,6 +153,10 @@ export function getRecordSection(record: DecisionRecord, title: string): string 
 
 export function getRecordDecision(record: DecisionRecord): string {
 	return getRecordSection(record, 'Decision') ?? '';
+}
+
+export function getRecordPitfalls(record: DecisionRecord): string {
+	return getRecordSection(record, 'Pitfalls') ?? '';
 }
 
 export function isValidRecordDomain(domain: string): boolean {

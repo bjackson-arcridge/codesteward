@@ -4,16 +4,13 @@ title: Agent harness installs use staged harness modules
 status: accepted
 domain: cli
 created: 2026-05-08
-affected_files:
-  - packages/cli/src/core/harnesses.ts
-  - packages/cli/src/core/store.ts
-  - packages/cli/src/core/templates/skills/generic
-  - packages/cli/src/core/templates/skills/claude
-  - packages/cli/src/core/templates/skills/codex
 references:
   - packages/cli/src/core/harnesses.ts
   - packages/cli/src/core/store.ts
   - packages/cli/src/unit/store.test.ts
+  - packages/cli/src/core/templates/skills/generic
+  - packages/cli/src/core/templates/skills/claude
+  - packages/cli/src/core/templates/skills/codex
 updated: 2026-05-08
 author: bjackson
 ---

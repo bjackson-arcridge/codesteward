@@ -41,8 +41,7 @@ describe('candidate lifecycle', () => {
 			title: 'Validation error response shape',
 			domain: 'cli.validation',
 			decision: 'Return field-keyed validation errors.',
-			affectedFiles: ['src/api/orders.ts'],
-			references: ['src/api/errors.ts#formatValidationErrors'],
+			references: ['src/api/orders.ts', 'src/api/errors.ts#formatValidationErrors'],
 			author: 'codex',
 			created: '2026-05-03',
 		});
@@ -53,6 +52,67 @@ describe('candidate lifecycle', () => {
 		assert.equal(getRecordDomain(result.record), 'cli.validation');
 		assert.equal(getRecordSection(result.record, 'Rationale'), undefined);
 		assert.equal(getRecordSection(result.record, 'Appendix'), undefined);
+		assert.equal(getRecordSection(result.record, 'Pitfalls'), undefined);
+	});
+
+	test('creates candidates with decision and pitfalls together', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-pitfalls-'));
+		const init = await initStore(root);
+
+		const result = await createCandidate(init.paths, vocabulary, {
+			title: 'Tenant-scoped HTTP clients',
+			domain: 'cli',
+			decision: 'Construct a new HTTP client per tenant request.',
+			pitfalls: '- Sharing one client across tenants leaks auth headers.\n- Pooling at the agent level defeats per-tenant TLS settings.',
+			references: [],
+			author: 'codex',
+			created: '2026-05-03',
+		});
+
+		assert.equal(
+			getRecordSection(result.record, 'Decision'),
+			'Construct a new HTTP client per tenant request.',
+		);
+		assert.equal(
+			getRecordSection(result.record, 'Pitfalls'),
+			'- Sharing one client across tenants leaks auth headers.\n- Pooling at the agent level defeats per-tenant TLS settings.',
+		);
+	});
+
+	test('creates pitfalls-only candidates when no positive decision applies', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-pitfalls-only-'));
+		const init = await initStore(root);
+
+		const result = await createCandidate(init.paths, vocabulary, {
+			title: 'CLI argument parsing traps',
+			domain: 'cli',
+			pitfalls: '- Consuming the next argv as a value without checking it is also a flag.',
+			references: [],
+			author: 'codex',
+			created: '2026-05-03',
+		});
+
+		assert.equal(getRecordSection(result.record, 'Decision'), undefined);
+		assert.equal(
+			getRecordSection(result.record, 'Pitfalls'),
+			'- Consuming the next argv as a value without checking it is also a flag.',
+		);
+	});
+
+	test('rejects candidates with neither decision nor pitfalls', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-empty-'));
+		const init = await initStore(root);
+
+		await assert.rejects(
+			createCandidate(init.paths, vocabulary, {
+				title: 'Empty body',
+				domain: 'cli',
+				references: [],
+				author: 'codex',
+				created: '2026-05-03',
+			}),
+			/decision, pitfalls, or both/,
+		);
 	});
 
 	test('accepts DR candidates as accepted DRs and removes the candidate file', async () => {
@@ -62,7 +122,6 @@ describe('candidate lifecycle', () => {
 			title: 'Validation error response shape',
 			domain: 'cli.validation',
 			decision: 'Return field-keyed validation errors.',
-			affectedFiles: [],
 			references: [],
 			author: 'codex',
 			created: '2026-05-03',
@@ -87,7 +146,6 @@ describe('candidate lifecycle', () => {
 			title: 'Legacy kind candidate',
 			domain: 'cli',
 			decision: 'Accept legacy DR candidates.',
-			affectedFiles: [],
 			references: [],
 			author: 'codex',
 			created: '2026-05-03',
@@ -120,7 +178,6 @@ describe('candidate lifecycle', () => {
 			domain: 'api.validation',
 			proposedDomainDescription: 'API validation behavior.',
 			decision: 'Return field-keyed validation errors.',
-			affectedFiles: [],
 			references: [],
 			author: 'codex',
 			created: '2026-05-03',
@@ -142,7 +199,6 @@ describe('candidate lifecycle', () => {
 			title: 'Temporary decision',
 			domain: 'all',
 			decision: 'Try the temporary path.',
-			affectedFiles: [],
 			references: [],
 			author: 'codex',
 			created: '2026-05-03',
@@ -151,7 +207,6 @@ describe('candidate lifecycle', () => {
 			title: 'Covered decision',
 			domain: 'all',
 			decision: 'Use the covered path.',
-			affectedFiles: [],
 			references: [],
 			author: 'codex',
 			created: '2026-05-03',
@@ -160,7 +215,6 @@ describe('candidate lifecycle', () => {
 			title: 'Deprecated decision',
 			domain: 'all',
 			decision: 'Use no longer relevant path.',
-			affectedFiles: [],
 			references: [],
 			author: 'codex',
 			created: '2026-05-03',

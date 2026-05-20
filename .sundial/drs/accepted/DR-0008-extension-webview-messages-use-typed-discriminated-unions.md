@@ -4,7 +4,7 @@ title: Extension ↔ webview messages use typed discriminated unions
 status: accepted
 domain: vscode.webview
 created: 2026-05-04
-affected_files:
+references:
   - packages/vscode/src/webviews/
 updated: 2026-05-04
 author: bjackson

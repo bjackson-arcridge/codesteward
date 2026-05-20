@@ -4,13 +4,10 @@ title: Managed agent instructions remain baseline alongside plugins
 status: accepted
 domain: cli
 created: 2026-05-08
-affected_files:
-  - packages/cli/src/core/store.ts
-  - packages/cli/src/core/templates/instructions/agent-instructions.md
-  - CLI_SPEC.md
 references:
   - packages/cli/src/core/templates/instructions/agent-instructions.md
   - packages/cli/src/core/store.ts
+  - CLI_SPEC.md
 updated: 2026-05-08
 author: bjackson
 ---

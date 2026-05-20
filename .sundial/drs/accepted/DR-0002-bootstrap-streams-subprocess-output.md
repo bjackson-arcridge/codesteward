@@ -4,10 +4,9 @@ title: Bootstrap streams subprocess output
 status: accepted
 domain: cli.bootstrap
 created: 2026-05-04
-affected_files:
-  - packages/cli/src/main.ts
 references:
   - packages/cli/src/main.ts#runBootstrapCommand
+  - packages/cli/src/main.ts
 updated: 2026-05-04
 author: bjackson
 ---

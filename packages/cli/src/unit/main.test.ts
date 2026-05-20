@@ -511,6 +511,55 @@ describe('bootstrapCommand', () => {
 		assert.equal(appendix.exitCode, 64);
 	});
 
+	test('creates candidates with --pitfalls and renders them in medium detail', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-pitfalls-'));
+		await initStore(root);
+
+		const created = await runCli(root, [
+			'candidate',
+			'create',
+			'--title',
+			'Tenant scoped HTTP clients',
+			'--domain',
+			'cli',
+			'--decision',
+			'Construct a new HTTP client per tenant request.',
+			'--pitfalls',
+			'- Pooling at the agent level defeats per-tenant TLS settings.',
+		]);
+		const shownFull = await runCli(root, ['candidate', 'show', 'CAND-0001']);
+		const pitfallsOnly = await runCli(root, [
+			'candidate',
+			'create',
+			'--title',
+			'Argv parsing traps',
+			'--domain',
+			'cli',
+			'--pitfalls',
+			'- Consuming the next argv as a value without checking it is also a flag.',
+		]);
+		const missingBoth = await runCli(root, [
+			'candidate',
+			'create',
+			'--title',
+			'No body',
+			'--domain',
+			'cli',
+		]);
+
+		await runCli(root, ['candidate', 'accept', 'CAND-0001']);
+		const retrieved = await runCli(root, ['dr', 'retrieve', '--domain', 'cli']);
+
+		assert.match(created.stdout, /Created CAND-0001/);
+		assert.match(shownFull.stdout, /## Decision\n\nConstruct a new HTTP client per tenant request\./);
+		assert.match(shownFull.stdout, /## Pitfalls\n\n- Pooling at the agent level defeats per-tenant TLS settings\./);
+		assert.match(pitfallsOnly.stdout, /Created CAND-0002/);
+		assert.match(retrieved.stdout, /Decision:\nConstruct a new HTTP client per tenant request\./);
+		assert.match(retrieved.stdout, /Pitfalls:\n- Pooling at the agent level defeats per-tenant TLS settings\./);
+		assert.match(missingBoth.stderr, /Usage: sundial candidate create/);
+		assert.equal(missingBoth.exitCode, 64);
+	});
+
 	test('creates candidates with proposed domain syntax', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-proposed-domain-'));
 		await initStore(root);

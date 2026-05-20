@@ -92,8 +92,44 @@ describe('decision record parsing and validation', () => {
 		].join('\n')));
 
 		assert.deepEqual(result.errors, [
-			'Missing required "## Decision" section.',
+			'Missing required "## Decision" or "## Pitfalls" section.',
 		]);
+	});
+
+	test('accepts a pitfalls-only DR without a decision section', () => {
+		const vocabulary = parseDomainVocabulary([
+			'## Domains',
+			'',
+			'### cli',
+			'',
+			'CLI.',
+			'',
+		].join('\n'));
+		const record = parseDecisionRecord([
+			'---',
+			'id: DR-0010',
+			'title: Pitfalls only',
+			'status: accepted',
+			'domain: cli',
+			'created: 2026-05-03',
+			'updated: 2026-05-03',
+			'author: codex',
+			'---',
+			'',
+			'## Pitfalls',
+			'',
+			'- Reusing a single HTTP client across tenants leaks auth headers.',
+			'- Caching response bodies before the streaming layer breaks chunked encoding.',
+			'',
+		].join('\n'), '/repo/.sundial/drs/accepted/DR-0010-pitfalls-only.md', 'accepted');
+
+		const result = validateDecisionRecord(record, vocabulary);
+
+		assert.deepEqual(result.errors, []);
+		assert.equal(
+			getRecordSection(record, 'Pitfalls'),
+			'- Reusing a single HTTP client across tenants leaks auth headers.\n- Caching response bodies before the streaming layer breaks chunked encoding.',
+		);
 	});
 
 	test('defaults missing domain to all and rejects legacy dimension', () => {

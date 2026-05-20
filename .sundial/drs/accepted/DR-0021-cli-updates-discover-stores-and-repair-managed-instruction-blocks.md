@@ -4,10 +4,6 @@ title: CLI updates discover stores and repair managed instruction blocks
 status: accepted
 domain: cli
 created: 2026-05-08
-affected_files:
-  - packages/cli/src/main.ts
-  - packages/cli/src/core/store.ts
-  - packages/cli/src/core/templates/instructions/agent-instructions.md
 references:
   - packages/cli/src/core/store.ts
   - packages/cli/src/main.ts

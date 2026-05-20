@@ -4,7 +4,7 @@ title: Sidebar sections use WebviewView, not TreeView
 status: accepted
 domain: vscode.extension
 created: 2026-05-04
-affected_files:
+references:
   - packages/vscode/src/extension.ts
   - packages/vscode/src/webviews/
 updated: 2026-05-04

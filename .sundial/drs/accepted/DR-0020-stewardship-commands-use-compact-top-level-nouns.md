@@ -4,7 +4,7 @@ title: Stewardship commands use compact top-level nouns
 status: accepted
 domain: cli
 created: 2026-05-08
-affected_files:
+references:
   - packages/cli/src/main.ts
   - CLI_SPEC.md
   - packages/vscode/src/extension.ts

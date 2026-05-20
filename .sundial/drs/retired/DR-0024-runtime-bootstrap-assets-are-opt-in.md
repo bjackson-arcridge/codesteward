@@ -4,14 +4,13 @@ title: Runtime bootstrap assets are opt-in
 status: retired
 domain: cli
 created: 2026-05-05
-affected_files:
+references:
+  - packages/cli/src/core/store.ts#initStore
+  - packages/vscode/src/extension.ts#initializeProject
   - CLI_SPEC.md
   - packages/cli/src/core/store.ts
   - packages/cli/src/main.ts
   - packages/vscode/src/extension.ts
-references:
-  - packages/cli/src/core/store.ts#initStore
-  - packages/vscode/src/extension.ts#initializeProject
 updated: 2026-05-08
 author: bjackson
 ---

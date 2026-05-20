@@ -4,13 +4,12 @@ title: VS Code tests use staged scenario workspaces
 status: accepted
 domain: vscode.extension
 created: 2026-05-05
-affected_files:
-  - .vscode-test.mjs
-  - packages/vscode/src/test/prepare-workspaces.mjs
-  - packages/vscode/src/test/fixtures
 references:
   - .vscode-test.mjs#userDataRoot
   - packages/vscode/src/test/prepare-workspaces.mjs#main
+  - .vscode-test.mjs
+  - packages/vscode/src/test/prepare-workspaces.mjs
+  - packages/vscode/src/test/fixtures
 updated: 2026-05-05
 author: bjackson
 ---

@@ -4,7 +4,7 @@ title: Separate harness failures from product fixes
 status: accepted
 domain: vscode.extension
 created: 2026-05-05
-affected_files:
+references:
   - .vscode-test.mjs
   - packages/vscode/src/test/extension.test.ts
 updated: 2026-05-05

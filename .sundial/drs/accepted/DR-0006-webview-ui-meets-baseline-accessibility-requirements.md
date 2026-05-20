@@ -4,7 +4,7 @@ title: Webview UI meets baseline accessibility requirements
 status: accepted
 domain: vscode.webview.ui
 created: 2026-05-04
-affected_files:
+references:
   - packages/vscode/src/webviews/apps/
 updated: 2026-05-07
 author: bjackson

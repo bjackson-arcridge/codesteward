@@ -4,7 +4,7 @@ title: VS Code per-item actions stay localized to the row, not in showQuickPick
 status: accepted
 domain: vscode.extension
 created: 2026-05-04
-affected_files:
+references:
   - packages/vscode/package.json
   - packages/vscode/src/extension.ts
 updated: 2026-05-04

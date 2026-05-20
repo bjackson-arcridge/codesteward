@@ -4,16 +4,15 @@ title: CLI store operations avoid runtime dependencies and shell pipelines
 status: accepted
 domain: cli
 created: 2026-05-05
-affected_files:
+references:
+  - CLI_SPEC.md#Indexing-and-Windows-Compatibility
+  - packages/cli/src/core/dr.ts#listDecisionRecords
+  - packages/cli/src/main.ts#runBootstrapCommand
   - CLI_SPEC.md
   - packages/cli/package.json
   - packages/cli/src/core/dr.ts
   - packages/cli/src/core/tags.ts
   - packages/cli/src/main.ts
-references:
-  - CLI_SPEC.md#Indexing-and-Windows-Compatibility
-  - packages/cli/src/core/dr.ts#listDecisionRecords
-  - packages/cli/src/main.ts#runBootstrapCommand
 updated: 2026-05-05
 author: bjackson
 ---

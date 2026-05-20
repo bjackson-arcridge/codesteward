@@ -4,11 +4,10 @@ title: Preserve Command Palette Access When Removing Local UI Entry Points
 status: accepted
 domain: vscode.extension
 created: 2026-05-07
-affected_files:
-  - packages/vscode/package.json
-  - packages/vscode/src/unit/packageManifest.test.ts
 references:
   - packages/vscode/package.json#contributes.menus.view/title
+  - packages/vscode/package.json
+  - packages/vscode/src/unit/packageManifest.test.ts
 updated: 2026-05-07
 author: bjackson
 ---

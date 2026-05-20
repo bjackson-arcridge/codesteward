@@ -4,14 +4,13 @@ title: Retrieval is deterministic and domain-first
 status: accepted
 domain: governance.dr-retrieval
 created: 2026-05-04
-affected_files:
+references:
+  - packages/cli/src/main.ts#runDrRetrieve
+  - packages/cli/src/main.ts#renderRecord
   - RETRIEVAL.md
   - CLI_SPEC.md
   - packages/cli/src/main.ts
   - packages/cli/src/core/dr.ts
-references:
-  - packages/cli/src/main.ts#runDrRetrieve
-  - packages/cli/src/main.ts#renderRecord
 updated: 2026-05-08
 author: bjackson
 ---

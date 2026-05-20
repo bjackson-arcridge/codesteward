@@ -4,7 +4,7 @@ title: Webviews enforce a strict nonce-based CSP
 status: accepted
 domain: vscode.webview
 created: 2026-05-04
-affected_files:
+references:
   - packages/vscode/src/webviews/
 updated: 2026-05-04
 author: bjackson

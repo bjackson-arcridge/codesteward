@@ -4,14 +4,12 @@ title: Skill review precedes hook enforcement
 status: accepted
 domain: governance.review
 created: 2026-05-04
-affected_files:
+references:
   - IMPLEMENTATION_APPROACH.md
   - .agents/skills/decision-aware-design/SKILL.md
   - .agents/skills/decision-aware-implement/SKILL.md
   - .claude/skills/decision-aware-design/SKILL.md
   - .claude/skills/decision-aware-implement/SKILL.md
-references:
-  - IMPLEMENTATION_APPROACH.md
 updated: 2026-05-07
 author: bjackson
 ---
