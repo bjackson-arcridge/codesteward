@@ -8,6 +8,17 @@ import { bootstrapCommand, main, runBootstrapCommand } from '../main';
 import { initStore } from '../core/store';
 
 describe('bootstrapCommand', () => {
+	test('prints package version without requiring a store', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-version-'));
+		const packageJson = JSON.parse(await fs.readFile(path.resolve(__dirname, '../../package.json'), 'utf8')) as { readonly version: string };
+
+		const result = await runCli(root, ['--version']);
+
+		assert.equal(result.stdout, `${packageJson.version}\n`);
+		assert.equal(result.stderr, '');
+		assert.equal(result.exitCode, undefined);
+	});
+
 	test('runs Codex bootstrap in bounded full-auto mode', () => {
 		const command = bootstrapCommand('codex', '/project', 'bootstrap prompt');
 

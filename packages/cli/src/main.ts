@@ -40,17 +40,21 @@ import {
 	updateRuntimeAssets,
 } from './core/store';
 
+const packageJson = require('../package.json') as { readonly version: string };
+const cliVersion = packageJson.version;
+
 interface CliOptions {
 	readonly cwd: string;
 	readonly quiet: boolean;
 	readonly noSessionLog: boolean;
+	readonly version: boolean;
 	readonly command: readonly string[];
 }
 
 const usage = `Sundial CLI
 
 Usage:
-  sundial [--cwd <path>] [--quiet] [--no-session-log] <command>
+  sundial [--cwd <path>] [--quiet] [--no-session-log] [--version] <command>
 
 Commands:
   init        Create or update the project-local .sundial store at an explicit root
@@ -90,6 +94,11 @@ const retrieveRecordRenderOptions: RecordRenderOptions = {
 
 export async function main(argv: readonly string[], io: Pick<NodeJS.Process, 'cwd' | 'stdout' | 'stderr' | 'exitCode'>): Promise<void> {
 	const parsed = parseArguments(argv, io.cwd());
+
+	if (parsed.version) {
+		write(io.stdout, `${cliVersion}\n`);
+		return;
+	}
 
 	if (parsed.command.length === 0 || parsed.command[0] === 'help' || parsed.command[0] === '--help') {
 		write(io.stdout, usage);
@@ -1582,6 +1591,7 @@ function parseArguments(argv: readonly string[], defaultCwd: string): CliOptions
 	let cwd = defaultCwd;
 	let quiet = false;
 	let noSessionLog = false;
+	let version = false;
 
 	for (let index = 0; index < argv.length; index += 1) {
 		const arg = argv[index];
@@ -1612,10 +1622,15 @@ function parseArguments(argv: readonly string[], defaultCwd: string): CliOptions
 			continue;
 		}
 
+		if (arg === '--version') {
+			version = true;
+			continue;
+		}
+
 		command.push(arg);
 	}
 
-	return { cwd, quiet, noSessionLog, command };
+	return { cwd, quiet, noSessionLog, version, command };
 }
 
 async function runInit(
