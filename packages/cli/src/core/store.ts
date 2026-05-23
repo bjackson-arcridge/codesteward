@@ -412,6 +412,18 @@ const templateIncludes: Readonly<Record<string, string>> = {
 	crHowTo: 'include/crHowTo.md',
 };
 
+export async function readAgentInstructionsBody(): Promise<string> {
+	const rendered = await renderTemplate('instructions/agent-instructions.md');
+	return rendered
+		.replace(new RegExp(`^${escapeRegExp(sundialInstructionStartMarker)}\\n?`), '')
+		.replace(new RegExp(`${escapeRegExp(sundialInstructionEndMarker)}\\n?$`), '')
+		.trim();
+}
+
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 async function renderTemplate(relativePath: string, seen: readonly string[] = []): Promise<string> {
 	if (seen.includes(relativePath)) {
 		throw new Error(`Circular Sundial template include: ${[...seen, relativePath].join(' -> ')}`);

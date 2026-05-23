@@ -36,6 +36,7 @@ import {
 	getStorePaths,
 	initStore,
 	pathExists,
+	readAgentInstructionsBody,
 	StorePaths,
 	updateRuntimeAssets,
 } from './core/store';
@@ -102,6 +103,8 @@ export async function main(argv: readonly string[], io: Pick<NodeJS.Process, 'cw
 
 	if (parsed.command.length === 0 || parsed.command[0] === 'help' || parsed.command[0] === '--help') {
 		write(io.stdout, usage);
+		write(io.stdout, '\n');
+		write(io.stdout, await renderDecisionRecordGuidance());
 		return;
 	}
 
@@ -1259,6 +1262,11 @@ function candidateCreateUsage(): string {
 
 function retrieveUsage(): string {
 	return 'Usage: sundial dr retrieve [--domain <domain>]\n';
+}
+
+async function renderDecisionRecordGuidance(): Promise<string> {
+	const body = await readAgentInstructionsBody();
+	return `Decision Record Workflow\n========================\n\n${body}\n`;
 }
 
 function retrieveHelp(): string {

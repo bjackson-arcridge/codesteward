@@ -42,11 +42,15 @@ sundial status
 npm run uninstall:cli:local  # remove the global install when done
 ```
 
-To publish to npm (requires `npm login` as the publisher account):
+To publish to npm, authenticate as a publisher account first:
 
 ```bash
+npm login
+npm whoami
 npm run publish:cli
 ```
+
+If the npm account requires two-factor authentication, npm will prompt for the one-time password during login or publish. `npm whoami` should print the expected publisher username before running the publish script.
 
 For local VS Code extension testing, package a VSIX from the extension workspace:
 

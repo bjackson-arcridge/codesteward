@@ -19,6 +19,24 @@ describe('bootstrapCommand', () => {
 		assert.equal(result.exitCode, undefined);
 	});
 
+	test('top-level help embeds the agent DR-proposal guidance', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-help-'));
+
+		for (const args of [[], ['help'], ['--help']]) {
+			const result = await runCli(root, args);
+
+			assert.match(result.stdout, /Sundial CLI/, `usage missing for args=${JSON.stringify(args)}`);
+			assert.match(result.stdout, /Usage:\s+sundial/);
+			assert.match(result.stdout, /Decision Record Workflow/);
+			assert.match(result.stdout, /sundial candidate create/);
+			assert.match(result.stdout, /Pitfalls discipline/);
+			assert.match(result.stdout, /--proposed-domain/);
+			assert.doesNotMatch(result.stdout, /<!-- sundial:agent-instructions -->/);
+			assert.equal(result.stderr, '');
+			assert.equal(result.exitCode, undefined);
+		}
+	});
+
 	test('runs Codex bootstrap in bounded full-auto mode', () => {
 		const command = bootstrapCommand('codex', '/project', 'bootstrap prompt');
 
