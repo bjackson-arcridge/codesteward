@@ -193,6 +193,18 @@ describe('bootstrapCommand', () => {
 		assert.match(grandchildDomainResult.stdout, /DR-0007 VS Code webview/);
 		assert.match(grandchildDomainResult.stdout, /DR-0008 VS Code webview UI/);
 		assert.doesNotMatch(grandchildDomainResult.stdout, /DR-0009 VS Code extension/);
+
+		const multiDomainResult = await runCli(root, ['dr', 'retrieve', '--domain', 'cli', '--domain', 'vscode.webview']);
+		assert.match(multiDomainResult.stdout, /DR-0001 Global architecture/);
+		assert.match(multiDomainResult.stdout, /DR-0002 CLI retrieve/);
+		assert.match(multiDomainResult.stdout, /DR-0006 VS Code broad/);
+		assert.match(multiDomainResult.stdout, /DR-0007 VS Code webview/);
+		assert.match(multiDomainResult.stdout, /DR-0008 VS Code webview UI/);
+		assert.doesNotMatch(multiDomainResult.stdout, /DR-0003 UI architecture/);
+		assert.doesNotMatch(multiDomainResult.stdout, /DR-0009 VS Code extension/);
+		assert.equal(multiDomainResult.stdout.match(/DR-0001 Global architecture/g)?.length, 1);
+		assert.equal(multiDomainResult.stderr, '');
+		assert.equal(multiDomainResult.exitCode, undefined);
 	});
 
 	test('does not expose the removed context command', async () => {

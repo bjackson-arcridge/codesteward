@@ -3,15 +3,15 @@
 Sundial is the tool used to manage all persistent memory and decisions for this project.
 
 1. Run `sundial domains` to get the list of known domains.
-2. Select the narrowest applicable domain.
-3. Retrieve accepted DRs with `sundial dr retrieve [--domain <domain>]`.
- * Domain retrieval matches ancestors, the exact domain, and descendants. Excluding the domain matches all domains.
+2. Select all relevant domains for the task.
+3. Retrieve accepted DRs with one call: `sundial dr retrieve [--domain <domain>]...`.
+ * Repeat `--domain` for each relevant domain. Domain retrieval matches ancestors, the exact domain, and descendants. Excluding all domain flags matches all domains.
 4. Indicate to the user which DRs are being applied.
 
 ## Domains
 `domain` defaults to `all`.
 
-Domains filter DRs. When querying DRs, all ancestor domains and children are included in the result. `all` is the root of the domain taxonomy.
+Domains filter DRs. When querying DRs, use one `sundial dr retrieve` call with all relevant domains; all ancestor domains and children for each queried domain are included in the result. `all` is the root of the domain taxonomy.
 
 
 ## Sundial Candidate Decision Record Submission

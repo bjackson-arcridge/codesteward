@@ -72,7 +72,7 @@ sundial domains
 
 sundial dr list [--status accepted]
 sundial dr get DR-0001
-sundial dr retrieve --domain <domain>
+sundial dr retrieve [--domain <domain>]...
 sundial dr disable DR-0001
 sundial dr enable DR-0001
 sundial dr retire DR-0001 [--by DR-0002]
@@ -89,6 +89,7 @@ sundial candidate retire CAND-0001 [--by DR-0001]
 Notes:
 
 - Enabled accepted DRs are the only precedent retrieved by `dr retrieve`.
+- Repeat `--domain` on one `dr retrieve` call to retrieve all relevant domain branches together.
 - Candidate DRs can include a proposed domain with a description; accepting the DR appends that proposal to `.sundial/domains.md`.
 - DRs can include a `## Appendix` section for human-facing explanatory context; short and medium retrieval omit it.
 

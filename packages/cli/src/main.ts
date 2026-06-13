@@ -63,7 +63,7 @@ Commands:
   status      Report store health, counts, and validation state
   bootstrap   Run an LLM-backed bootstrap that creates candidates via the CLI
   domains     List known domains from .sundial/domains.md
-  dr retrieve Retrieve visible accepted DRs by domain
+  dr retrieve Retrieve visible accepted DRs by relevant domains
   dr get      Cat DR markdown files by id
   dr list     List DRs by status
   dr enable   Include an accepted DR in retrieval results
@@ -474,7 +474,7 @@ async function runDrRetrieve(
 	}
 
 	const vocabulary = await readDomainVocabulary(paths.domains);
-	const unknownDomain = unknownQueryDomain(vocabulary.domains, parsed.domain);
+	const unknownDomain = unknownQueryDomain(vocabulary.domains, parsed.domains);
 
 	if (unknownDomain !== undefined) {
 		write(io.stderr, `Unknown domain "${unknownDomain}".\n`);
@@ -483,7 +483,7 @@ async function runDrRetrieve(
 	}
 
 	const records = await listDecisionRecords(paths, 'accepted');
-	const matches = records.filter(record => recordMatches(record, parsed.domain));
+	const matches = records.filter(record => recordMatches(record, parsed.domains));
 
 	if (options.quiet) {
 		return;
@@ -741,8 +741,8 @@ function renderStoreValidationResult(
 function parseRetrieveArgs(
 	args: readonly string[],
 	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
-): { readonly domain: string | undefined } | undefined {
-	let domain: string | undefined;
+): { readonly domains: readonly string[] } | undefined {
+	const domains: string[] = [];
 
 	for (let index = 0; index < args.length; index += 1) {
 		const arg = args[index];
@@ -753,7 +753,7 @@ function parseRetrieveArgs(
 				return usageError(retrieveUsage(), io);
 			}
 
-			domain = value;
+			domains.push(value);
 			index += 1;
 			continue;
 		}
@@ -761,7 +761,7 @@ function parseRetrieveArgs(
 		return usageError(retrieveUsage(), io);
 	}
 
-	return { domain };
+	return { domains: [...new Set(domains)] };
 }
 
 function parseGetArgs(
@@ -1261,7 +1261,7 @@ function candidateCreateUsage(): string {
 }
 
 function retrieveUsage(): string {
-	return 'Usage: sundial dr retrieve [--domain <domain>]\n';
+	return 'Usage: sundial dr retrieve [--domain <domain>]...\n';
 }
 
 async function renderDecisionRecordGuidance(): Promise<string> {
@@ -1270,12 +1270,12 @@ async function renderDecisionRecordGuidance(): Promise<string> {
 }
 
 function retrieveHelp(): string {
-	return `Usage: sundial dr retrieve [--domain <domain>]
+	return `Usage: sundial dr retrieve [--domain <domain>]...
 
 Retrieve visible accepted Decision Records.
 
 Options:
-  --domain <domain>  Filter by domain. Matches the exact domain, its ancestors, and its descendants. Omit to match every domain.
+  --domain <domain>  Filter by domain. Repeat for each relevant domain in a single call. Each domain matches itself, its ancestors, and its descendants. Omit to match every domain.
 `;
 }
 
@@ -1356,15 +1356,19 @@ function renderOptionalSection(
 	write(io.stdout, `${outputTitle}:\n${section}\n`);
 }
 
-function recordMatches(record: DecisionRecord, domain: string | undefined): boolean {
-	return getRecordEnabled(record) && recordMatchesDomain(record, domain);
+function recordMatches(record: DecisionRecord, domains: readonly string[]): boolean {
+	return getRecordEnabled(record) && recordMatchesAnyDomain(record, domains);
 }
 
-function recordMatchesDomain(record: DecisionRecord, domain: string | undefined): boolean {
-	if (domain === undefined || domain === 'all') {
+function recordMatchesAnyDomain(record: DecisionRecord, domains: readonly string[]): boolean {
+	if (domains.length === 0 || domains.includes('all')) {
 		return true;
 	}
 
+	return domains.some(domain => recordMatchesDomain(record, domain));
+}
+
+function recordMatchesDomain(record: DecisionRecord, domain: string): boolean {
 	const recordDomain = getRecordDomain(record);
 	if (recordDomain === 'all') {
 		return true;
@@ -1812,13 +1816,14 @@ function renderDomainDefinitions(
 	}
 }
 
-function unknownQueryDomain(domains: readonly DomainDefinition[], domain: string | undefined): string | undefined {
-	if (domain === undefined || domain === 'all' || domains.length === 0) {
+function unknownQueryDomain(domains: readonly DomainDefinition[], queryDomains: readonly string[]): string | undefined {
+	if (queryDomains.length === 0 || domains.length === 0) {
 		return undefined;
 	}
 
 	const knownDomains = new Set(domains.map(item => item.name));
-	return knownDomains.has(domain) ? undefined : domain;
+	knownDomains.add('all');
+	return queryDomains.find(domain => !knownDomains.has(domain));
 }
 
 async function requireStore(

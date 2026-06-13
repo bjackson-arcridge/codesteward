@@ -74,7 +74,7 @@ sundial status
 sundial bootstrap --provider claude
 sundial bootstrap --provider codex
 sundial domains
-sundial dr retrieve --domain vscode
+sundial dr retrieve --domain cli --domain vscode.webview
 sundial dr get DR-0001
 sundial dr list --status accepted
 sundial dr disable DR-0001
@@ -106,5 +106,6 @@ The extension contributes a `Sundial` activity bar view with a Candidate Inbox, 
 ## Notes
 
 - Enabled accepted DRs are the only precedent retrieved by `dr retrieve`.
+- Repeat `--domain` on one `dr retrieve` call to retrieve all relevant domain branches together.
 - Candidate DRs can include a proposed domain with a description; accepting the DR appends that proposal to `.sundial/domains.md`.
 - DRs can include a `## Appendix` section for human-facing explanatory context; short and medium retrieval omit it.
