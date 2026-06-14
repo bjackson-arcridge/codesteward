@@ -23,6 +23,13 @@ const directoryLayout = [
 	'sessions',
 ] as const;
 
+const decisionRecordDirectoryKeepFiles = [
+	'drs/candidates/.gitkeep',
+	'drs/accepted/.gitkeep',
+	'drs/rejected/.gitkeep',
+	'drs/retired/.gitkeep',
+] as const;
+
 const skillTemplateFiles = [
 	'decision-aware-design/SKILL.md',
 	'decision-aware-implement/SKILL.md',
@@ -91,6 +98,10 @@ export async function initStore(projectRoot: string, options: InitOptions = {}):
 
 	for (const relativeDirectory of directoryLayout) {
 		await ensureDirectory(path.join(paths.store, relativeDirectory), created, existing, paths.root);
+	}
+
+	for (const relativeFile of decisionRecordDirectoryKeepFiles) {
+		await ensureFile(path.join(paths.store, relativeFile), keepFileContents(), created, existing, paths.root);
 	}
 
 	await ensureFile(paths.config, defaultConfig(), created, existing, paths.root);
@@ -186,6 +197,10 @@ function defaultConfig(): string {
 		version: 1,
 		store: storeDirectoryName,
 	}, undefined, 2)}\n`;
+}
+
+function keepFileContents(): string {
+	return 'Keep this DR lifecycle directory present in fresh git worktrees.\n';
 }
 
 function defaultDomains(): string {
