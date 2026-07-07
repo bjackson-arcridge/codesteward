@@ -141,6 +141,7 @@ describe('candidates message guards', () => {
 		assert.equal(isCandidatesClient({ kind: 'edit', id: 'CAND-1', filePath: '/repo/sundial/decisions/candidates/CAND-1.md' }), true);
 		assert.equal(isCandidatesClient({ kind: 'open', id: 'CAND-1' }), true);
 		assert.equal(isCandidatesClient({ kind: 'accept', id: 'CAND-1' }), true);
+		assert.equal(isCandidatesClient({ kind: 'dismiss', id: 'CAND-1', filePath: '/repo/sundial/decisions/candidates/CAND-1.md' }), true);
 		assert.equal(isCandidatesClient({ kind: 'reject', id: 'CAND-1', reason: '' }), true);
 		assert.equal(isCandidatesClient({ kind: 'reject', id: 'CAND-1', reason: 'Too specific.' }), true);
 		assert.equal(isCandidatesClient({ kind: 'retire', id: 'CAND-1', retiredBy: 'DR-1' }), true);

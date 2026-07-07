@@ -340,6 +340,11 @@ export class CandidatesApp extends LitElement {
 						.expanded=${activePrompt?.kind === 'retire'}
 						@click=${(event: Event) => this.openPrompt('retire', candidate, event)}
 					></cs-icon-button>
+					<cs-icon-button
+						icon="trash"
+						label="Dismiss candidate"
+						@click=${() => this.sendCandidateCommand('dismiss', candidate)}
+					></cs-icon-button>
 				</div>
 				${activePrompt === undefined ? nothing : this.renderPrompt(candidate, activePrompt)}
 			</cs-card>

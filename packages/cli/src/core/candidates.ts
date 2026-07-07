@@ -35,6 +35,12 @@ export interface CandidateMoveResult {
 	readonly record: DecisionRecord;
 }
 
+export interface CandidateDismissResult {
+	readonly from: string;
+	readonly id: string;
+	readonly title: string;
+}
+
 export interface DecisionRecordDeleteResult {
 	readonly from: string;
 	readonly id: string;
@@ -156,6 +162,17 @@ export async function deleteDecisionRecord(
 		id: getRecordId(record),
 		title: getRecordTitle(record),
 		status: from,
+	};
+}
+
+export async function dismissCandidate(paths: StorePaths, id: string): Promise<CandidateDismissResult> {
+	const candidate = await requireCandidateInFolder(paths, id, 'candidate');
+	await fs.unlink(candidate.filePath);
+
+	return {
+		from: candidate.filePath,
+		id: getRecordId(candidate),
+		title: getRecordTitle(candidate),
 	};
 }
 

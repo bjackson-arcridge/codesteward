@@ -27,7 +27,7 @@ export type HostToWebview =
 	| { kind: 'diagnosticClickCandidate'; id: string; target: 'title' | 'preview' }
 	| { kind: 'diagnosticSelectProvider'; provider: BootstrapProvider };
 
-export type CandidateCommandKind = 'preview' | 'edit' | 'open' | 'accept' | 'reject' | 'retire';
+export type CandidateCommandKind = 'preview' | 'edit' | 'open' | 'accept' | 'reject' | 'retire' | 'dismiss';
 export type SimpleCandidateCommandKind = Exclude<CandidateCommandKind, 'reject' | 'retire'>;
 
 export type WebviewToHost =
@@ -106,6 +106,7 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 		|| message.kind === 'edit'
 		|| message.kind === 'open'
 		|| message.kind === 'accept'
+		|| message.kind === 'dismiss'
 	) {
 		return typeof message.id === 'string'
 			&& (message.filePath === undefined || typeof message.filePath === 'string');
@@ -154,4 +155,3 @@ function isCandidateRenderDiagnostic(value: unknown): value is CandidateRenderDi
 		&& (diagnostic.bootstrapProvider === undefined || isBootstrapProvider(diagnostic.bootstrapProvider))
 		&& typeof diagnostic.providerSelectorVisible === 'boolean';
 }
-

@@ -244,6 +244,11 @@ export function activate(context: vscode.ExtensionContext): void {
 				return;
 			}
 
+			if (message.kind === 'dismiss') {
+				await dismissCandidate(message.id, message.filePath, welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider);
+				return;
+			}
+
 			if (message.kind === 'retire') {
 				await retireCandidate(message.id, message.filePath, welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider, message.retiredBy);
 			}
@@ -275,6 +280,9 @@ export function activate(context: vscode.ExtensionContext): void {
 	}));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.retire', (id?: string) => {
 		return retireCandidate(id, undefined, welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider);
+	}));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.dismiss', (id?: string) => {
+		return dismissCandidate(id, undefined, welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider);
 	}));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.showDiagnostics', async () => {
 		const diagnostics = await buildDiagnostics(
@@ -327,9 +335,13 @@ export function activate(context: vscode.ExtensionContext): void {
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'sundial.internal.candidates.lifecycle',
-			(action: 'accept' | 'reject', id: string, reason?: string) => {
+			(action: 'accept' | 'reject' | 'dismiss', id: string, reason?: string) => {
 				if (action === 'accept') {
 					return acceptCandidate(id, undefined, welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider);
+				}
+
+				if (action === 'dismiss') {
+					return dismissCandidate(id, undefined, welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider, true);
 				}
 
 				return rejectCandidate(id, undefined, welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider, reason ?? '');
@@ -747,6 +759,36 @@ async function retireCandidate(
 
 	const retiredByArg = retiredBy.trim();
 	await runLifecycle(target.id, ['candidate', 'retire', target.id, ...(retiredByArg.length === 0 ? [] : ['--by', retiredByArg])], target.filePath);
+	await refreshGovernanceViews(welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider);
+}
+
+async function dismissCandidate(
+	id: string | undefined,
+	filePath: string | undefined,
+	welcomeProvider: WelcomeWebviewProvider,
+	candidatesProvider: CandidatesWebviewProvider,
+	recordsProvider: RecordsWebviewProvider,
+	rejectedRecordsProvider: RecordsWebviewProvider,
+	retiredRecordsProvider: RecordsWebviewProvider,
+	skipConfirmation = false,
+): Promise<void> {
+	const target = await candidatePathForCommand(id, filePath);
+	if (target === undefined) {
+		return;
+	}
+
+	if (!skipConfirmation) {
+		const action = await vscode.window.showWarningMessage(
+			`Dismiss ${target.id}? This deletes ${path.basename(target.filePath)} without adding it to rejected history.`,
+			{ modal: true },
+			'Dismiss',
+		);
+		if (action !== 'Dismiss') {
+			return;
+		}
+	}
+
+	await runLifecycle(target.id, ['candidate', 'dismiss', target.id], target.filePath);
 	await refreshGovernanceViews(welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider);
 }
 

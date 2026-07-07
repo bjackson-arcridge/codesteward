@@ -6,6 +6,7 @@ import { describe, test } from 'node:test';
 import {
 	acceptCandidate,
 	createCandidate,
+	dismissCandidate,
 	rejectCandidate,
 	retireCandidate,
 } from '../core/candidates';
@@ -230,5 +231,27 @@ describe('candidate lifecycle', () => {
 		assert.deepEqual(rejectedRecords.map(getRecordId), ['CAND-0001']);
 		assert.deepEqual(retiredRecords.map(getRecordId), ['CAND-0002', 'CAND-0003']);
 		assert.equal(retiredRecords[1].frontmatter.retired_by, undefined);
+	});
+
+	test('dismisses candidates by deleting without lifecycle history', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-candidate-dismiss-'));
+		const init = await initStore(root);
+		const created = await createCandidate(init.paths, vocabulary, {
+			title: 'Discarded proposal',
+			domain: 'all',
+			decision: 'Use the discarded path.',
+			references: [],
+			author: 'codex',
+			created: '2026-05-03',
+		});
+
+		const dismissed = await dismissCandidate(init.paths, getRecordId(created.record));
+
+		assert.equal(dismissed.id, 'CAND-0001');
+		assert.equal(dismissed.title, 'Discarded proposal');
+		assert.equal(await fs.access(dismissed.from).then(() => true, () => false), false);
+		assert.deepEqual((await listDecisionRecords(init.paths, 'candidate')).map(getRecordId), []);
+		assert.deepEqual((await listDecisionRecords(init.paths, 'rejected')).map(getRecordId), []);
+		assert.deepEqual((await listDecisionRecords(init.paths, 'retired')).map(getRecordId), []);
 	});
 });

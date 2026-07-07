@@ -84,6 +84,7 @@ sundial candidate show CAND-0001
 sundial candidate accept CAND-0001
 sundial candidate reject CAND-0001 --reason "Covered by DR-0001"
 sundial candidate retire CAND-0001 [--by DR-0001]
+sundial candidate dismiss CAND-0001
 ```
 
 Notes:

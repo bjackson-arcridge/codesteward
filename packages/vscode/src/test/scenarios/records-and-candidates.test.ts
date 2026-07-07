@@ -17,7 +17,7 @@ import {
 const expectedAcceptedRecordCount = 3;
 const expectedRejectedRecordCount = 1;
 const expectedRetiredRecordCount = 1;
-const expectedActiveCandidateCount = 2;
+const expectedActiveCandidateCount = 3;
 
 suite('Scenario: records-and-candidates', () => {
 	test('webviews render the seeded fixture state', async () => {
@@ -116,6 +116,13 @@ suite('Scenario: records-and-candidates', () => {
 		});
 
 		await vscode.commands.executeCommand('sundial.internal.candidates.lifecycle', 'reject', 'CAND-0002', 'Rejected by integration coverage.');
+		await waitForGovernanceCounts({
+			acceptedRecordCount: expectedAcceptedRecordCount + 1,
+			activeCandidateCount: 1,
+			rejectedRecordCount: expectedRejectedRecordCount + 1,
+		});
+
+		await vscode.commands.executeCommand('sundial.internal.candidates.lifecycle', 'dismiss', 'CAND-0005');
 		await waitForGovernanceCounts({
 			acceptedRecordCount: expectedAcceptedRecordCount + 1,
 			activeCandidateCount: 0,

@@ -5,6 +5,7 @@ import {
 	acceptCandidate,
 	createCandidate,
 	deleteDecisionRecord,
+	dismissCandidate,
 	findCandidate,
 	promoteDecisionRecord,
 	rejectCandidate,
@@ -71,7 +72,7 @@ Commands:
   dr retire   Move an accepted DR to retired history
   dr promote  Move a rejected or retired DR back to accepted precedent
   dr delete   Remove a rejected or retired DR file from disk
-  candidate   Create, list, show, accept, reject, or retire candidates
+  candidate   Create, list, show, accept, reject, retire, or dismiss candidates
   help        Show this help
 `;
 
@@ -229,7 +230,12 @@ async function runCandidate(
 		return;
 	}
 
-	write(io.stderr, 'Usage: sundial candidate (create | list | show | accept | reject | retire)\n');
+	if (subcommand === 'dismiss') {
+		await runCandidateDismiss(options, subcommandArgs, io);
+		return;
+	}
+
+	write(io.stderr, 'Usage: sundial candidate (create | list | show | accept | reject | retire | dismiss)\n');
 	io.exitCode = 64;
 }
 
@@ -396,6 +402,32 @@ async function runCandidateRetire(
 		if (!options.quiet) {
 			write(io.stdout, `Retired ${parsed.id}${parsed.by === undefined ? '' : ` by ${parsed.by}`}\n`);
 			write(io.stdout, `Path: ${formatRecordPath(paths, result.record)}\n`);
+		}
+	} catch (error) {
+		writeError(error, io);
+	}
+}
+
+async function runCandidateDismiss(
+	options: CliOptions,
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
+): Promise<void> {
+	if (args.length !== 1) {
+		write(io.stderr, 'Usage: sundial candidate dismiss <id>\n');
+		io.exitCode = 64;
+		return;
+	}
+
+	const paths = await requireStore(options.cwd, io);
+	if (paths === undefined) {
+		return;
+	}
+
+	try {
+		await dismissCandidate(paths, args[0]);
+		if (!options.quiet) {
+			write(io.stdout, `Dismissed ${args[0]}\n`);
 		}
 	} catch (error) {
 		writeError(error, io);

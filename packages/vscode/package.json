@@ -105,6 +105,11 @@
         "command": "sundial.candidates.retire",
         "title": "Sundial: Retire Candidate",
         "icon": "$(archive)"
+      },
+      {
+        "command": "sundial.candidates.dismiss",
+        "title": "Sundial: Dismiss Candidate",
+        "icon": "$(trash)"
       }
     ],
     "viewsContainers": {
@@ -198,11 +203,12 @@
     "watch:tsc-webview": "tsc --noEmit --watch -p tsconfig.webview.json",
     "package": "npm run check-types && node esbuild.js --production",
     "package:vsix": "vsce package --no-dependencies",
+    "compile-cli": "npm --workspace @arcridge/sundial run compile",
     "compile-tests": "tsc -p . --outDir out",
     "test:unit": "npm run compile-tests && node --test out/unit/*.test.js",
     "watch-tests": "tsc -p . -w --outDir out",
     "prepare-test-workspaces": "node src/test/prepare-workspaces.mjs",
-    "pretest": "npm run compile-tests && npm run compile && npm run prepare-test-workspaces",
+    "pretest": "npm run compile-cli && npm run compile-tests && npm run compile && npm run prepare-test-workspaces",
     "test": "vscode-test"
   },
   "dependencies": {
