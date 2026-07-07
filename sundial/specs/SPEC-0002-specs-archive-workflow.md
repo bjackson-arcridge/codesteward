@@ -1,7 +1,7 @@
 ---
 id: SPEC-0002
 title: Specs archive workflow
-status: Done
+status: Archive
 created: 2026-07-07
 updated: 2026-07-07
 created_by: bjackson
