@@ -7,6 +7,7 @@ import {
 	type HostToWebview,
 	type RecordActionMode,
 	type RecordSummary,
+	type SpecRecordGroup,
 	type WebviewToHost,
 	isHostToWebview,
 } from '../../records/messages.js';
@@ -73,6 +74,81 @@ export class RecordsApp extends LitElement {
 				color: var(--cs-fg);
 				line-height: 1.4;
 				overflow-wrap: anywhere;
+			}
+
+			.specs-launcher {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				gap: 6px;
+				width: 100%;
+				min-height: 32px;
+				box-sizing: border-box;
+				margin: 0 0 8px;
+				padding: 6px 8px;
+				border: 1px solid var(--vscode-button-border, transparent);
+				border-radius: 4px;
+				background: var(--cs-button-bg);
+				color: var(--cs-button-fg);
+				font: inherit;
+				font-weight: 600;
+				cursor: pointer;
+			}
+
+			.specs-launcher:hover {
+				background: var(--cs-button-hover);
+			}
+
+			.specs-launcher:focus-visible,
+			.group-toggle:focus-visible {
+				outline: 1px solid var(--cs-focus);
+				outline-offset: 2px;
+			}
+
+			.spec-group {
+				margin: 0 0 8px;
+			}
+
+			.group-toggle {
+				display: grid;
+				grid-template-columns: 16px minmax(0, 1fr) auto;
+				gap: 6px;
+				align-items: center;
+				width: 100%;
+				min-height: 26px;
+				box-sizing: border-box;
+				padding: 3px 4px;
+				border: 0;
+				border-radius: 4px;
+				background: transparent;
+				color: var(--cs-fg);
+				font: inherit;
+				font-weight: 600;
+				text-align: left;
+				cursor: pointer;
+			}
+
+			.group-toggle:hover {
+				background: var(--cs-icon-hover-bg);
+			}
+
+			.group-title,
+			.group-count {
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			.group-count {
+				color: var(--cs-fg-muted);
+				font-weight: 400;
+				font-size: calc(var(--vscode-font-size) - 1px);
+			}
+
+			.group-records {
+				display: grid;
+				gap: 6px;
+				margin-top: 4px;
 			}
 
 			@media (min-width: 260px) {
@@ -167,6 +243,7 @@ export class RecordsApp extends LitElement {
 	private stopRefreshTriggers?: () => void;
 	private promptReturnTarget?: HTMLElement;
 	@state() private records: readonly RecordSummary[] = [];
+	@state() private specGroups: readonly SpecRecordGroup[] = [];
 	@state() private domainFilter?: string;
 	@state() private domainOptions: readonly string[] = [];
 	@state() private filtersEnabled = false;
@@ -212,16 +289,69 @@ export class RecordsApp extends LitElement {
 				...(this.filtersEnabled ? {
 					domainSelectOptionCount: this.renderRoot.querySelector<HTMLSelectElement>('select[data-filter="domain"]')?.options.length ?? 0,
 				} : {}),
+				...(this.actionMode === 'specs' ? {
+					groupCount: this.renderRoot.querySelectorAll('.spec-group').length,
+					openBoardButtonVisible: this.renderRoot.querySelector('[data-action="open-kanban"]') !== null,
+				} : {}),
 			},
 		});
 	}
 
 	render() {
+		if (this.actionMode === 'specs') {
+			return this.renderSpecs();
+		}
+
 		return html`
 			${this.filtersEnabled ? this.renderFilters() : nothing}
 			${this.records.length === 0
 				? html`<div class="empty">${this.emptyText}</div>`
 				: this.records.map(record => this.renderRecord(record))}
+		`;
+	}
+
+	private renderSpecs() {
+		return html`
+			<button
+				class="specs-launcher"
+				type="button"
+				data-action="open-kanban"
+				@click=${() => this.send({ kind: 'openBoard' })}
+			>
+				<cs-icon icon="list-tree"></cs-icon>
+				<span>Open Kanban View</span>
+			</button>
+			${this.records.length === 0
+				? html`<div class="empty">${this.emptyText}</div>`
+				: this.renderSpecGroups()}
+		`;
+	}
+
+	private renderSpecGroups() {
+		const groups = this.specGroups.length === 0
+			? groupRecordsByStatus(this.records)
+			: this.specGroups;
+		return groups.map(group => this.renderSpecGroup(group));
+	}
+
+	private renderSpecGroup(group: SpecRecordGroup) {
+		const collapsed = group.collapsed === true;
+		return html`
+			<section class="spec-group" data-spec-group=${group.status}>
+				<button
+					class="group-toggle"
+					type="button"
+					aria-expanded=${collapsed ? 'false' : 'true'}
+					@click=${() => this.toggleSpecGroup(group)}
+				>
+					<cs-icon icon=${collapsed ? 'chevron-right' : 'chevron-down'}></cs-icon>
+					<span class="group-title">${group.status}</span>
+					<span class="group-count">${group.records.length}</span>
+				</button>
+				${collapsed
+					? nothing
+					: html`<div class="group-records">${group.records.map(record => this.renderRecord(record, { showStatusBadge: false }))}</div>`}
+			</section>
 		`;
 	}
 
@@ -243,8 +373,9 @@ export class RecordsApp extends LitElement {
 		`;
 	}
 
-	private renderRecord(record: RecordSummary) {
+	private renderRecord(record: RecordSummary, options: { readonly showStatusBadge?: boolean } = {}) {
 		const retirePromptOpen = this.actionMode === 'accepted' && this.retirePromptRecordId === record.id;
+		const showStatusBadge = options.showStatusBadge ?? true;
 		return html`
 			<cs-card>
 				<button
@@ -259,7 +390,9 @@ export class RecordsApp extends LitElement {
 				<span slot="meta">
 					<span class="id">${record.id}</span>
 					${this.actionMode === 'specs'
+						? showStatusBadge
 						? html`<cs-badge variant="inverse">${record.status ?? 'Planning'}</cs-badge>`
+						: nothing
 						: html`<cs-badge variant="inverse">${record.domain}</cs-badge>`}
 					${record.enabled ? nothing : html`<cs-badge>disabled</cs-badge>`}
 					${record.workspace === undefined ? nothing : html`<span>${record.workspace}</span>`}
@@ -436,6 +569,7 @@ export class RecordsApp extends LitElement {
 			case 'state':
 				this.host.setState(message);
 				this.records = message.records;
+				this.specGroups = message.specGroups ?? [];
 				this.domainFilter = message.domainFilter;
 				this.domainOptions = message.domainOptions ?? [];
 				this.filtersEnabled = message.domainOptions !== undefined;
@@ -472,6 +606,14 @@ export class RecordsApp extends LitElement {
 		});
 	};
 
+	private toggleSpecGroup(group: SpecRecordGroup): void {
+		const collapsed = group.collapsed !== true;
+		this.specGroups = this.specGroups.map(item => item.status === group.status
+			? { ...item, collapsed }
+			: item);
+		this.send({ kind: 'toggleSpecGroup', status: group.status, collapsed });
+	}
+
 	private selectFilterForDiagnostics(filter: 'domain', value: string | undefined): void {
 		const select = this.renderRoot.querySelector<HTMLSelectElement>(`select[data-filter="${filter}"]`);
 		if (select === null) {
@@ -496,6 +638,21 @@ export class RecordsApp extends LitElement {
 	private send(message: WebviewToHost): void {
 		this.host.postMessage(message);
 	}
+}
+
+function groupRecordsByStatus(records: readonly RecordSummary[]): readonly SpecRecordGroup[] {
+	const groups = new Map<string, RecordSummary[]>();
+	for (const record of records) {
+		const status = record.status ?? 'Planning';
+		const group = groups.get(status) ?? [];
+		group.push(record);
+		groups.set(status, group);
+	}
+
+	return [...groups].map(([status, groupRecords]) => ({
+		status,
+		records: groupRecords,
+	}));
 }
 
 function filterValue<Key extends 'domainFilter'>(

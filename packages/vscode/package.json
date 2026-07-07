@@ -218,11 +218,6 @@
           "command": "sundial.installCli",
           "when": "view == sundial.welcome && !sundial.cliAvailable",
           "group": "navigation"
-        },
-        {
-          "command": "sundial.specs.openBoard",
-          "when": "view == sundial.specs && sundial.workspaceInitialized",
-          "group": "navigation"
         }
       ],
       "commandPalette": [

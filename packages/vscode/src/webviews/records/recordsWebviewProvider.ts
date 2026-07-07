@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { renderWebviewHtml } from '../shared/csp.js';
 import { attachMessageRouter, type MessageRouter } from '../shared/messageRouter.js';
-import { type HostToWebview, type WebviewToHost, isWebviewToHost, type RecordActionMode, type RecordSummary } from './messages.js';
+import { type HostToWebview, type WebviewToHost, isWebviewToHost, type RecordActionMode, type RecordSummary, type SpecRecordGroup } from './messages.js';
 
 export interface RecordFilterOptions {
 	readonly domains: readonly string[];
@@ -9,6 +9,7 @@ export interface RecordFilterOptions {
 
 export interface RecordsServices {
 	readonly listRecords: () => Promise<readonly RecordSummary[]>;
+	readonly listSpecGroups?: () => Promise<readonly SpecRecordGroup[]>;
 	readonly listFilterOptions?: () => Promise<RecordFilterOptions>;
 	readonly getDomainFilter?: () => string | undefined;
 	readonly actionMode?: RecordActionMode;
@@ -82,11 +83,13 @@ export class RecordsWebviewProvider implements vscode.WebviewViewProvider {
 			this.services.listRecords(),
 			this.services.listFilterOptions?.(),
 		]);
+		const specGroups = await this.services.listSpecGroups?.();
 		const domainFilter = this.services.getDomainFilter?.();
 		const diagnosticsEnabled = this.services.diagnosticsEnabled?.() === true;
 		return {
 			kind: 'state',
 			records,
+			...(specGroups === undefined ? {} : { specGroups }),
 			...(domainFilter === undefined ? {} : { domainFilter }),
 			...(filterOptions === undefined ? {} : {
 				domainOptions: filterOptions.domains,

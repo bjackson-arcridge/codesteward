@@ -8,6 +8,12 @@ export interface RecordSummary {
 	readonly workspace?: string;
 }
 
+export interface SpecRecordGroup {
+	readonly status: string;
+	readonly collapsed?: boolean;
+	readonly records: readonly RecordSummary[];
+}
+
 export type RecordActionMode = 'accepted' | 'rejected' | 'retired' | 'research' | 'specs';
 
 export interface RecordRenderDiagnostic {
@@ -16,6 +22,8 @@ export interface RecordRenderDiagnostic {
 	readonly emptyVisible: boolean;
 	readonly domainFilter?: string;
 	readonly domainSelectOptionCount?: number;
+	readonly groupCount?: number;
+	readonly openBoardButtonVisible?: boolean;
 }
 
 export type HostToWebview =
@@ -24,6 +32,7 @@ export type HostToWebview =
 		records: readonly RecordSummary[];
 		domainFilter?: string;
 		domainOptions?: readonly string[];
+		specGroups?: readonly SpecRecordGroup[];
 		actionMode?: RecordActionMode;
 		emptyText?: string;
 		diagnosticsEnabled?: boolean;
@@ -34,7 +43,9 @@ export type HostToWebview =
 export type WebviewToHost =
 	| { kind: 'preview'; id: string }
 	| { kind: 'edit'; id: string }
+	| { kind: 'openBoard' }
 	| { kind: 'setDomainFilter'; domainFilter?: string }
+	| { kind: 'toggleSpecGroup'; status: string; collapsed: boolean }
 	| { kind: 'toggleEnabled'; id: string; enabled: boolean }
 	| { kind: 'retire'; id: string; retiredBy: string }
 	| { kind: 'promote'; id: string }
@@ -53,6 +64,7 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 		records?: unknown;
 		domainFilter?: unknown;
 		domainOptions?: unknown;
+		specGroups?: unknown;
 		actionMode?: unknown;
 		emptyText?: unknown;
 		diagnosticsEnabled?: unknown;
@@ -81,6 +93,10 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 	}
 
 	if (message.domainOptions !== undefined && !isStringArray(message.domainOptions)) {
+		return false;
+	}
+
+	if (message.specGroups !== undefined && !isSpecRecordGroupArray(message.specGroups)) {
 		return false;
 	}
 
@@ -122,6 +138,27 @@ function isRecordSummary(value: unknown): value is RecordSummary {
 		&& (record.workspace === undefined || typeof record.workspace === 'string');
 }
 
+function isSpecRecordGroupArray(value: unknown): value is readonly SpecRecordGroup[] {
+	return Array.isArray(value) && value.every(isSpecRecordGroup);
+}
+
+function isSpecRecordGroup(value: unknown): value is SpecRecordGroup {
+	if (typeof value !== 'object' || value === null) {
+		return false;
+	}
+
+	const group = value as {
+		status?: unknown;
+		collapsed?: unknown;
+		records?: unknown;
+	};
+
+	return typeof group.status === 'string'
+		&& (group.collapsed === undefined || typeof group.collapsed === 'boolean')
+		&& Array.isArray(group.records)
+		&& group.records.every(isRecordSummary);
+}
+
 export function isWebviewToHost(value: unknown): value is WebviewToHost {
 	if (typeof value !== 'object' || value === null) {
 		return false;
@@ -134,6 +171,8 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 		domainFilter?: unknown;
 		enabled?: unknown;
 		retiredBy?: unknown;
+		status?: unknown;
+		collapsed?: unknown;
 	};
 	if (message.kind === 'preview'
 		|| message.kind === 'edit'
@@ -155,11 +194,16 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 		return message.domainFilter === undefined || typeof message.domainFilter === 'string';
 	}
 
+	if (message.kind === 'toggleSpecGroup') {
+		return typeof message.status === 'string' && typeof message.collapsed === 'boolean';
+	}
+
 	if (message.kind === 'rendered') {
 		return isRecordRenderDiagnostic(message.diagnostic);
 	}
 
 	return message.kind === 'clearFilters'
+		|| message.kind === 'openBoard'
 		|| message.kind === 'requestRefresh';
 }
 
@@ -174,12 +218,16 @@ function isRecordRenderDiagnostic(value: unknown): value is RecordRenderDiagnost
 		emptyVisible?: unknown;
 		domainFilter?: unknown;
 		domainSelectOptionCount?: unknown;
+		groupCount?: unknown;
+		openBoardButtonVisible?: unknown;
 	};
 	return typeof diagnostic.recordCount === 'number'
 		&& typeof diagnostic.cardCount === 'number'
 		&& typeof diagnostic.emptyVisible === 'boolean'
 		&& (diagnostic.domainFilter === undefined || typeof diagnostic.domainFilter === 'string')
-		&& (diagnostic.domainSelectOptionCount === undefined || typeof diagnostic.domainSelectOptionCount === 'number');
+		&& (diagnostic.domainSelectOptionCount === undefined || typeof diagnostic.domainSelectOptionCount === 'number')
+		&& (diagnostic.groupCount === undefined || typeof diagnostic.groupCount === 'number')
+		&& (diagnostic.openBoardButtonVisible === undefined || typeof diagnostic.openBoardButtonVisible === 'boolean');
 }
 
 function isStringArray(value: unknown): value is readonly string[] {

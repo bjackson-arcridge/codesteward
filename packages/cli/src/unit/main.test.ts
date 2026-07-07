@@ -295,6 +295,15 @@ describe('bootstrapCommand', () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-spec-custom-lanes-'));
 		const init = await initStore(root);
 		await fs.writeFile(path.join(init.paths.store, 'specs', 'workflow.yml'), [
+			'kanban:',
+			'  order:',
+			'    - Building',
+			'    - Icebox',
+			'sidebar:',
+			'  order:',
+			'    - Shipped',
+			'    - Building',
+			'    - Icebox',
 			'statuses:',
 			'  - name: Icebox',
 			'    kanban:',
@@ -322,7 +331,7 @@ describe('bootstrapCommand', () => {
 		assert.match(created.stdout, /Created SPEC-0001 Custom lane spec/);
 		assert.match(created.stdout, /Status: Building/);
 		assert.match(shipped.stdout, /Status: Building -> Shipped/);
-		assert.equal(lanes.stdout, 'Icebox\nBuilding\n');
+		assert.equal(lanes.stdout, 'Building\nIcebox\n');
 		assert.match(invalid.stderr, /Unknown spec status "Active"\. Known statuses: Icebox, Building, Shipped\./);
 		assert.equal(invalid.exitCode, 1);
 	});

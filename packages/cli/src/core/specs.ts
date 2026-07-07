@@ -5,6 +5,7 @@ import { type FrontmatterValue } from './dr';
 import { type StorePaths } from './store';
 
 export const defaultSpecLanes = ['Backlog', 'Todo', 'Active', 'Done'] as const;
+const defaultSpecSidebarOrder = ['Active', 'Todo', 'Backlog', 'Done', 'Archive'] as const;
 const specsDirectoryName = 'specs';
 const workflowFileName = 'workflow.yml';
 
@@ -16,6 +17,8 @@ export interface SpecWorkflowStatus {
 
 export interface SpecWorkflow {
 	readonly statuses: readonly SpecWorkflowStatus[];
+	readonly kanbanOrder: readonly string[];
+	readonly sidebarOrder: readonly string[];
 }
 
 export interface SpecRecord {
@@ -57,6 +60,12 @@ export function specsWorkflowPath(paths: StorePaths): string {
 
 export function defaultSpecsWorkflow(): string {
 	return [
+		'kanban:',
+		'  order:',
+		...defaultSpecLanes.map(status => `    - ${status}`),
+		'sidebar:',
+		'  order:',
+		...defaultSpecSidebarOrder.map(status => `    - ${status}`),
 		'statuses:',
 		...defaultWorkflow().statuses.flatMap(status => [
 			`  - name: ${status.name}`,
@@ -77,13 +86,17 @@ export async function readSpecWorkflow(paths: StorePaths): Promise<SpecWorkflow>
 
 	const contents = await fs.readFile(workflowPath, 'utf8');
 	const workflow = parseSpecWorkflow(contents);
-	return workflow.statuses.length === 0 ? defaultWorkflow() : workflow;
+	if (workflow.statuses.length === 0) {
+		return defaultWorkflow();
+	}
+
+	return normalizeWorkflow(workflow);
 }
 
 export async function readSpecLanes(paths: StorePaths): Promise<readonly string[]> {
-	return (await readSpecWorkflow(paths)).statuses
-		.filter(status => status.kanbanVisible)
-		.map(status => status.name);
+	const workflow = await readSpecWorkflow(paths);
+	const visibleStatuses = new Set(workflow.statuses.filter(status => status.kanbanVisible).map(status => status.name));
+	return workflow.kanbanOrder.filter(status => visibleStatuses.has(status));
 }
 
 export async function readSpecStatuses(paths: StorePaths): Promise<readonly string[]> {
@@ -252,6 +265,8 @@ function renderSpecBoardMarkdown(specs: readonly SpecRecord[], lanes: readonly s
 
 function defaultWorkflow(): SpecWorkflow {
 	return {
+		kanbanOrder: defaultSpecLanes,
+		sidebarOrder: defaultSpecSidebarOrder,
 		statuses: [
 			...defaultSpecLanes.map(name => ({
 				name,
@@ -268,7 +283,80 @@ function defaultWorkflow(): SpecWorkflow {
 }
 
 function parseSpecWorkflow(markdown: string): SpecWorkflow {
-	return { statuses: parseWorkflowStatuses(markdown) };
+	return {
+		statuses: parseWorkflowStatuses(markdown),
+		kanbanOrder: parseWorkflowOrder(markdown, 'kanban'),
+		sidebarOrder: parseWorkflowOrder(markdown, 'sidebar'),
+	};
+}
+
+function normalizeWorkflow(workflow: SpecWorkflow): SpecWorkflow {
+	const statusNames = workflow.statuses.map(status => status.name);
+	return {
+		statuses: workflow.statuses,
+		kanbanOrder: orderedKnownStatuses(workflow.kanbanOrder, statusNames),
+		sidebarOrder: orderedKnownStatuses(workflow.sidebarOrder, statusNames),
+	};
+}
+
+function orderedKnownStatuses(order: readonly string[], statusNames: readonly string[]): readonly string[] {
+	const known = new Set(statusNames);
+	const ordered: string[] = [];
+	for (const status of order.length === 0 ? statusNames : order) {
+		if (known.has(status)) {
+			pushUnique(ordered, status);
+		}
+	}
+
+	for (const status of statusNames) {
+		pushUnique(ordered, status);
+	}
+
+	return ordered;
+}
+
+function pushUnique(values: string[], value: string): void {
+	if (!values.includes(value)) {
+		values.push(value);
+	}
+}
+
+function parseWorkflowOrder(markdown: string, blockName: 'kanban' | 'sidebar'): readonly string[] {
+	const order: string[] = [];
+	let inBlock = false;
+	let inOrder = false;
+
+	for (const line of markdown.split(/\r?\n/)) {
+		if (new RegExp(`^${blockName}:\\s*$`).test(line)) {
+			inBlock = true;
+			inOrder = false;
+			continue;
+		}
+
+		if (!inBlock) {
+			continue;
+		}
+
+		if (line.trim().length > 0 && !line.startsWith(' ') && !line.startsWith('\t')) {
+			break;
+		}
+
+		if (/^\s*order:\s*$/.test(line)) {
+			inOrder = true;
+			continue;
+		}
+
+		if (!inOrder) {
+			continue;
+		}
+
+		const scalarItem = /^\s*-\s+(.+?)\s*$/.exec(line);
+		if (scalarItem !== null) {
+			pushUnique(order, stripYamlString(scalarItem[1]));
+		}
+	}
+
+	return order.filter(status => status.length > 0);
 }
 
 function parseWorkflowStatuses(markdown: string): readonly SpecWorkflowStatus[] {

@@ -9,6 +9,7 @@ import {
 	listDecisionRecordSummaries,
 	listKnownDomains,
 	listResearchSummaries,
+	listSidebarSpecGroups,
 	listSidebarSpecSummaries,
 	listSpecLanes,
 	listSpecSummaries,
@@ -21,7 +22,7 @@ import { WelcomeWebviewProvider } from './webviews/welcome/welcomeWebviewProvide
 import { RecordsWebviewProvider } from './webviews/records/recordsWebviewProvider';
 import { CandidatesWebviewProvider } from './webviews/candidates/candidatesWebviewProvider';
 import { SpecsBoardPanel, type SpecsBoardState } from './webviews/specs/specsBoardPanel';
-import type { RecordRenderDiagnostic, RecordSummary } from './webviews/records/messages';
+import type { RecordRenderDiagnostic, RecordSummary, SpecRecordGroup } from './webviews/records/messages';
 import type { BootstrapProvider, CandidateRenderDiagnostic, CandidateSummary } from './webviews/candidates/messages';
 import type { SpecCard, SpecsRenderDiagnostic } from './webviews/specs/messages';
 import type { WebviewToHost as WelcomeWebviewToHost, WelcomeRenderDiagnostic } from './webviews/welcome/messages';
@@ -30,6 +31,7 @@ import { sundialCliCommand, sundialCliInstallArgs } from './sundialCli';
 
 const execFileAsync = promisify(execFile);
 const markdownPreviewScheme = 'sundial-preview';
+const specsCollapsedGroupsStateKey = 'sundial.specs.sidebar.collapsedGroups';
 let activeMarkdownPreviewProvider: FrontmatterMarkdownPreviewProvider | undefined;
 
 interface RecordsState {
@@ -275,6 +277,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			specsDiagnostics.lastState = { recordCount: records.length };
 			return records;
 		},
+		listSpecGroups: () => collectSpecGroups(context),
 		actionMode: 'specs',
 		emptyText: 'No specs yet.',
 		title: 'Specs',
@@ -299,6 +302,17 @@ export function activate(context: vscode.ExtensionContext): void {
 			}
 
 			if (message.kind === 'requestRefresh') {
+				await specsProvider.refresh();
+				return;
+			}
+
+			if (message.kind === 'openBoard') {
+				specsBoardPanel.reveal();
+				return;
+			}
+
+			if (message.kind === 'toggleSpecGroup') {
+				await setSpecGroupCollapsed(context, message.status, message.collapsed);
 				await specsProvider.refresh();
 			}
 		},
@@ -861,6 +875,53 @@ async function collectSpecs(): Promise<readonly RecordSummary[]> {
 	}));
 
 	return all.flat();
+}
+
+async function collectSpecGroups(context: vscode.ExtensionContext): Promise<readonly SpecRecordGroup[]> {
+	const stores = await collectWorkspaceStores();
+	const collapsed = new Set(context.workspaceState.get<readonly string[]>(specsCollapsedGroupsStateKey) ?? []);
+	const all = await Promise.all(stores.map(async store => {
+		const groups = await listSidebarSpecGroups(store.root);
+		return groups.map(group => ({
+			status: group.status,
+			records: group.specs.map(spec => ({
+				id: spec.id,
+				title: spec.title,
+				domain: 'all',
+				enabled: true,
+				status: spec.status,
+				...(stores.length > 1 ? { workspace: store.name } : {}),
+			} satisfies RecordSummary)),
+		}));
+	}));
+
+	const groupsByStatus = new Map<string, RecordSummary[]>();
+	for (const group of all.flat()) {
+		const records = groupsByStatus.get(group.status) ?? [];
+		records.push(...group.records);
+		groupsByStatus.set(group.status, records);
+	}
+
+	return [...groupsByStatus].map(([status, records]) => ({
+		status,
+		collapsed: collapsed.has(status),
+		records: records.sort((left, right) => left.title.localeCompare(right.title) || left.id.localeCompare(right.id)),
+	}));
+}
+
+async function setSpecGroupCollapsed(
+	context: vscode.ExtensionContext,
+	status: string,
+	collapsed: boolean,
+): Promise<void> {
+	const statuses = new Set(context.workspaceState.get<readonly string[]>(specsCollapsedGroupsStateKey) ?? []);
+	if (collapsed) {
+		statuses.add(status);
+	} else {
+		statuses.delete(status);
+	}
+
+	await context.workspaceState.update(specsCollapsedGroupsStateKey, [...statuses].sort());
 }
 
 async function collectSpecBoardState(): Promise<SpecsBoardState> {

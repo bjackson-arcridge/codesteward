@@ -1,3 +1,15 @@
+kanban:
+  order:
+    - Backlog
+    - Todo
+    - Active
+    - Done
+sidebar:
+  order:
+    - Active
+    - Todo
+    - Backlog
+    - Done
 statuses:
   - name: Backlog
     kanban:

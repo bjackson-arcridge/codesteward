@@ -37,6 +37,19 @@ describe('store bootstrap', () => {
 		assert.equal(await fs.readFile(path.join(root, 'sundial', 'research', '.gitkeep'), 'utf8'), 'Keep this Sundial store directory present in fresh git worktrees.\n');
 		assert.equal(await fs.readFile(path.join(root, 'sundial', 'specs', '.gitkeep'), 'utf8'), 'Keep this Sundial store directory present in fresh git worktrees.\n');
 		assert.equal(await fs.readFile(path.join(root, 'sundial', 'specs', 'workflow.yml'), 'utf8'), [
+			'kanban:',
+			'  order:',
+			'    - Backlog',
+			'    - Todo',
+			'    - Active',
+			'    - Done',
+			'sidebar:',
+			'  order:',
+			'    - Active',
+			'    - Todo',
+			'    - Backlog',
+			'    - Done',
+			'    - Archive',
 			'statuses:',
 			'  - name: Backlog',
 			'    kanban:',

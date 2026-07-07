@@ -227,6 +227,11 @@ describe('records message guards', () => {
 		assert.equal(isRecordsHost({
 			kind: 'state',
 			records: [{ id: 'SPEC-0001', title: 'Alpha spec', domain: 'all', enabled: true, status: 'Active' }],
+			specGroups: [{
+				status: 'Active',
+				collapsed: false,
+				records: [{ id: 'SPEC-0001', title: 'Alpha spec', domain: 'all', enabled: true, status: 'Active' }],
+			}],
 			actionMode: 'specs',
 		}), true);
 	});
@@ -257,6 +262,12 @@ describe('records message guards', () => {
 			records: [],
 			actionMode: 'archived',
 		}), false);
+		assert.equal(isRecordsHost({
+			kind: 'state',
+			records: [],
+			specGroups: [{ status: 'Active', records: [{ id: 'SPEC-0001', title: 'Missing metadata' }] }],
+			actionMode: 'specs',
+		}), false);
 	});
 
 	test('accept all defined client commands', () => {
@@ -268,6 +279,8 @@ describe('records message guards', () => {
 		assert.equal(isRecordsClient({ kind: 'retire', id: 'DR-1', retiredBy: '' }), true);
 		assert.equal(isRecordsClient({ kind: 'promote', id: 'CAND-1' }), true);
 		assert.equal(isRecordsClient({ kind: 'delete', id: 'CAND-1' }), true);
+		assert.equal(isRecordsClient({ kind: 'openBoard' }), true);
+		assert.equal(isRecordsClient({ kind: 'toggleSpecGroup', status: 'Active', collapsed: true }), true);
 		assert.equal(isRecordsClient({ kind: 'clearFilters' }), true);
 		assert.equal(isRecordsClient({ kind: 'requestRefresh' }), true);
 		assert.equal(isRecordsClient({
@@ -278,6 +291,8 @@ describe('records message guards', () => {
 				emptyVisible: false,
 				domainFilter: 'vscode',
 				domainSelectOptionCount: 2,
+				groupCount: 3,
+				openBoardButtonVisible: true,
 			},
 		}), true);
 	});
@@ -287,6 +302,7 @@ describe('records message guards', () => {
 		assert.equal(isRecordsClient({ kind: 'setDomainFilter', domainFilter: 5 }), false);
 		assert.equal(isRecordsClient({ kind: 'toggleEnabled', id: 'DR-1', enabled: 'false' }), false);
 		assert.equal(isRecordsClient({ kind: 'retire', id: 'DR-1' }), false);
+		assert.equal(isRecordsClient({ kind: 'toggleSpecGroup', status: 'Active' }), false);
 		assert.equal(isRecordsClient({
 			kind: 'rendered',
 			diagnostic: { recordCount: 1, cardCount: '1', emptyVisible: false },

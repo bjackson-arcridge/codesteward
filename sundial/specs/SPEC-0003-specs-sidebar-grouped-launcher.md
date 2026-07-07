@@ -1,12 +1,11 @@
 ---
 id: SPEC-0003
 title: Specs sidebar grouped launcher
-status: Backlog
+status: Done
 created: 2026-07-07
 updated: 2026-07-07
 created_by: bjackson
 ---
-
 # Specs sidebar grouped launcher
 
 ## Discovery
@@ -31,6 +30,7 @@ created_by: bjackson
 - DR-0012 Sundial workflows live in the CLI-backed store.
 - DR-0019 Preserve Command Palette Access When Removing Local UI Entry Points.
 - DR-0027 Governance sidebars refresh on store file changes.
+- DR-0030 Spec workflow visibility lives in status metadata.
 
 ## Applicable Research Notes
 
@@ -38,11 +38,14 @@ created_by: bjackson
 
 ## Planned Approach
 
-- Extend workflow configuration so each status can define sidebar ordering and Kanban visibility.
-- Use the configured order for sidebar groups; the intended default order is `Active`, `Todo`, `Backlog`, `Done`, then `Archive`.
+- Extend workflow configuration with separate `kanban` and `sidebar` order blocks while status visibility remains status metadata.
+- Use the configured `sidebar` order for sidebar groups; the intended default priority order is `Active`, `Todo`, `Backlog`, `Done`, then `Archive`.
+- Use the configured `kanban` order for the board's classic workflow state order; the intended default order remains `Backlog`, `Todo`, `Active`, then `Done`.
 - Keep `Archive` available as a sidebar group when configured for sidebar visibility, while excluding it from Kanban lanes when Kanban visibility is false.
 - Replace the small title-bar Specs board icon with a prominent `Open Kanban View` button at the top of the Specs sidebar.
 - Keep the `sundial.specs.openBoard` command available in the Command Palette even if the view-title entry point is removed.
+- Render only sidebar groups that contain at least one spec.
+- Persist sidebar group collapsed/expanded state per workspace.
 - Render specs under their configured status group by title, with row-level actions remaining local to each row.
 - Refresh the sidebar when spec markdown files or workflow configuration changes.
 - Route any sidebar action that mutates spec state through the CLI.
@@ -55,7 +58,7 @@ created_by: bjackson
 
 ## Test Plan
 
-- Add CLI/core tests for parsing sidebar order and Kanban visibility from workflow configuration.
+- Add CLI/core tests for parsing separate sidebar and Kanban ordering plus per-status visibility from workflow configuration.
 - Add sidebar webview unit coverage for the large `Open Kanban View` button.
 - Add sidebar webview unit coverage for configured group ordering.
 - Add sidebar webview unit coverage for statuses visible in the sidebar but hidden from Kanban lanes.
@@ -64,12 +67,25 @@ created_by: bjackson
 
 ## Open Questions
 
-- Should sidebar group collapsed/expanded state persist per workspace?
-- Should empty configured groups render in the sidebar, or only groups with at least one spec?
-- Should sidebar ordering and Kanban ordering use the same status list with per-view visibility, or separate `sidebar` and `kanban` order blocks?
+- Resolved: Sidebar group collapsed/expanded state persists per workspace.
+- Resolved: Only groups containing at least one spec render in the sidebar.
+- Resolved: Workflow configuration uses separate `sidebar` and `kanban` order blocks; Kanban keeps classic state order, while sidebar uses priority order `Active`, `Todo`, `Backlog`, `Done`, `Archive`.
 
 ## Implementation Log
 
 - 2026-07-07: Created this planning spec.
+- 2026-07-07: Resolved sidebar state persistence, empty group rendering, and separate sidebar/Kanban ordering.
+- 2026-07-07: Implemented `kanban.order` and `sidebar.order` workflow blocks while keeping visibility on status metadata.
+- 2026-07-07: Added grouped Specs sidebar rendering with a prominent `Open Kanban View` launcher and per-workspace collapsed group persistence.
+- 2026-07-07: Removed the Specs view-title board button while preserving `sundial.specs.openBoard` command access.
 
 ## Test Log
+
+- 2026-07-07: `npm --workspace packages/cli run check-types` passed.
+- 2026-07-07: `npm --workspace packages/vscode run check-types` passed.
+- 2026-07-07: `npm --workspace packages/cli run test:unit` passed.
+- 2026-07-07: `npm --workspace packages/vscode run test:unit` passed.
+- 2026-07-07: `npm run check-types` passed.
+- 2026-07-07: `npm run lint` passed.
+- 2026-07-07: `npm run test:unit` passed.
+- 2026-07-07: `npm test` initially failed in the sandbox on DNS lookup for `update.code.visualstudio.com`; reran with approved network access and it passed.

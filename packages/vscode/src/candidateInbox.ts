@@ -3,6 +3,7 @@ import * as path from 'node:path';
 
 const storeDirectoryName = 'sundial';
 export const defaultSpecLanes = ['Backlog', 'Todo', 'Active', 'Done'] as const;
+const defaultSpecSidebarOrder = ['Active', 'Todo', 'Backlog', 'Done', 'Archive'] as const;
 
 export interface CandidateSummary {
 	readonly id: string;
@@ -35,10 +36,21 @@ export interface SpecSummary {
 	readonly status: string;
 }
 
+export interface SpecSidebarGroup {
+	readonly status: string;
+	readonly specs: readonly SpecSummary[];
+}
+
 interface SpecWorkflowStatus {
 	readonly name: string;
 	readonly kanbanVisible: boolean;
 	readonly sidebarVisible: boolean;
+}
+
+interface SpecWorkflow {
+	readonly statuses: readonly SpecWorkflowStatus[];
+	readonly kanbanOrder: readonly string[];
+	readonly sidebarOrder: readonly string[];
 }
 
 export async function discoverSundialRoot(startDirectory: string): Promise<string | undefined> {
@@ -104,18 +116,46 @@ export async function listSpecSummaries(workspaceRoot: string): Promise<readonly
 }
 
 export async function listSidebarSpecSummaries(workspaceRoot: string): Promise<readonly SpecSummary[]> {
+	return (await listSidebarSpecGroups(workspaceRoot)).flatMap(group => group.specs);
+}
+
+export async function listSidebarSpecGroups(workspaceRoot: string): Promise<readonly SpecSidebarGroup[]> {
 	const statuses = await listSpecWorkflowStatuses(workspaceRoot);
 	const visibleStatuses = new Set(statuses.filter(status => status.sidebarVisible).map(status => status.name));
-	return (await listSpecSummaries(workspaceRoot)).filter(spec => visibleStatuses.has(spec.status));
+	const specs = (await listSpecSummaries(workspaceRoot)).filter(spec => visibleStatuses.has(spec.status));
+	const specsByStatus = new Map<string, SpecSummary[]>();
+	for (const spec of specs) {
+		const group = specsByStatus.get(spec.status) ?? [];
+		group.push(spec);
+		specsByStatus.set(spec.status, group);
+	}
+
+	return (await listSpecWorkflow(workspaceRoot)).sidebarOrder
+		.filter(status => visibleStatuses.has(status))
+		.flatMap(status => {
+			const groupSpecs = specsByStatus.get(status);
+			if (groupSpecs === undefined || groupSpecs.length === 0) {
+				return [];
+			}
+
+			return [{
+				status,
+				specs: groupSpecs.sort((left, right) => left.title.localeCompare(right.title) || left.id.localeCompare(right.id)),
+			}];
+		});
 }
 
 export async function listSpecLanes(workspaceRoot: string): Promise<readonly string[]> {
-	return (await listSpecWorkflowStatuses(workspaceRoot))
-		.filter(status => status.kanbanVisible)
-		.map(status => status.name);
+	const workflow = await listSpecWorkflow(workspaceRoot);
+	const visibleStatuses = new Set(workflow.statuses.filter(status => status.kanbanVisible).map(status => status.name));
+	return workflow.kanbanOrder.filter(status => visibleStatuses.has(status));
 }
 
 async function listSpecWorkflowStatuses(workspaceRoot: string): Promise<readonly SpecWorkflowStatus[]> {
+	return (await listSpecWorkflow(workspaceRoot)).statuses;
+}
+
+async function listSpecWorkflow(workspaceRoot: string): Promise<SpecWorkflow> {
 	const storeRoot = await discoverSundialRoot(workspaceRoot);
 	if (storeRoot === undefined) {
 		return defaultWorkflowStatuses();
@@ -133,8 +173,8 @@ async function listSpecWorkflowStatuses(workspaceRoot: string): Promise<readonly
 		throw error;
 	}
 
-	const statuses = parseWorkflowStatuses(contents);
-	return statuses.length === 0 ? defaultWorkflowStatuses() : statuses;
+	const workflow = parseWorkflow(contents);
+	return workflow.statuses.length === 0 ? defaultWorkflowStatuses() : normalizeWorkflow(workflow);
 }
 
 export async function listKnownDomains(workspaceRoot: string): Promise<readonly string[]> {
@@ -250,19 +290,100 @@ function parseFrontmatterScalars(markdown: string): Map<string, string> {
 	return scalars;
 }
 
-function defaultWorkflowStatuses(): readonly SpecWorkflowStatus[] {
-	return [
-		...defaultSpecLanes.map(name => ({
-			name,
-			kanbanVisible: true,
-			sidebarVisible: true,
-		})),
-		{
-			name: 'Archive',
-			kanbanVisible: false,
-			sidebarVisible: true,
-		},
-	];
+function defaultWorkflowStatuses(): SpecWorkflow {
+	return {
+		kanbanOrder: defaultSpecLanes,
+		sidebarOrder: defaultSpecSidebarOrder,
+		statuses: [
+			...defaultSpecLanes.map(name => ({
+				name,
+				kanbanVisible: true,
+				sidebarVisible: true,
+			})),
+			{
+				name: 'Archive',
+				kanbanVisible: false,
+				sidebarVisible: true,
+			},
+		],
+	};
+}
+
+function parseWorkflow(markdown: string): SpecWorkflow {
+	return {
+		statuses: parseWorkflowStatuses(markdown),
+		kanbanOrder: parseWorkflowOrder(markdown, 'kanban'),
+		sidebarOrder: parseWorkflowOrder(markdown, 'sidebar'),
+	};
+}
+
+function normalizeWorkflow(workflow: SpecWorkflow): SpecWorkflow {
+	const statusNames = workflow.statuses.map(status => status.name);
+	return {
+		statuses: workflow.statuses,
+		kanbanOrder: orderedKnownStatuses(workflow.kanbanOrder, statusNames),
+		sidebarOrder: orderedKnownStatuses(workflow.sidebarOrder, statusNames),
+	};
+}
+
+function orderedKnownStatuses(order: readonly string[], statusNames: readonly string[]): readonly string[] {
+	const known = new Set(statusNames);
+	const ordered: string[] = [];
+	for (const status of order.length === 0 ? statusNames : order) {
+		if (known.has(status)) {
+			pushUnique(ordered, status);
+		}
+	}
+
+	for (const status of statusNames) {
+		pushUnique(ordered, status);
+	}
+
+	return ordered;
+}
+
+function pushUnique(values: string[], value: string): void {
+	if (!values.includes(value)) {
+		values.push(value);
+	}
+}
+
+function parseWorkflowOrder(markdown: string, blockName: 'kanban' | 'sidebar'): readonly string[] {
+	const order: string[] = [];
+	let inBlock = false;
+	let inOrder = false;
+
+	for (const line of markdown.split(/\r?\n/)) {
+		if (new RegExp(`^${blockName}:\\s*$`).test(line)) {
+			inBlock = true;
+			inOrder = false;
+			continue;
+		}
+
+		if (!inBlock) {
+			continue;
+		}
+
+		if (line.trim().length > 0 && !line.startsWith(' ') && !line.startsWith('\t')) {
+			break;
+		}
+
+		if (/^\s*order:\s*$/.test(line)) {
+			inOrder = true;
+			continue;
+		}
+
+		if (!inOrder) {
+			continue;
+		}
+
+		const scalarItem = /^\s*-\s+(.+?)\s*$/.exec(line);
+		if (scalarItem !== null) {
+			pushUnique(order, stripYamlString(scalarItem[1]));
+		}
+	}
+
+	return order.filter(status => status.length > 0);
 }
 
 function parseWorkflowStatuses(markdown: string): readonly SpecWorkflowStatus[] {
