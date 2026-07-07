@@ -36,20 +36,32 @@ export class CandidatesApp extends LitElement {
 			}
 
 			.empty {
-				padding: 16px 8px;
+				display: grid;
+				grid-template-columns: minmax(0, 1fr) auto;
+				align-items: center;
+				gap: 6px 8px;
+				padding: 8px 4px 10px;
 				color: var(--cs-fg-muted);
 				line-height: 1.4;
-				display: flex;
-				flex-direction: column;
-				gap: 12px;
+			}
+
+			.empty-message {
+				min-width: 0;
+				overflow-wrap: anywhere;
+			}
+
+			.empty-action {
+				justify-self: end;
 			}
 
 			.provider-selector {
+				grid-column: 1 / -1;
 				display: flex;
-				flex-direction: column;
-				gap: 4px;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 4px 10px;
 				margin: 0;
-				padding: 8px 10px;
+				padding: 5px 8px;
 				border: 1px solid var(--cs-card-border);
 				border-radius: 2px;
 				background: var(--cs-card-bg);
@@ -72,6 +84,16 @@ export class CandidatesApp extends LitElement {
 			.provider-selector input[type='radio'] {
 				accent-color: var(--cs-button-bg);
 				cursor: pointer;
+			}
+
+			@media (max-width: 240px) {
+				.empty {
+					grid-template-columns: minmax(0, 1fr);
+				}
+
+				.empty-action {
+					justify-self: start;
+				}
 			}
 
 			.id {
@@ -222,9 +244,7 @@ export class CandidatesApp extends LitElement {
 	private renderEmpty() {
 		const action = this.bootstrapAction();
 		const label = action === 'audit' ? 'Audit decisions' : 'Bootstrap decisions';
-		const emptyMessage = action === 'audit'
-			? 'No active candidates. Audit the project for new decisions.'
-			: 'No active candidates.';
+		const emptyMessage = 'No active candidates.';
 		const providerSelector = this.installedProviders.length >= 2 ? this.renderProviderSelector() : nothing;
 		const buttonDisabled = this.installedProviders.length === 0;
 		const buttonTooltip = buttonDisabled
@@ -232,13 +252,14 @@ export class CandidatesApp extends LitElement {
 			: '';
 		return html`
 			<div class="empty">
-				<div>${emptyMessage}</div>
-				${providerSelector}
+				<div class="empty-message">${emptyMessage}</div>
 				<cs-button
+					class="empty-action"
 					?disabled=${buttonDisabled}
 					title=${buttonTooltip}
 					@click=${this.dispatchBootstrap}
 				>${label}</cs-button>
+				${providerSelector}
 			</div>
 		`;
 	}

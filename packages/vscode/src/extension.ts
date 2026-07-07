@@ -116,8 +116,19 @@ export function activate(context: vscode.ExtensionContext): void {
 	let candidatesProvider: CandidatesWebviewProvider;
 	let rejectedRecordsProvider: RecordsWebviewProvider;
 	let retiredRecordsProvider: RecordsWebviewProvider;
+	let governanceRefreshTimer: NodeJS.Timeout | undefined;
 	const refreshGovernance = async (): Promise<void> => {
 		await refreshGovernanceViews(welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider);
+	};
+	const scheduleGovernanceRefresh = (): void => {
+		if (governanceRefreshTimer !== undefined) {
+			clearTimeout(governanceRefreshTimer);
+		}
+
+		governanceRefreshTimer = setTimeout(() => {
+			governanceRefreshTimer = undefined;
+			void refreshGovernance();
+		}, 50);
 	};
 
 	const recordsProvider = new RecordsWebviewProvider(context.extensionUri, {
@@ -260,6 +271,20 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.records.rejected', rejectedRecordsProvider));
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.records.retired', retiredRecordsProvider));
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.candidates', candidatesProvider));
+	const governanceWatcher = vscode.workspace.createFileSystemWatcher('**/sundial/decisions/**/*.md');
+	context.subscriptions.push(
+		governanceWatcher,
+		governanceWatcher.onDidCreate(scheduleGovernanceRefresh),
+		governanceWatcher.onDidChange(scheduleGovernanceRefresh),
+		governanceWatcher.onDidDelete(scheduleGovernanceRefresh),
+		{
+			dispose: () => {
+				if (governanceRefreshTimer !== undefined) {
+					clearTimeout(governanceRefreshTimer);
+				}
+			},
+		},
+	);
 
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.installCli', () => installCli(welcomeProvider)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.bootstrap', () => bootstrap(candidatesProvider)));

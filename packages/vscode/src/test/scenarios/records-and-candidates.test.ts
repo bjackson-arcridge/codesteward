@@ -1,5 +1,7 @@
 import * as assert from 'assert';
+import { execFile } from 'node:child_process';
 import * as path from 'node:path';
+import { promisify } from 'node:util';
 import * as vscode from 'vscode';
 
 import {
@@ -17,7 +19,8 @@ import {
 const expectedAcceptedRecordCount = 3;
 const expectedRejectedRecordCount = 1;
 const expectedRetiredRecordCount = 1;
-const expectedActiveCandidateCount = 3;
+const expectedActiveCandidateCount = 4;
+const execFileAsync = promisify(execFile);
 
 suite('Scenario: records-and-candidates', () => {
 	test('webviews render the seeded fixture state', async () => {
@@ -118,15 +121,29 @@ suite('Scenario: records-and-candidates', () => {
 		await vscode.commands.executeCommand('sundial.internal.candidates.lifecycle', 'reject', 'CAND-0002', 'Rejected by integration coverage.');
 		await waitForGovernanceCounts({
 			acceptedRecordCount: expectedAcceptedRecordCount + 1,
-			activeCandidateCount: 1,
+			activeCandidateCount: expectedActiveCandidateCount - 2,
 			rejectedRecordCount: expectedRejectedRecordCount + 1,
 		});
 
 		await vscode.commands.executeCommand('sundial.internal.candidates.lifecycle', 'dismiss', 'CAND-0005');
 		await waitForGovernanceCounts({
 			acceptedRecordCount: expectedAcceptedRecordCount + 1,
-			activeCandidateCount: 0,
+			activeCandidateCount: expectedActiveCandidateCount - 3,
 			rejectedRecordCount: expectedRejectedRecordCount + 1,
+		});
+	});
+
+	test('refreshes candidate state after external dismiss', async () => {
+		await useLocalSundialCli();
+		await activateExtension();
+		const before = await waitForWebviewDiagnostics();
+
+		await execFileAsync(localSundialCliPath(), ['--cwd', workspaceRoot(), 'candidate', 'dismiss', 'CAND-0006'], { cwd: workspaceRoot() });
+
+		await waitForGovernanceCounts({
+			acceptedRecordCount: before.acceptedRecordCount,
+			activeCandidateCount: before.activeCandidateCount - 1,
+			rejectedRecordCount: before.rejectedRecordCount,
 		});
 	});
 
@@ -168,12 +185,25 @@ function getSidebarViewVisibility(id: string): string | undefined {
 }
 
 function getCandidateFixturePath(filename: string): string {
-	const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-	if (workspaceRoot === undefined) {
+	return path.join(workspaceRoot(), 'sundial', 'decisions', 'candidates', filename);
+}
+
+function workspaceRoot(): string {
+	const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+	if (root === undefined) {
 		throw new Error('Expected scenario workspace folder to be open');
 	}
 
-	return path.join(workspaceRoot, 'sundial', 'decisions', 'candidates', filename);
+	return root;
+}
+
+function localSundialCliPath(): string {
+	const extension = vscode.extensions.getExtension('arcridge.sundial');
+	if (extension === undefined) {
+		throw new Error('Expected Sundial extension to be available');
+	}
+
+	return path.resolve(extension.extensionPath, '..', 'cli', 'dist', 'main.js');
 }
 
 interface ExpectedRecordFilterDiagnostics {
