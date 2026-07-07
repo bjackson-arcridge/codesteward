@@ -9,6 +9,7 @@ import {
 	listDecisionRecordSummaries,
 	listKnownDomains,
 	listResearchSummaries,
+	listSpecLanes,
 	listSpecSummaries,
 } from '../candidateInbox';
 
@@ -140,6 +141,13 @@ describe('listCandidateSummaries', () => {
 		const specs = path.join(root, 'sundial', 'specs');
 		await fs.mkdir(specs, { recursive: true });
 		await fs.writeFile(path.join(specs, 'board.md'), '# Sundial Specs\n\n## Planning\n', 'utf8');
+		await fs.writeFile(path.join(specs, 'workflow.yml'), [
+			'lanes:',
+			'  - Backlog',
+			'  - Implementation',
+			'  - Done',
+			'',
+		].join('\n'), 'utf8');
 		await fs.writeFile(path.join(specs, 'SPEC-0001-alpha.md'), [
 			'---',
 			'id: SPEC-0001',
@@ -157,5 +165,6 @@ describe('listCandidateSummaries', () => {
 		assert.equal(records[0]?.id, 'SPEC-0001');
 		assert.equal(records[0]?.status, 'Implementation');
 		assert.equal(records[0]?.filePath.endsWith('SPEC-0001-alpha.md'), true);
+		assert.deepEqual(await listSpecLanes(root), ['Backlog', 'Implementation', 'Done']);
 	});
 });

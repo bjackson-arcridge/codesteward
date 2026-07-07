@@ -33,6 +33,10 @@ export interface SpecStatusResult {
 	readonly previousStatus: string;
 }
 
+export interface SpecDeleteResult {
+	readonly spec: SpecRecord;
+}
+
 export function specsDirectory(paths: StorePaths): string {
 	return path.join(paths.store, specsDirectoryName);
 }
@@ -121,6 +125,12 @@ export async function setSpecStatus(paths: StorePaths, id: string, status: strin
 	await fs.writeFile(spec.filePath, updatedMarkdown.endsWith('\n') ? updatedMarkdown : `${updatedMarkdown}\n`, 'utf8');
 	const updatedSpec = await readSpecFile(spec.filePath);
 	return { spec: updatedSpec, previousStatus: spec.status };
+}
+
+export async function deleteSpec(paths: StorePaths, id: string): Promise<SpecDeleteResult> {
+	const spec = await requireSpec(paths, id);
+	await fs.unlink(spec.filePath);
+	return { spec };
 }
 
 export async function renderSpecBoard(paths: StorePaths): Promise<string> {

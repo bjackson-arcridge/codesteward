@@ -39,5 +39,9 @@ describe('package manifest contributions', () => {
 			commands.some(item => item.command === 'sundial.specs.openSpec'),
 			true,
 		);
+		assert.equal(
+			commands.some(item => item.command === 'sundial.specs.openBoard'),
+			true,
+		);
 	});
 });

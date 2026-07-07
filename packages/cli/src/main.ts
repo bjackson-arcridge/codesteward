@@ -43,6 +43,7 @@ import {
 } from './core/store';
 import {
 	createSpec,
+	deleteSpec,
 	findSpec,
 	listSpecs,
 	readSpecLanes,
@@ -82,7 +83,7 @@ Commands:
   dr promote  Move a rejected or retired DR back to accepted precedent
   dr delete   Remove a rejected or retired DR file from disk
   candidate   Create, list, show, accept, reject, retire, or dismiss candidates
-  spec        Create, list, show, update, or render implementation specs
+  spec        Create, list, show, update, delete, or render implementation specs
   help        Show this help
 `;
 
@@ -532,12 +533,17 @@ async function runSpec(
 		return;
 	}
 
+	if (subcommand === 'delete') {
+		await runSpecDelete(options, subcommandArgs, io);
+		return;
+	}
+
 	if (subcommand === 'lanes') {
 		await runSpecLanes(options, subcommandArgs, io);
 		return;
 	}
 
-	write(io.stderr, 'Usage: sundial spec (create | list | board | show | status | update-status | lanes)\n');
+	write(io.stderr, 'Usage: sundial spec (create | list | board | show | status | update-status | delete | lanes)\n');
 	io.exitCode = 64;
 }
 
@@ -662,6 +668,33 @@ async function runSpecStatus(
 		if (!options.quiet) {
 			write(io.stdout, `Updated ${result.spec.id} ${result.spec.title}\n`);
 			write(io.stdout, `Status: ${result.previousStatus} -> ${result.spec.status}\n`);
+			write(io.stdout, `Path: ${formatPath(paths, result.spec.filePath)}\n`);
+		}
+	} catch (error) {
+		writeError(error, io);
+	}
+}
+
+async function runSpecDelete(
+	options: CliOptions,
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
+): Promise<void> {
+	if (args.length !== 1) {
+		write(io.stderr, 'Usage: sundial spec delete <id>\n');
+		io.exitCode = 64;
+		return;
+	}
+
+	const paths = await requireStore(options.cwd, io);
+	if (paths === undefined) {
+		return;
+	}
+
+	try {
+		const result = await deleteSpec(paths, args[0]);
+		if (!options.quiet) {
+			write(io.stdout, `Deleted ${result.spec.id} ${result.spec.title}\n`);
 			write(io.stdout, `Path: ${formatPath(paths, result.spec.filePath)}\n`);
 		}
 	} catch (error) {

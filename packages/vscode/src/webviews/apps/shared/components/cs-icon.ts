@@ -2,6 +2,7 @@ import { LitElement, css, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
 const codiconGlyphs: Readonly<Record<string, string>> = {
+	add: '\uea60',
 	'arrow-up': '\ueaa1',
 	archive: '\uea98',
 	check: '\ueab2',

@@ -1,12 +1,11 @@
 ---
 id: SPEC-0001
 title: Embedded specs board MVP
-status: Active
+status: Done
 created: 2026-07-07
 updated: 2026-07-07
 created_by: bjackson
 ---
-
 # Embedded specs board MVP
 
 ## Discovery
@@ -39,10 +38,12 @@ created_by: bjackson
   - `sundial spec list`
   - `sundial spec show <id>`
   - `sundial spec status <id> <lane>`
+  - `sundial spec delete <id>`
   - `sundial spec lanes`
 - Generate spec markdown from a fixed template and let the model edit section bodies directly.
 - Generate board views by scanning canonical spec markdown files; do not keep `board.md` as a source-of-truth artifact.
-- Defer the fully embedded Lit board UI until after the CLI workflow and artifact layout are stable.
+- Add a main editor-area Specs Board webview panel, launched from the Specs sidebar/command palette, with lane columns, draggable spec cards, add, delete, and open-source actions.
+- Route board mutations through CLI commands; keep the webview as UI over CLI-backed operations.
 
 ## Rejected Alternatives
 
@@ -51,9 +52,10 @@ created_by: bjackson
 
 ## Test Plan
 
-- CLI unit tests cover default lanes, custom YAML lanes, spec creation, status updates, listing, showing, and generated board links.
+- CLI unit tests cover default lanes, custom YAML lanes, spec creation, status updates, deletion, listing, showing, and generated board links.
 - Store bootstrap tests cover creation of `sundial/specs/workflow.yml` without creating `board.md`.
 - VS Code unit tests verify the Specs sidebar reads individual spec markdown files.
+- VS Code unit tests cover the Specs Board webview message contract and manifest command contribution.
 - VS Code integration tests should not depend on an external Markdown Kanban extension being installed or enabled.
 
 ## Open Questions
@@ -69,6 +71,10 @@ created_by: bjackson
 - Added generated board rendering from canonical spec artifacts.
 - Removed `board.md` from the store contract; spec markdown files are the source of truth.
 - Updated the interim VS Code Specs sidebar to scan spec markdown files directly.
+- Added `sundial spec delete` for CLI-owned spec removal.
+- Added a main editor-area Specs Board webview panel with lanes, draggable cards, add, delete, and open-source actions.
+- Fixed the board Add action by using a native form submit button instead of a custom element inside the form.
+- Replaced the per-card move dropdown with drag and drop between lanes; drops still route through `sundial spec status`.
 - Created this spec through `sundial spec create`.
 
 ## Test Log
@@ -77,4 +83,9 @@ created_by: bjackson
 - `npm --workspace packages/vscode run test:unit` passed after switching Specs to individual spec files.
 - `npm --workspace packages/cli run compile` passed.
 - `npm --workspace packages/vscode run compile` passed.
+- `npm --workspace packages/cli run test:unit` passed after adding `sundial spec delete`.
+- `npm --workspace packages/vscode run test:unit` passed after adding the main editor Specs Board panel.
+- A regression test first confirmed the Add action bug by failing on `<cs-button type="submit">`; after the fix, `npm --workspace packages/vscode run test:unit` passed.
+- `npm --workspace packages/vscode run test:unit` passed after replacing the move dropdown with drag and drop.
+- `npm --workspace packages/vscode run compile` passed after replacing the move dropdown with drag and drop.
 - `node packages/cli/dist/main.js --cwd /Users/bjackson/codesteward spec board` rendered the board projection from `SPEC-0001`.

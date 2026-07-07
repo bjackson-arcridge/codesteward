@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 const storeDirectoryName = 'sundial';
+export const defaultSpecLanes = ['Backlog', 'Todo', 'Active', 'Done'] as const;
 
 export interface CandidateSummary {
 	readonly id: string;
@@ -94,6 +95,28 @@ export async function listSpecSummaries(workspaceRoot: string): Promise<readonly
 	return [...records]
 		.filter(record => path.basename(record.filePath).toLowerCase() !== 'board.md')
 		.sort((left, right) => left.id.localeCompare(right.id));
+}
+
+export async function listSpecLanes(workspaceRoot: string): Promise<readonly string[]> {
+	const storeRoot = await discoverSundialRoot(workspaceRoot);
+	if (storeRoot === undefined) {
+		return defaultSpecLanes;
+	}
+
+	const workflowPath = path.join(storeRoot, storeDirectoryName, 'specs', 'workflow.yml');
+	let contents: string;
+	try {
+		contents = await fs.readFile(workflowPath, 'utf8');
+	} catch (error) {
+		if (isNodeError(error) && error.code === 'ENOENT') {
+			return defaultSpecLanes;
+		}
+
+		throw error;
+	}
+
+	const lanes = parseWorkflowLanes(contents);
+	return lanes.length === 0 ? defaultSpecLanes : lanes;
 }
 
 export async function listKnownDomains(workspaceRoot: string): Promise<readonly string[]> {
@@ -207,6 +230,37 @@ function parseFrontmatterScalars(markdown: string): Map<string, string> {
 	}
 
 	return scalars;
+}
+
+function parseWorkflowLanes(markdown: string): readonly string[] {
+	const lanes: string[] = [];
+	let inLanes = false;
+	for (const line of markdown.split(/\r?\n/)) {
+		if (/^\s*lanes:\s*$/.test(line)) {
+			inLanes = true;
+			continue;
+		}
+
+		if (!inLanes) {
+			continue;
+		}
+
+		const item = /^\s*-\s+(.+?)\s*$/.exec(line);
+		if (item !== null) {
+			lanes.push(stripYamlString(item[1]));
+			continue;
+		}
+
+		if (line.trim().length > 0 && !line.startsWith(' ') && !line.startsWith('\t')) {
+			break;
+		}
+	}
+
+	return [...new Set(lanes.filter(lane => lane.length > 0))];
+}
+
+function stripYamlString(value: string): string {
+	return value.replace(/^['"]|['"]$/g, '').trim();
 }
 
 function parseDomainNames(markdown: string): readonly string[] {

@@ -3,6 +3,7 @@ import { describe, test } from 'node:test';
 import { isHostToWebview as isWelcomeHost, isWebviewToHost as isWelcomeClient } from '../webviews/welcome/messages';
 import { isHostToWebview as isCandidatesHost, isWebviewToHost as isCandidatesClient } from '../webviews/candidates/messages';
 import { isHostToWebview as isRecordsHost, isWebviewToHost as isRecordsClient } from '../webviews/records/messages';
+import { isHostToWebview as isSpecsHost, isWebviewToHost as isSpecsClient } from '../webviews/specs/messages';
 
 describe('welcome message guards', () => {
 	test('accept well-formed host -> webview state', () => {
@@ -289,6 +290,69 @@ describe('records message guards', () => {
 		assert.equal(isRecordsClient({
 			kind: 'rendered',
 			diagnostic: { recordCount: 1, cardCount: '1', emptyVisible: false },
+		}), false);
+	});
+});
+
+describe('specs board message guards', () => {
+	test('accept host state and diagnostics messages', () => {
+		assert.equal(isSpecsHost({
+			kind: 'state',
+			lanes: ['Backlog', 'Active'],
+			specs: [{ id: 'SPEC-0001', title: 'Board MVP', status: 'Active' }],
+		}), true);
+		assert.equal(isSpecsHost({
+			kind: 'state',
+			lanes: ['Backlog'],
+			specs: [{ id: 'SPEC-0001', title: 'Board MVP', status: 'Backlog', workspace: 'repo' }],
+			workspaces: ['repo'],
+			diagnosticsEnabled: true,
+		}), true);
+		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'open' }), true);
+		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'delete', workspace: 'repo' }), true);
+		assert.equal(isSpecsHost({ kind: 'diagnosticCreateSpec', title: 'New spec', status: 'Backlog' }), true);
+		assert.equal(isSpecsHost({ kind: 'diagnosticMoveSpec', id: 'SPEC-0001', status: 'Active' }), true);
+		assert.equal(isSpecsHost({ kind: 'diagnosticDeleteSpec', id: 'SPEC-0001' }), true);
+	});
+
+	test('reject malformed host messages', () => {
+		assert.equal(isSpecsHost({ kind: 'state', lanes: 'Backlog', specs: [] }), false);
+		assert.equal(isSpecsHost({ kind: 'state', lanes: ['Backlog'], specs: [{ id: 'SPEC-1', title: 'Missing status' }] }), false);
+		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'edit' }), false);
+		assert.equal(isSpecsHost({ kind: 'diagnosticCreateSpec', title: 'New spec' }), false);
+		assert.equal(isSpecsHost({ kind: 'diagnosticMoveSpec', id: 'SPEC-0001' }), false);
+	});
+
+	test('accept all defined client commands', () => {
+		assert.equal(isSpecsClient({ kind: 'open', id: 'SPEC-0001' }), true);
+		assert.equal(isSpecsClient({ kind: 'create', title: 'New spec', status: 'Backlog' }), true);
+		assert.equal(isSpecsClient({ kind: 'move', id: 'SPEC-0001', status: 'Active', workspace: 'repo' }), true);
+		assert.equal(isSpecsClient({ kind: 'delete', id: 'SPEC-0001' }), true);
+		assert.equal(isSpecsClient({ kind: 'requestRefresh' }), true);
+		assert.equal(isSpecsClient({
+			kind: 'rendered',
+			diagnostic: {
+				laneCount: 4,
+				specCount: 1,
+				cardCount: 1,
+				emptyVisible: false,
+			},
+		}), true);
+	});
+
+	test('reject malformed client commands', () => {
+		assert.equal(isSpecsClient({ kind: 'open' }), false);
+		assert.equal(isSpecsClient({ kind: 'create', title: 'New spec' }), false);
+		assert.equal(isSpecsClient({ kind: 'move', id: 'SPEC-0001' }), false);
+		assert.equal(isSpecsClient({ kind: 'delete', id: 12 }), false);
+		assert.equal(isSpecsClient({
+			kind: 'rendered',
+			diagnostic: {
+				laneCount: '4',
+				specCount: 1,
+				cardCount: 1,
+				emptyVisible: false,
+			},
 		}), false);
 	});
 });

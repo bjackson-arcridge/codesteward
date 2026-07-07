@@ -259,6 +259,8 @@ describe('bootstrapCommand', () => {
 		const list = await runCli(root, ['spec', 'list']);
 		const shown = await runCli(root, ['spec', 'show', 'SPEC-0001']);
 		const board = await runCli(root, ['spec', 'board']);
+		const deleted = await runCli(root, ['spec', 'delete', 'SPEC-0001']);
+		const listAfterDelete = await runCli(root, ['spec', 'list']);
 
 		assert.equal(lanes.stdout, 'Backlog\nTodo\nActive\nDone\n');
 		assert.match(created.stdout, /Created SPEC-0001 Embedded specs board MVP/);
@@ -272,10 +274,14 @@ describe('bootstrapCommand', () => {
 		assert.match(shown.stdout, /## Test Log/);
 		assert.match(board.stdout, /## Active\n\n### Embedded specs board MVP/);
 		assert.match(board.stdout, /\[Open spec\]\(\.\/SPEC-0001-embedded-specs-board-mvp\.md\)/);
+		assert.match(deleted.stdout, /Deleted SPEC-0001 Embedded specs board MVP/);
+		assert.equal(listAfterDelete.stdout, '');
+		await assert.rejects(fs.access(path.join(init.paths.store, 'specs', 'SPEC-0001-embedded-specs-board-mvp.md')));
 		await assert.rejects(fs.access(path.join(init.paths.store, 'specs', 'board.md')));
 		assert.equal(created.stderr, '');
 		assert.equal(active.stderr, '');
 		assert.equal(board.stderr, '');
+		assert.equal(deleted.stderr, '');
 	});
 
 	test('uses custom spec workflow lanes from yaml', async () => {

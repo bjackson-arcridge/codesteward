@@ -5,7 +5,7 @@ const path = require('node:path');
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
 
-const webviews = ['welcome', 'records', 'candidates'];
+const webviews = ['welcome', 'records', 'candidates', 'specs'];
 
 const codiconSrc = path.dirname(require.resolve('@vscode/codicons/package.json'));
 const mediaDir = path.join(__dirname, 'media');

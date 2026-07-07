@@ -114,6 +114,12 @@
         "icon": "$(edit)"
       },
       {
+        "command": "sundial.specs.openBoard",
+        "title": "Sundial: Open Specs Board",
+        "icon": "$(list-tree)",
+        "enablement": "sundial.workspaceInitialized"
+      },
+      {
         "command": "sundial.specs.openSpec",
         "title": "Sundial: Open Spec",
         "icon": "$(open-preview)"
@@ -211,6 +217,11 @@
         {
           "command": "sundial.installCli",
           "when": "view == sundial.welcome && !sundial.cliAvailable",
+          "group": "navigation"
+        },
+        {
+          "command": "sundial.specs.openBoard",
+          "when": "view == sundial.specs && sundial.workspaceInitialized",
           "group": "navigation"
         }
       ],

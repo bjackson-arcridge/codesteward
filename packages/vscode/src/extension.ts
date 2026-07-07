@@ -9,7 +9,9 @@ import {
 	listDecisionRecordSummaries,
 	listKnownDomains,
 	listResearchSummaries,
+	listSpecLanes,
 	listSpecSummaries,
+	defaultSpecLanes,
 	type DecisionRecordSummary,
 	type DecisionRecordSummaryStatus,
 	type ResearchSummary,
@@ -17,8 +19,10 @@ import {
 import { WelcomeWebviewProvider } from './webviews/welcome/welcomeWebviewProvider';
 import { RecordsWebviewProvider } from './webviews/records/recordsWebviewProvider';
 import { CandidatesWebviewProvider } from './webviews/candidates/candidatesWebviewProvider';
+import { SpecsBoardPanel, type SpecsBoardState } from './webviews/specs/specsBoardPanel';
 import type { RecordRenderDiagnostic, RecordSummary } from './webviews/records/messages';
 import type { BootstrapProvider, CandidateRenderDiagnostic, CandidateSummary } from './webviews/candidates/messages';
+import type { SpecCard, SpecsRenderDiagnostic } from './webviews/specs/messages';
 import type { WebviewToHost as WelcomeWebviewToHost, WelcomeRenderDiagnostic } from './webviews/welcome/messages';
 import { renderMarkdownPreviewSource } from './markdownPreview';
 import { sundialCliCommand, sundialCliInstallArgs } from './sundialCli';
@@ -56,6 +60,14 @@ interface CandidatesDiagnostics {
 	lastRendered?: CandidateRenderDiagnostic;
 }
 
+interface SpecsBoardDiagnostics {
+	lastState?: {
+		readonly laneCount: number;
+		readonly specCount: number;
+	};
+	lastRendered?: SpecsRenderDiagnostic;
+}
+
 interface WelcomeDiagnostics {
 	lastRendered?: WelcomeRenderDiagnostic;
 	lastCommand?: WelcomeWebviewToHost;
@@ -67,6 +79,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	const recordsDiagnostics: RecordsDiagnostics = {};
 	const researchDiagnostics: RecordsDiagnostics = {};
 	const specsDiagnostics: RecordsDiagnostics = {};
+	const specsBoardDiagnostics: SpecsBoardDiagnostics = {};
 	const rejectedRecordsDiagnostics: RecordsDiagnostics = {};
 	const retiredRecordsDiagnostics: RecordsDiagnostics = {};
 	const candidatesDiagnostics: CandidatesDiagnostics = {};
@@ -76,6 +89,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(diagnosticsChannel);
 	let researchProvider: RecordsWebviewProvider;
 	let specsProvider: RecordsWebviewProvider;
+	let specsBoardPanel: SpecsBoardPanel;
 	const markdownPreviewProvider = new FrontmatterMarkdownPreviewProvider();
 	activeMarkdownPreviewProvider = markdownPreviewProvider;
 	context.subscriptions.push(markdownPreviewProvider);
@@ -115,6 +129,7 @@ export function activate(context: vscode.ExtensionContext): void {
 					recordsProvider,
 					researchProvider,
 					specsProvider,
+					specsBoardPanel,
 					rejectedRecordsProvider,
 					retiredRecordsProvider,
 					{ claude: command.claude, codex: command.codex },
@@ -129,6 +144,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	let governanceRefreshTimer: NodeJS.Timeout | undefined;
 	const refreshGovernance = async (): Promise<void> => {
 		await refreshGovernanceViews(welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider, researchProvider, specsProvider);
+		await specsBoardPanel.refresh();
 	};
 	const scheduleGovernanceRefresh = (): void => {
 		if (governanceRefreshTimer !== undefined) {
@@ -287,6 +303,50 @@ export function activate(context: vscode.ExtensionContext): void {
 		},
 	});
 
+	specsBoardPanel = new SpecsBoardPanel(context.extensionUri, {
+		getState: async () => {
+			const state = await collectSpecBoardState();
+			specsBoardDiagnostics.lastState = {
+				laneCount: state.lanes.length,
+				specCount: state.specs.length,
+			};
+			return state;
+		},
+		diagnosticsEnabled: () => diagnosticsEnabled,
+		onCommand: async message => {
+			if (message.kind === 'rendered') {
+				if (diagnosticsEnabled) {
+					specsBoardDiagnostics.lastRendered = message.diagnostic;
+				}
+				return;
+			}
+
+			if (message.kind === 'requestRefresh') {
+				await specsBoardPanel.refresh();
+				return;
+			}
+
+			if (message.kind === 'open') {
+				await openSpec(message.id, message.workspace);
+				return;
+			}
+
+			if (message.kind === 'create') {
+				await createSpecFromBoard(message.title, message.status, message.workspace, specsProvider, specsBoardPanel);
+				return;
+			}
+
+			if (message.kind === 'move') {
+				await moveSpecFromBoard(message.id, message.status, message.workspace, specsProvider, specsBoardPanel);
+				return;
+			}
+
+			if (message.kind === 'delete') {
+				await deleteSpecFromBoard(message.id, message.workspace, specsProvider, specsBoardPanel);
+			}
+		},
+	});
+
 	rejectedRecordsProvider = createLifecycleRecordsProvider(
 		context.extensionUri,
 		'rejected',
@@ -370,7 +430,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.records.rejected', rejectedRecordsProvider));
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.records.retired', retiredRecordsProvider));
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.candidates', candidatesProvider));
-	const governanceWatcher = vscode.workspace.createFileSystemWatcher('**/sundial/{decisions,research,specs}/**/*.md');
+	context.subscriptions.push(specsBoardPanel);
+	const governanceWatcher = vscode.workspace.createFileSystemWatcher('**/sundial/{decisions,research,specs}/**/*.{md,yml,yaml}');
 	context.subscriptions.push(
 		governanceWatcher,
 		governanceWatcher.onDidCreate(scheduleGovernanceRefresh),
@@ -401,6 +462,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.editSource', (id?: string) => editRecordSource(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.research.openPreview', (id?: string) => previewResearch(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.research.editSource', (id?: string) => editResearchSource(id)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.openBoard', () => specsBoardPanel.reveal()));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.openSpec', (id?: string) => openSpec(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.open', (id?: string) => previewCandidate(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.editSource', (id?: string) => editCandidateSource(id)));
@@ -425,6 +487,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			retiredRecordsDiagnostics,
 			researchDiagnostics,
 			specsDiagnostics,
+			specsBoardDiagnostics,
 			candidatesDiagnostics,
 			welcomeDiagnostics,
 			recordsState,
@@ -445,6 +508,7 @@ export function activate(context: vscode.ExtensionContext): void {
 				retiredRecordsDiagnostics,
 				researchDiagnostics,
 				specsDiagnostics,
+				specsBoardDiagnostics,
 				candidatesDiagnostics,
 				welcomeDiagnostics,
 				recordsState,
@@ -634,6 +698,8 @@ interface ExtensionDiagnostics {
 	readonly specsCount: number;
 	readonly specsLastState?: RecordsDiagnostics['lastState'];
 	readonly specsLastRendered?: RecordsDiagnostics['lastRendered'];
+	readonly specsBoardLastState?: SpecsBoardDiagnostics['lastState'];
+	readonly specsBoardLastRendered?: SpecsBoardDiagnostics['lastRendered'];
 	readonly candidatesLastState?: CandidatesDiagnostics['lastState'];
 	readonly candidatesLastRendered?: CandidatesDiagnostics['lastRendered'];
 	readonly welcomeLastRendered?: WelcomeDiagnostics['lastRendered'];
@@ -649,6 +715,7 @@ async function buildDiagnostics(
 	retiredRecordsDiagnostics: RecordsDiagnostics,
 	researchDiagnostics: RecordsDiagnostics,
 	specsDiagnostics: RecordsDiagnostics,
+	specsBoardDiagnostics: SpecsBoardDiagnostics,
 	candidatesDiagnostics: CandidatesDiagnostics,
 	welcomeDiagnostics: WelcomeDiagnostics,
 	recordsState: RecordsState,
@@ -681,6 +748,8 @@ async function buildDiagnostics(
 		specsCount: specs.length,
 		specsLastState: specsDiagnostics.lastState ?? { recordCount: specs.length },
 		specsLastRendered: specsDiagnostics.lastRendered,
+		specsBoardLastState: specsBoardDiagnostics.lastState,
+		specsBoardLastRendered: specsBoardDiagnostics.lastRendered,
 		candidatesLastState: candidatesDiagnostics.lastState,
 		candidatesLastRendered: candidatesDiagnostics.lastRendered,
 		welcomeLastRendered: welcomeDiagnostics.lastRendered,
@@ -689,6 +758,7 @@ async function buildDiagnostics(
 			'dist/webviews/welcome.js',
 			'dist/webviews/records.js',
 			'dist/webviews/candidates.js',
+			'dist/webviews/specs.js',
 			'media/codicon.css',
 			'media/codicon.ttf',
 		].map(relativePath => assetDiagnostic(extensionUri, relativePath))),
@@ -792,6 +862,38 @@ async function collectSpecs(): Promise<readonly RecordSummary[]> {
 	return all.flat();
 }
 
+async function collectSpecBoardState(): Promise<SpecsBoardState> {
+	const stores = await collectWorkspaceStores();
+	const perStore = await Promise.all(stores.map(async store => ({
+		store,
+		lanes: await listSpecLanes(store.root),
+		specs: await listSpecSummaries(store.root),
+	})));
+	const lanes: string[] = [];
+	for (const lane of perStore.flatMap(item => item.lanes)) {
+		pushUnique(lanes, lane);
+	}
+	for (const spec of perStore.flatMap(item => item.specs)) {
+		pushUnique(lanes, spec.status);
+	}
+	if (lanes.length === 0) {
+		lanes.push(...defaultSpecLanes);
+	}
+
+	const specs = perStore.flatMap(item => item.specs.map(spec => ({
+		id: spec.id,
+		title: spec.title,
+		status: spec.status,
+		...(stores.length > 1 ? { workspace: item.store.name } : {}),
+	} satisfies SpecCard)));
+
+	return {
+		lanes,
+		specs,
+		...(stores.length > 1 ? { workspaces: stores.map(store => store.name) } : {}),
+	};
+}
+
 async function collectRecordFilterOptions(): Promise<{ domains: readonly string[] }> {
 	const stores = await collectWorkspaceStores();
 	const all = await Promise.all(stores.map(async store => {
@@ -855,6 +957,12 @@ function sortedUnique(values: readonly string[]): readonly string[] {
 		.sort((left, right) => left.localeCompare(right));
 }
 
+function pushUnique(values: string[], value: string): void {
+	if (value.length > 0 && !values.includes(value)) {
+		values.push(value);
+	}
+}
+
 async function collectCandidates(): Promise<readonly CandidateSummary[]> {
 	const stores = await collectWorkspaceStores();
 	const all = await Promise.all(stores.map(async store => {
@@ -913,7 +1021,7 @@ async function resolveResearchPath(record: RecordSummary | undefined): Promise<s
 	return undefined;
 }
 
-async function resolveSpecPath(record: RecordSummary | undefined): Promise<string | undefined> {
+async function resolveSpecPath(record: { readonly id: string; readonly workspace?: string } | undefined): Promise<string | undefined> {
 	if (record === undefined) {
 		return undefined;
 	}
@@ -953,14 +1061,76 @@ async function editResearchSource(id: string | undefined): Promise<void> {
 	await openMarkdownSource(await resolveResearchPath(record));
 }
 
-async function openSpec(id: string | undefined): Promise<void> {
-	const record = await specForCommand(id);
+async function openSpec(id: string | undefined, workspace?: string): Promise<void> {
+	const record = await specForCommand(id, workspace);
 	const filePath = await resolveSpecPath(record);
 	if (filePath === undefined) {
 		return;
 	}
 
 	await openMarkdownSource(filePath);
+}
+
+async function createSpecFromBoard(
+	title: string,
+	status: string,
+	workspace: string | undefined,
+	specsProvider: RecordsWebviewProvider,
+	specsBoardPanel: SpecsBoardPanel,
+): Promise<void> {
+	const root = await specWorkspaceRootForCommand(workspace);
+	if (root === undefined) {
+		return;
+	}
+
+	try {
+		await runSundial(root, ['spec', 'create', '--title', title, '--status', status]);
+		await refreshSpecViews(specsProvider, specsBoardPanel);
+	} catch (error) {
+		showCommandError(error);
+	}
+}
+
+async function moveSpecFromBoard(
+	id: string,
+	status: string,
+	workspace: string | undefined,
+	specsProvider: RecordsWebviewProvider,
+	specsBoardPanel: SpecsBoardPanel,
+): Promise<void> {
+	const record = await specForCommand(id, workspace);
+	const filePath = await resolveSpecPath(record);
+	if (record === undefined || filePath === undefined) {
+		return;
+	}
+
+	await runLifecycle(record.id, ['spec', 'status', record.id, status], filePath);
+	await refreshSpecViews(specsProvider, specsBoardPanel);
+}
+
+async function deleteSpecFromBoard(
+	id: string,
+	workspace: string | undefined,
+	specsProvider: RecordsWebviewProvider,
+	specsBoardPanel: SpecsBoardPanel,
+): Promise<void> {
+	const record = await specForCommand(id, workspace);
+	const filePath = await resolveSpecPath(record);
+	if (record === undefined || filePath === undefined) {
+		return;
+	}
+
+	const action = await vscode.window.showWarningMessage(
+		`Delete ${record.id}? This removes ${path.basename(filePath)} from disk.`,
+		{ modal: true },
+		'Delete File',
+	);
+	if (action !== 'Delete File') {
+		return;
+	}
+
+	await runLifecycle(record.id, ['spec', 'delete', record.id], filePath);
+	await refreshSpecViews(specsProvider, specsBoardPanel);
 }
 
 async function previewCandidate(id: string | undefined, filePath?: string): Promise<void> {
@@ -1167,6 +1337,14 @@ async function refreshGovernanceViews(
 	await refreshWorkspaceState(welcomeProvider);
 }
 
+async function refreshSpecViews(
+	specsProvider: RecordsWebviewProvider,
+	specsBoardPanel: SpecsBoardPanel,
+): Promise<void> {
+	await specsProvider.refresh();
+	await specsBoardPanel.refresh();
+}
+
 interface RecordPick extends vscode.QuickPickItem {
 	readonly record: RecordSummary;
 }
@@ -1226,10 +1404,10 @@ async function researchForCommand(id: string | undefined): Promise<RecordSummary
 	return pick?.record;
 }
 
-async function specForCommand(id: string | undefined): Promise<RecordSummary | undefined> {
+async function specForCommand(id: string | undefined, workspace?: string): Promise<RecordSummary | undefined> {
 	const records = await collectSpecs();
 	if (id !== undefined) {
-		const match = records.find(record => record.id === id);
+		const match = records.find(record => record.id === id && (workspace === undefined || record.workspace === workspace));
 		if (match === undefined) {
 			void vscode.window.showWarningMessage(`No spec found with id "${id}".`);
 		}
@@ -1250,6 +1428,37 @@ async function specForCommand(id: string | undefined): Promise<RecordSummary | u
 		placeHolder: 'Select a spec',
 	});
 	return pick?.record;
+}
+
+async function specWorkspaceRootForCommand(workspace: string | undefined): Promise<string | undefined> {
+	const stores = await collectWorkspaceStores();
+	if (workspace !== undefined) {
+		const match = stores.find(store => store.name === workspace);
+		if (match === undefined) {
+			void vscode.window.showWarningMessage(`No Sundial workspace found for "${workspace}".`);
+		}
+
+		return match?.root;
+	}
+
+	if (stores.length === 0) {
+		void vscode.window.showInformationMessage('No initialized Sundial workspace is available.');
+		return undefined;
+	}
+
+	if (stores.length === 1) {
+		return stores[0].root;
+	}
+
+	const pick = await vscode.window.showQuickPick<WorkspaceRootPick>(stores.map(store => ({
+		label: store.name,
+		description: store.root,
+		root: store.root,
+	})), {
+		placeHolder: 'Select a Sundial workspace',
+	});
+
+	return pick?.root;
 }
 
 interface CandidatePick extends vscode.QuickPickItem {
@@ -1369,6 +1578,7 @@ async function initializeProject(
 	recordsProvider: RecordsWebviewProvider,
 	researchProvider: RecordsWebviewProvider,
 	specsProvider: RecordsWebviewProvider,
+	specsBoardPanel: SpecsBoardPanel,
 	rejectedRecordsProvider: RecordsWebviewProvider,
 	retiredRecordsProvider: RecordsWebviewProvider,
 	agents: AgentSelection,
@@ -1399,6 +1609,7 @@ async function initializeProject(
 			await recordsProvider.refresh();
 			await researchProvider.refresh();
 			await specsProvider.refresh();
+			await specsBoardPanel.refresh();
 			await rejectedRecordsProvider.refresh();
 			await retiredRecordsProvider.refresh();
 			await refreshWorkspaceState(welcomeProvider);
