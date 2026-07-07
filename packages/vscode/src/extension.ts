@@ -8,8 +8,10 @@ import {
 	listCandidateSummaries,
 	listDecisionRecordSummaries,
 	listKnownDomains,
+	listResearchSummaries,
 	type DecisionRecordSummary,
 	type DecisionRecordSummaryStatus,
+	type ResearchSummary,
 } from './candidateInbox';
 import { WelcomeWebviewProvider } from './webviews/welcome/welcomeWebviewProvider';
 import { RecordsWebviewProvider } from './webviews/records/recordsWebviewProvider';
@@ -60,7 +62,9 @@ interface WelcomeDiagnostics {
 
 export function activate(context: vscode.ExtensionContext): void {
 	const recordsState: RecordsState = { domainFilter: undefined };
+	const researchState: RecordsState = { domainFilter: undefined };
 	const recordsDiagnostics: RecordsDiagnostics = {};
+	const researchDiagnostics: RecordsDiagnostics = {};
 	const rejectedRecordsDiagnostics: RecordsDiagnostics = {};
 	const retiredRecordsDiagnostics: RecordsDiagnostics = {};
 	const candidatesDiagnostics: CandidatesDiagnostics = {};
@@ -68,6 +72,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	const diagnosticsEnabled = isIntegrationTest();
 	const diagnosticsChannel = vscode.window.createOutputChannel('Sundial Diagnostics');
 	context.subscriptions.push(diagnosticsChannel);
+	let researchProvider: RecordsWebviewProvider;
 	const markdownPreviewProvider = new FrontmatterMarkdownPreviewProvider();
 	activeMarkdownPreviewProvider = markdownPreviewProvider;
 	context.subscriptions.push(markdownPreviewProvider);
@@ -105,6 +110,7 @@ export function activate(context: vscode.ExtensionContext): void {
 					welcomeProvider,
 					candidatesProvider,
 					recordsProvider,
+					researchProvider,
 					rejectedRecordsProvider,
 					retiredRecordsProvider,
 					{ claude: command.claude, codex: command.codex },
@@ -118,7 +124,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	let retiredRecordsProvider: RecordsWebviewProvider;
 	let governanceRefreshTimer: NodeJS.Timeout | undefined;
 	const refreshGovernance = async (): Promise<void> => {
-		await refreshGovernanceViews(welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider);
+		await refreshGovernanceViews(welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider, researchProvider);
 	};
 	const scheduleGovernanceRefresh = (): void => {
 		if (governanceRefreshTimer !== undefined) {
@@ -186,6 +192,56 @@ export function activate(context: vscode.ExtensionContext): void {
 
 			if (message.kind === 'requestRefresh') {
 				await recordsProvider.refresh();
+			}
+		},
+	});
+
+	researchProvider = new RecordsWebviewProvider(context.extensionUri, {
+		listRecords: async () => {
+			const records = await collectResearch(researchState);
+			researchDiagnostics.lastState = {
+				recordCount: records.length,
+				...(researchState.domainFilter === undefined ? {} : { domainFilter: researchState.domainFilter }),
+			};
+			return records;
+		},
+		listFilterOptions: () => collectResearchFilterOptions(),
+		getDomainFilter: () => researchState.domainFilter,
+		actionMode: 'research',
+		emptyText: 'No research notes yet.',
+		diagnosticsEnabled: () => diagnosticsEnabled,
+		onCommand: async message => {
+			if (message.kind === 'rendered') {
+				if (diagnosticsEnabled) {
+					researchDiagnostics.lastRendered = message.diagnostic;
+				}
+				return;
+			}
+
+			if (message.kind === 'preview') {
+				await previewResearch(message.id);
+				return;
+			}
+
+			if (message.kind === 'edit') {
+				await editResearchSource(message.id);
+				return;
+			}
+
+			if (message.kind === 'setDomainFilter') {
+				researchState.domainFilter = normalizeFilterValue(message.domainFilter);
+				await researchProvider.refresh();
+				return;
+			}
+
+			if (message.kind === 'clearFilters') {
+				clearRecordFilters(researchState);
+				await researchProvider.refresh();
+				return;
+			}
+
+			if (message.kind === 'requestRefresh') {
+				await researchProvider.refresh();
 			}
 		},
 	});
@@ -268,10 +324,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.welcome', welcomeProvider));
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.records', recordsProvider));
+	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.research', researchProvider));
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.records.rejected', rejectedRecordsProvider));
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.records.retired', retiredRecordsProvider));
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.candidates', candidatesProvider));
-	const governanceWatcher = vscode.workspace.createFileSystemWatcher('**/sundial/decisions/**/*.md');
+	const governanceWatcher = vscode.workspace.createFileSystemWatcher('**/sundial/{decisions,research}/**/*.md');
 	context.subscriptions.push(
 		governanceWatcher,
 		governanceWatcher.onDidCreate(scheduleGovernanceRefresh),
@@ -289,12 +346,19 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.installCli', () => installCli(welcomeProvider)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.bootstrap', () => bootstrap(candidatesProvider)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.filterByDomain', () => runFilterByDomain(recordsState, recordsProvider)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.research.filterByDomain', () => runFilterByDomain(researchState, researchProvider)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.clearFilters', async () => {
 		clearRecordFilters(recordsState);
 		await recordsProvider.refresh();
 	}));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.research.clearFilters', async () => {
+		clearRecordFilters(researchState);
+		await researchProvider.refresh();
+	}));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.openPreview', (id?: string) => previewRecord(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.editSource', (id?: string) => editRecordSource(id)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.research.openPreview', (id?: string) => previewResearch(id)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.research.editSource', (id?: string) => editResearchSource(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.open', (id?: string) => previewCandidate(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.editSource', (id?: string) => editCandidateSource(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.accept', (id?: string) => {
@@ -316,9 +380,11 @@ export function activate(context: vscode.ExtensionContext): void {
 			recordsDiagnostics,
 			rejectedRecordsDiagnostics,
 			retiredRecordsDiagnostics,
+			researchDiagnostics,
 			candidatesDiagnostics,
 			welcomeDiagnostics,
 			recordsState,
+			researchState,
 		);
 		diagnosticsChannel.clear();
 		diagnosticsChannel.appendLine(formatDiagnostics(diagnostics));
@@ -333,9 +399,11 @@ export function activate(context: vscode.ExtensionContext): void {
 				recordsDiagnostics,
 				rejectedRecordsDiagnostics,
 				retiredRecordsDiagnostics,
+				researchDiagnostics,
 				candidatesDiagnostics,
 				welcomeDiagnostics,
 				recordsState,
+				researchState,
 			),
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
@@ -398,6 +466,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
 		void candidatesProvider.refresh();
 		void recordsProvider.refresh();
+		void researchProvider.refresh();
 		void rejectedRecordsProvider.refresh();
 		void retiredRecordsProvider.refresh();
 		void refreshWorkspaceState(welcomeProvider);
@@ -510,6 +579,8 @@ interface ExtensionDiagnostics {
 	readonly rejectedRecordsLastRendered?: RecordsDiagnostics['lastRendered'];
 	readonly retiredRecordsLastState?: RecordsDiagnostics['lastState'];
 	readonly retiredRecordsLastRendered?: RecordsDiagnostics['lastRendered'];
+	readonly researchLastState?: RecordsDiagnostics['lastState'];
+	readonly researchLastRendered?: RecordsDiagnostics['lastRendered'];
 	readonly candidatesLastState?: CandidatesDiagnostics['lastState'];
 	readonly candidatesLastRendered?: CandidatesDiagnostics['lastRendered'];
 	readonly welcomeLastRendered?: WelcomeDiagnostics['lastRendered'];
@@ -523,14 +594,17 @@ async function buildDiagnostics(
 	recordsDiagnostics: RecordsDiagnostics,
 	rejectedRecordsDiagnostics: RecordsDiagnostics,
 	retiredRecordsDiagnostics: RecordsDiagnostics,
+	researchDiagnostics: RecordsDiagnostics,
 	candidatesDiagnostics: CandidatesDiagnostics,
 	welcomeDiagnostics: WelcomeDiagnostics,
 	recordsState: RecordsState,
+	researchState: RecordsState,
 ): Promise<ExtensionDiagnostics> {
 	const stores = await collectWorkspaceStores();
 	const records = await collectRecords(recordsState);
 	const rejectedRecords = await collectRecords(undefined, 'rejected');
 	const retiredRecords = await collectRecords(undefined, 'retired');
+	const research = await collectResearch(researchState);
 	const candidates = await collectCandidates();
 	return {
 		extensionUri: extensionUri.toString(),
@@ -547,6 +621,8 @@ async function buildDiagnostics(
 		rejectedRecordsLastRendered: rejectedRecordsDiagnostics.lastRendered,
 		retiredRecordsLastState: retiredRecordsDiagnostics.lastState,
 		retiredRecordsLastRendered: retiredRecordsDiagnostics.lastRendered,
+		researchLastState: researchDiagnostics.lastState ?? { recordCount: research.length },
+		researchLastRendered: researchDiagnostics.lastRendered,
 		candidatesLastState: candidatesDiagnostics.lastState,
 		candidatesLastRendered: candidatesDiagnostics.lastRendered,
 		welcomeLastRendered: welcomeDiagnostics.lastRendered,
@@ -620,6 +696,27 @@ async function collectRecords(
 	return all.flat();
 }
 
+async function collectResearch(
+	filters: Partial<RecordsState> | undefined,
+): Promise<readonly RecordSummary[]> {
+	const stores = await collectWorkspaceStores();
+	const all = await Promise.all(stores.map(async store => {
+		const records = await listResearchSummaries(store.root);
+		return records
+			.filter(record => researchMatchesFilters(record, filters))
+			.map(record => ({
+				id: record.id,
+				title: record.title,
+				domain: record.domain,
+				enabled: true,
+				summary: record.summary,
+				...(stores.length > 1 ? { workspace: store.name } : {}),
+			} satisfies RecordSummary));
+	}));
+
+	return all.flat();
+}
+
 async function collectRecordFilterOptions(): Promise<{ domains: readonly string[] }> {
 	const stores = await collectWorkspaceStores();
 	const all = await Promise.all(stores.map(async store => {
@@ -638,7 +735,29 @@ async function collectRecordFilterOptions(): Promise<{ domains: readonly string[
 	};
 }
 
+async function collectResearchFilterOptions(): Promise<{ domains: readonly string[] }> {
+	const stores = await collectWorkspaceStores();
+	const all = await Promise.all(stores.map(async store => {
+		const [knownDomains, records] = await Promise.all([
+			listKnownDomains(store.root),
+			listResearchSummaries(store.root),
+		]);
+
+		return {
+			domains: [...knownDomains, ...records.map(record => record.domain)],
+		};
+	}));
+
+	return {
+		domains: sortedUnique(all.flatMap(item => item.domains)).filter(domain => domain !== 'all'),
+	};
+}
+
 function recordMatchesFilters(record: DecisionRecordSummary, filters: Partial<RecordsState> | undefined): boolean {
+	return recordMatchesDomain(record.domain, filters?.domainFilter);
+}
+
+function researchMatchesFilters(record: ResearchSummary, filters: Partial<RecordsState> | undefined): boolean {
 	return recordMatchesDomain(record.domain, filters?.domainFilter);
 }
 
@@ -699,6 +818,26 @@ async function resolveRecordPath(
 	return undefined;
 }
 
+async function resolveResearchPath(record: RecordSummary | undefined): Promise<string | undefined> {
+	if (record === undefined) {
+		return undefined;
+	}
+
+	for (const store of await collectWorkspaceStores()) {
+		if (record.workspace !== undefined && record.workspace !== store.name) {
+			continue;
+		}
+
+		const records = await listResearchSummaries(store.root);
+		const match = records.find(item => item.id === record.id);
+		if (match !== undefined) {
+			return match.filePath;
+		}
+	}
+
+	return undefined;
+}
+
 async function previewRecord(id: string | undefined, status: DecisionRecordSummaryStatus = 'accepted'): Promise<void> {
 	const record = await recordForCommand(id, status);
 	await openMarkdownPreview(await resolveRecordPath(record, status));
@@ -707,6 +846,16 @@ async function previewRecord(id: string | undefined, status: DecisionRecordSumma
 async function editRecordSource(id: string | undefined, status: DecisionRecordSummaryStatus = 'accepted'): Promise<void> {
 	const record = await recordForCommand(id, status);
 	await openMarkdownSource(await resolveRecordPath(record, status));
+}
+
+async function previewResearch(id: string | undefined): Promise<void> {
+	const record = await researchForCommand(id);
+	await openMarkdownPreview(await resolveResearchPath(record));
+}
+
+async function editResearchSource(id: string | undefined): Promise<void> {
+	const record = await researchForCommand(id);
+	await openMarkdownSource(await resolveResearchPath(record));
 }
 
 async function previewCandidate(id: string | undefined, filePath?: string): Promise<void> {
@@ -901,9 +1050,11 @@ async function refreshGovernanceViews(
 	recordsProvider: RecordsWebviewProvider,
 	rejectedRecordsProvider: RecordsWebviewProvider,
 	retiredRecordsProvider: RecordsWebviewProvider,
+	researchProvider?: RecordsWebviewProvider,
 ): Promise<void> {
 	await candidatesProvider.refresh();
 	await recordsProvider.refresh();
+	await researchProvider?.refresh();
 	await rejectedRecordsProvider.refresh();
 	await retiredRecordsProvider.refresh();
 	await refreshWorkspaceState(welcomeProvider);
@@ -938,6 +1089,32 @@ async function recordForCommand(
 		record,
 	})), {
 		placeHolder: 'Select a decision record',
+	});
+	return pick?.record;
+}
+
+async function researchForCommand(id: string | undefined): Promise<RecordSummary | undefined> {
+	const records = await collectResearch(undefined);
+	if (id !== undefined) {
+		const match = records.find(record => record.id === id);
+		if (match === undefined) {
+			void vscode.window.showWarningMessage(`No research note found with id "${id}".`);
+		}
+
+		return match;
+	}
+
+	if (records.length === 0) {
+		void vscode.window.showInformationMessage('No research notes are available.');
+		return undefined;
+	}
+
+	const pick = await vscode.window.showQuickPick<RecordPick>(records.map(record => ({
+		label: record.title,
+		description: record.workspace === undefined ? record.id : `${record.id} - ${record.workspace}`,
+		record,
+	})), {
+		placeHolder: 'Select a research note',
 	});
 	return pick?.record;
 }
@@ -1057,6 +1234,7 @@ async function initializeProject(
 	welcomeProvider: WelcomeWebviewProvider,
 	candidatesProvider: CandidatesWebviewProvider,
 	recordsProvider: RecordsWebviewProvider,
+	researchProvider: RecordsWebviewProvider,
 	rejectedRecordsProvider: RecordsWebviewProvider,
 	retiredRecordsProvider: RecordsWebviewProvider,
 	agents: AgentSelection,
@@ -1085,6 +1263,7 @@ async function initializeProject(
 		async exitCode => {
 			await candidatesProvider.refresh();
 			await recordsProvider.refresh();
+			await researchProvider.refresh();
 			await rejectedRecordsProvider.refresh();
 			await retiredRecordsProvider.refresh();
 			await refreshWorkspaceState(welcomeProvider);
@@ -1100,7 +1279,7 @@ async function initializeProject(
 		},
 	);
 
-	scheduleWorkspaceRefresh(welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider);
+	scheduleWorkspaceRefresh(welcomeProvider, candidatesProvider, recordsProvider, researchProvider, rejectedRecordsProvider, retiredRecordsProvider);
 	void vscode.window.showInformationMessage('Sundial initialization started in the terminal.');
 }
 
@@ -1137,6 +1316,7 @@ function scheduleWorkspaceRefresh(
 	welcomeProvider: WelcomeWebviewProvider,
 	candidatesProvider: CandidatesWebviewProvider,
 	recordsProvider: RecordsWebviewProvider,
+	researchProvider: RecordsWebviewProvider,
 	rejectedRecordsProvider: RecordsWebviewProvider,
 	retiredRecordsProvider: RecordsWebviewProvider,
 ): void {
@@ -1144,6 +1324,7 @@ function scheduleWorkspaceRefresh(
 		setTimeout(() => {
 			void candidatesProvider.refresh();
 			void recordsProvider.refresh();
+			void researchProvider.refresh();
 			void rejectedRecordsProvider.refresh();
 			void retiredRecordsProvider.refresh();
 			void refreshWorkspaceState(welcomeProvider);

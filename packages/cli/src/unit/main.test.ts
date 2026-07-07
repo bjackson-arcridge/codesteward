@@ -295,19 +295,24 @@ describe('bootstrapCommand', () => {
 		await initStore(root, { codex: true });
 		const designSkillPath = path.join(root, '.agents', 'skills', 'decision-aware-design', 'SKILL.md');
 		const implementSkillPath = path.join(root, '.agents', 'skills', 'decision-aware-implement', 'SKILL.md');
+		const researchSkillPath = path.join(root, '.agents', 'skills', 'remember-research', 'SKILL.md');
 		await fs.writeFile(designSkillPath, 'custom design skill\n', 'utf8');
 		await fs.writeFile(implementSkillPath, 'custom implement skill\n', 'utf8');
+		await fs.writeFile(researchSkillPath, 'custom research skill\n', 'utf8');
 
 		const result = await runCli(root, ['update', '--codex']);
 		const designSkillContents = await fs.readFile(designSkillPath, 'utf8');
 		const implementSkillContents = await fs.readFile(implementSkillPath, 'utf8');
+		const researchSkillContents = await fs.readFile(researchSkillPath, 'utf8');
 
 		assert.match(result.stdout, /Updated Sundial skill files/);
 		assert.match(result.stdout, /\.agents\/skills\/decision-aware-design\/SKILL\.md/);
 		assert.match(result.stdout, /\.agents\/skills\/decision-aware-implement\/SKILL\.md/);
+		assert.match(result.stdout, /\.agents\/skills\/remember-research\/SKILL\.md/);
 		assert.doesNotMatch(result.stdout, /\.agents\/agents\/decision-aware-design-review\.md/);
 		assert.match(designSkillContents, /name: decision-aware-design/);
 		assert.match(implementSkillContents, /name: decision-aware-implement/);
+		assert.match(researchSkillContents, /name: remember-research/);
 		assert.equal(result.stderr, '');
 	});
 

@@ -15,4 +15,4 @@ Use Sundial through the CLI from the project root. Keep updates short and cite g
 ---
 <Do the Design Work>
 ---
-4. If the design establishes reusable guidance, follow the project candidate instructions already in `AGENTS.md`.
+4. Only propose a DR candidate when the design establishes guidance that would change how a future agent acts on a similar task. Skip candidates for one-off rationale, backward-facing summaries, obvious codebase facts, or details that would not constrain future design or implementation. If the guidance passes that test, follow the project candidate instructions already in `AGENTS.md`.

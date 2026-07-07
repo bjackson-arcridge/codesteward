@@ -68,6 +68,13 @@ export class RecordsApp extends LitElement {
 				font-family: var(--vscode-editor-font-family);
 			}
 
+			.summary {
+				margin: 0;
+				color: var(--cs-fg);
+				line-height: 1.4;
+				overflow-wrap: anywhere;
+			}
+
 			@media (min-width: 260px) {
 				.filters {
 					grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -254,6 +261,9 @@ export class RecordsApp extends LitElement {
 					${record.workspace === undefined ? nothing : html`<span>${record.workspace}</span>`}
 				</span>
 				<div slot="actions">${this.renderActions(record)}</div>
+				${this.actionMode === 'research' && record.summary !== undefined && record.summary.length > 0
+					? html`<p slot="body" class="summary">${record.summary}</p>`
+					: nothing}
 				${retirePromptOpen ? this.renderRetirePrompt(record) : nothing}
 			</cs-card>
 		`;
@@ -303,6 +313,10 @@ export class RecordsApp extends LitElement {
 					@click=${() => this.send({ kind: 'delete', id: record.id })}
 				></cs-icon-button>
 			`;
+		}
+
+		if (this.actionMode === 'research') {
+			return baseActions;
 		}
 
 		return html`

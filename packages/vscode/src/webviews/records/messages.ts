@@ -3,10 +3,11 @@ export interface RecordSummary {
 	readonly title: string;
 	readonly domain: string;
 	readonly enabled: boolean;
+	readonly summary?: string;
 	readonly workspace?: string;
 }
 
-export type RecordActionMode = 'accepted' | 'rejected' | 'retired';
+export type RecordActionMode = 'accepted' | 'rejected' | 'retired' | 'research';
 
 export interface RecordRenderDiagnostic {
 	readonly recordCount: number;
@@ -94,11 +95,12 @@ function isRecordSummary(value: unknown): value is RecordSummary {
 		return false;
 	}
 
-	const record = value as { id?: unknown; title?: unknown; domain?: unknown; enabled?: unknown; workspace?: unknown };
+	const record = value as { id?: unknown; title?: unknown; domain?: unknown; enabled?: unknown; summary?: unknown; workspace?: unknown };
 	return typeof record.id === 'string'
 		&& typeof record.title === 'string'
 		&& typeof record.domain === 'string'
 		&& typeof record.enabled === 'boolean'
+		&& (record.summary === undefined || typeof record.summary === 'string')
 		&& (record.workspace === undefined || typeof record.workspace === 'string');
 }
 
@@ -167,5 +169,5 @@ function isStringArray(value: unknown): value is readonly string[] {
 }
 
 function isRecordActionMode(value: unknown): value is RecordActionMode {
-	return value === 'accepted' || value === 'rejected' || value === 'retired';
+	return value === 'accepted' || value === 'rejected' || value === 'retired' || value === 'research';
 }

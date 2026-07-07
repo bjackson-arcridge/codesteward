@@ -19,6 +19,14 @@ export interface DecisionRecordSummary {
 
 export type DecisionRecordSummaryStatus = 'accepted' | 'rejected' | 'retired';
 
+export interface ResearchSummary {
+	readonly id: string;
+	readonly title: string;
+	readonly filePath: string;
+	readonly domain: string;
+	readonly summary: string;
+}
+
 export async function discoverSundialRoot(startDirectory: string): Promise<string | undefined> {
 	let current = path.resolve(startDirectory);
 
@@ -56,6 +64,16 @@ export async function listDecisionRecordSummaries(
 	}
 
 	const records = await listMarkdownRecords(path.join(storeRoot, storeDirectoryName, 'decisions', status), summarizeDecisionRecord);
+	return [...records].sort((left, right) => left.id.localeCompare(right.id));
+}
+
+export async function listResearchSummaries(workspaceRoot: string): Promise<readonly ResearchSummary[]> {
+	const storeRoot = await discoverSundialRoot(workspaceRoot);
+	if (storeRoot === undefined) {
+		return [];
+	}
+
+	const records = await listMarkdownRecords(path.join(storeRoot, storeDirectoryName, 'research'), summarizeResearch);
 	return [...records].sort((left, right) => left.id.localeCompare(right.id));
 }
 
@@ -125,6 +143,20 @@ async function summarizeDecisionRecord(filePath: string): Promise<DecisionRecord
 		filePath,
 		domain: frontmatter.get('domain') ?? 'all',
 		enabled: frontmatter.get('enabled') !== 'false',
+	};
+}
+
+async function summarizeResearch(filePath: string): Promise<ResearchSummary> {
+	const markdown = await fs.readFile(filePath, 'utf8');
+	const frontmatter = parseFrontmatterScalars(markdown);
+	const id = frontmatter.get('id') ?? path.basename(filePath, '.md');
+
+	return {
+		id,
+		title: frontmatter.get('title') ?? id,
+		filePath,
+		domain: frontmatter.get('domain') ?? 'all',
+		summary: frontmatter.get('summary') ?? '',
 	};
 }
 

@@ -20,6 +20,7 @@ const directoryLayout = [
 	'decisions/accepted',
 	'decisions/rejected',
 	'decisions/retired',
+	'research',
 	'sessions',
 ] as const;
 
@@ -28,11 +29,13 @@ const decisionRecordDirectoryKeepFiles = [
 	'decisions/accepted/.gitkeep',
 	'decisions/rejected/.gitkeep',
 	'decisions/retired/.gitkeep',
+	'research/.gitkeep',
 ] as const;
 
 const skillTemplateFiles = [
 	'decision-aware-design/SKILL.md',
 	'decision-aware-implement/SKILL.md',
+	'remember-research/SKILL.md',
 ] as const;
 
 export interface StorePaths {

@@ -2,7 +2,7 @@
   "name": "sundial",
   "displayName": "Sundial",
   "description": "Markdown-backed Decision Records and agent skills for AI coding workflows.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "arcridge",
   "license": "Apache-2.0",
   "homepage": "https://github.com/bjackson-arcridge/sundial/tree/main/packages/vscode#readme",
@@ -92,6 +92,28 @@
         "icon": "$(edit)"
       },
       {
+        "command": "sundial.research.filterByDomain",
+        "title": "Sundial: Filter Research by Domain",
+        "icon": "$(filter)",
+        "enablement": "sundial.workspaceInitialized"
+      },
+      {
+        "command": "sundial.research.clearFilters",
+        "title": "Sundial: Clear Research Filters",
+        "icon": "$(clear-all)",
+        "enablement": "sundial.workspaceInitialized"
+      },
+      {
+        "command": "sundial.research.openPreview",
+        "title": "Sundial: Open Research Preview",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "sundial.research.editSource",
+        "title": "Sundial: Edit Research Source",
+        "icon": "$(edit)"
+      },
+      {
         "command": "sundial.candidates.accept",
         "title": "Sundial: Accept Candidate",
         "icon": "$(check)"
@@ -132,6 +154,12 @@
         {
           "id": "sundial.records",
           "name": "DECISION RECORDS",
+          "type": "webview",
+          "when": "sundial.workspaceInitialized"
+        },
+        {
+          "id": "sundial.research",
+          "name": "RESEARCH",
           "type": "webview",
           "when": "sundial.workspaceInitialized"
         },

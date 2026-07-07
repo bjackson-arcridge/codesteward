@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { describe, test } from 'node:test';
-import { discoverSundialRoot, listCandidateSummaries, listDecisionRecordSummaries, listKnownDomains } from '../candidateInbox';
+import { discoverSundialRoot, listCandidateSummaries, listDecisionRecordSummaries, listKnownDomains, listResearchSummaries } from '../candidateInbox';
 
 describe('listCandidateSummaries', () => {
 	test('returns empty list when the candidate folder does not exist', async () => {
@@ -99,5 +99,32 @@ describe('listCandidateSummaries', () => {
 		assert.equal(record?.domain, 'all');
 		assert.equal(record?.enabled, true);
 		assert.deepEqual(await listKnownDomains(nested), ['vscode']);
+	});
+
+	test('reads research summaries without loading body content into list fields', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-vscode-research-'));
+		const research = path.join(root, 'sundial', 'research');
+		await fs.mkdir(research, { recursive: true });
+		await fs.writeFile(path.join(research, 'RES-0001-api-signatures.md'), [
+			'---',
+			'id: RES-0001',
+			'title: API signatures',
+			'domain: vscode.webview',
+			'summary: Use before changing the webview provider constructor and message router signatures.',
+			'created: 2026-07-07',
+			'---',
+			'',
+			'## Research',
+			'',
+			'Long details stay in the Markdown file until preview or edit opens it.',
+		].join('\n'), 'utf8');
+
+		const [record] = await listResearchSummaries(root);
+
+		assert.equal(record?.id, 'RES-0001');
+		assert.equal(record?.title, 'API signatures');
+		assert.equal(record?.domain, 'vscode.webview');
+		assert.equal(record?.summary, 'Use before changing the webview provider constructor and message router signatures.');
+		assert.equal(record?.filePath.endsWith('RES-0001-api-signatures.md'), true);
 	});
 });
