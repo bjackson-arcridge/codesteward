@@ -12,8 +12,8 @@ description: Use in Claude Code during implementation, when writing non-trivial 
 !`sundial dr retrieve --help`
 
 ## Steps
-1. Narrow the domain.
-2. Retrieve accepted DRs.
+1. Select all relevant domains for the task.
+2. Retrieve accepted DRs with one `sundial dr retrieve` call, repeating `--domain` for each relevant domain.
 3. State which DRs apply.
 ---
 <Do the implementation>

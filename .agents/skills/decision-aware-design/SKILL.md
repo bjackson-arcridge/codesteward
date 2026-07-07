@@ -8,11 +8,11 @@ description: Consult accepted Sundial Decision Records before consequential Code
 Use Sundial through the CLI from the project root. Keep updates short and cite governing DR ids.
 
 1. Run `sundial domains`.
-2. Retrieve accepted DRs for the narrowest relevant domain:
-   `sundial dr retrieve [--domain <domain>]`
-   * Domain retrieval matches ancestors, the exact domain, and descendants. Excluding the domain matches all domains.
+2. Select all relevant domains for the task, then retrieve accepted DRs with one call:
+   `sundial dr retrieve [--domain <domain>]...`
+   * Repeat `--domain` for each relevant domain. Domain retrieval matches ancestors, the exact domain, and descendants. Excluding all domain flags matches all domains.
 3. State which DRs apply, or state that none matched.
 ---
 <Do the Design Work>
 ---
-4. Only propose a DR candidate when the design establishes guidance that would change how a future agent acts on a similar task. Skip candidates for one-off rationale, backward-facing summaries, obvious codebase facts, or details that would not constrain future design or implementation. If the guidance passes that test, follow the project candidate instructions already in `AGENTS.md`.
+4. If the design establishes reusable guidance, follow the project candidate instructions already in `AGENTS.md`.
