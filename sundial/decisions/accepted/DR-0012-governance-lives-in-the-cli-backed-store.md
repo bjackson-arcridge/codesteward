@@ -1,22 +1,27 @@
 ---
 id: DR-0012
-title: Governance lives in the CLI-backed store
+title: Sundial workflows live in the CLI-backed store
 status: accepted
-domain: governance
+domain: all
 created: 2026-05-04
 references:
   - packages/vscode/src/extension.ts#runLifecycleCommand
   - packages/cli/src/main.ts#runCandidate
+  - packages/cli/src/main.ts#runSpec
   - CLI_SPEC.md
   - packages/cli/src/main.ts
   - packages/vscode/src/extension.ts
-updated: 2026-05-04
+updated: 2026-07-07
 author: bjackson
 ---
 ## Decision
 
-Keep governance lifecycle in the sundial CLI over the hand-editable .sundial store; editor, MCP, CI, and agent adapters delegate lifecycle actions to the CLI.
+Keep Sundial workflow and lifecycle mutations in the sundial CLI over the hand-editable `sundial/` store; editor, MCP, CI, VS Code, and agent adapters delegate logical state-changing operations to the CLI. Direct markdown edits remain appropriate for human or LLM-authored document bodies where the model is intentionally filling in the artifact from its template.
+
+## Pitfalls
+
+Do not reimplement workflow mutations in the VS Code extension host or webviews when a CLI command owns the operation, including candidate lifecycle, decision lifecycle, spec creation, spec status changes, generated workflow state, and future Sundial store transitions.
 
 ## Appendix
 
-The `.sundial/` store is intentionally hand-editable so that humans can review and version DRs as plain markdown, but lifecycle operations (accept, reject, retire, promote) touch multiple files and the vocabulary in lockstep. Centralizing those mutations in the CLI is what keeps editor, MCP, CI, and agent adapters in agreement; if the same logic were re-implemented in each adapter, the store would drift quickly.
+The `sundial/` store is intentionally hand-editable so that humans and LLMs can review and version DRs, research notes, specs, and implementation logs as plain markdown. Workflow operations such as accepting a candidate, retiring a DR, creating a spec, or moving a spec between lanes encode product behavior and may touch multiple files or derived views. Centralizing those mutations in the CLI is what keeps editor, MCP, CI, and agent adapters in agreement; if the same logic were re-implemented in each adapter, the store would drift quickly.

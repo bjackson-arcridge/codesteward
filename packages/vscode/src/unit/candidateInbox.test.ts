@@ -3,7 +3,14 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { describe, test } from 'node:test';
-import { discoverSundialRoot, listCandidateSummaries, listDecisionRecordSummaries, listKnownDomains, listResearchSummaries } from '../candidateInbox';
+import {
+	discoverSundialRoot,
+	listCandidateSummaries,
+	listDecisionRecordSummaries,
+	listKnownDomains,
+	listResearchSummaries,
+	listSpecSummaries,
+} from '../candidateInbox';
 
 describe('listCandidateSummaries', () => {
 	test('returns empty list when the candidate folder does not exist', async () => {
@@ -126,5 +133,29 @@ describe('listCandidateSummaries', () => {
 		assert.equal(record?.domain, 'vscode.webview');
 		assert.equal(record?.summary, 'Use before changing the webview provider constructor and message router signatures.');
 		assert.equal(record?.filePath.endsWith('RES-0001-api-signatures.md'), true);
+	});
+
+	test('reads specs from individual markdown files', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-vscode-specs-'));
+		const specs = path.join(root, 'sundial', 'specs');
+		await fs.mkdir(specs, { recursive: true });
+		await fs.writeFile(path.join(specs, 'board.md'), '# Sundial Specs\n\n## Planning\n', 'utf8');
+		await fs.writeFile(path.join(specs, 'SPEC-0001-alpha.md'), [
+			'---',
+			'id: SPEC-0001',
+			'title: Alpha spec',
+			'status: Implementation',
+			'---',
+			'',
+			'## Discovery',
+			'',
+		].join('\n'), 'utf8');
+
+		const records = await listSpecSummaries(root);
+
+		assert.deepEqual(records.map(record => record.title), ['Alpha spec']);
+		assert.equal(records[0]?.id, 'SPEC-0001');
+		assert.equal(records[0]?.status, 'Implementation');
+		assert.equal(records[0]?.filePath.endsWith('SPEC-0001-alpha.md'), true);
 	});
 });

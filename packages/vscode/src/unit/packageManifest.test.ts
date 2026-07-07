@@ -9,6 +9,7 @@ interface MenuContribution {
 
 interface PackageManifest {
 	readonly contributes?: {
+		readonly commands?: readonly MenuContribution[];
 		readonly menus?: Record<string, readonly MenuContribution[]>;
 	};
 }
@@ -26,6 +27,17 @@ describe('package manifest contributions', () => {
 		assert.equal(
 			viewTitle.some(item => item.command === 'sundial.bootstrap'),
 			false,
+		);
+	});
+
+	test('declares the Sundial open spec command without extension dependencies', () => {
+		const manifest = readPackageManifest();
+		const commands = manifest.contributes?.commands ?? [];
+
+		assert.equal(Object.hasOwn(manifest, 'extensionDependencies'), false);
+		assert.equal(
+			commands.some(item => item.command === 'sundial.specs.openSpec'),
+			true,
 		);
 	});
 });

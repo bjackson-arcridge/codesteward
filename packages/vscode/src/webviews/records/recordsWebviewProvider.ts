@@ -13,6 +13,8 @@ export interface RecordsServices {
 	readonly getDomainFilter?: () => string | undefined;
 	readonly actionMode?: RecordActionMode;
 	readonly emptyText?: string;
+	readonly title?: string;
+	readonly fallbackText?: string;
 	readonly diagnosticsEnabled?: () => boolean;
 	readonly onCommand: (message: WebviewToHost) => void | Promise<void>;
 }
@@ -31,13 +33,13 @@ export class RecordsWebviewProvider implements vscode.WebviewViewProvider {
 			localResourceRoots: [this.extensionUri],
 		};
 		view.webview.html = renderWebviewHtml({
-			title: 'Decision Records',
+			title: this.services.title ?? 'Decision Records',
 			bodyTagId: 'cs-records-app',
 			scriptUri: view.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'dist', 'webviews', 'records.js')),
 			codiconUri: view.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media', 'codicon.css')),
 			cspSource: view.webview.cspSource,
 			initialState: await this.buildState(),
-			fallbackText: 'Loading Decision Records...',
+			fallbackText: this.services.fallbackText ?? 'Loading Decision Records...',
 		});
 
 		const router = attachMessageRouter<WebviewToHost, HostToWebview>(
@@ -66,6 +68,12 @@ export class RecordsWebviewProvider implements vscode.WebviewViewProvider {
 				filter,
 				...(value === undefined ? {} : { value }),
 			});
+		}
+	}
+
+	clickRecordForDiagnostics(id: string, target: 'title' | 'preview'): void {
+		for (const router of this.routers) {
+			router.post({ kind: 'diagnosticClickRecord', id, target });
 		}
 	}
 

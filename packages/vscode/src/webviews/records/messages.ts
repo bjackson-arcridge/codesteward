@@ -4,10 +4,11 @@ export interface RecordSummary {
 	readonly domain: string;
 	readonly enabled: boolean;
 	readonly summary?: string;
+	readonly status?: string;
 	readonly workspace?: string;
 }
 
-export type RecordActionMode = 'accepted' | 'rejected' | 'retired' | 'research';
+export type RecordActionMode = 'accepted' | 'rejected' | 'retired' | 'research' | 'specs';
 
 export interface RecordRenderDiagnostic {
 	readonly recordCount: number;
@@ -27,7 +28,8 @@ export type HostToWebview =
 		emptyText?: string;
 		diagnosticsEnabled?: boolean;
 	}
-	| { kind: 'diagnosticSelectFilter'; filter: 'domain'; value?: string };
+	| { kind: 'diagnosticSelectFilter'; filter: 'domain'; value?: string }
+	| { kind: 'diagnosticClickRecord'; id: string; target: 'title' | 'preview' };
 
 export type WebviewToHost =
 	| { kind: 'preview'; id: string }
@@ -56,7 +58,14 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 		diagnosticsEnabled?: unknown;
 		filter?: unknown;
 		value?: unknown;
+		id?: unknown;
+		target?: unknown;
 	};
+
+	if (message.kind === 'diagnosticClickRecord') {
+		return typeof message.id === 'string'
+			&& (message.target === 'title' || message.target === 'preview');
+	}
 
 	if (message.kind === 'diagnosticSelectFilter') {
 		return message.filter === 'domain'
@@ -95,12 +104,21 @@ function isRecordSummary(value: unknown): value is RecordSummary {
 		return false;
 	}
 
-	const record = value as { id?: unknown; title?: unknown; domain?: unknown; enabled?: unknown; summary?: unknown; workspace?: unknown };
+	const record = value as {
+		id?: unknown;
+		title?: unknown;
+		domain?: unknown;
+		enabled?: unknown;
+		summary?: unknown;
+		status?: unknown;
+		workspace?: unknown;
+	};
 	return typeof record.id === 'string'
 		&& typeof record.title === 'string'
 		&& typeof record.domain === 'string'
 		&& typeof record.enabled === 'boolean'
 		&& (record.summary === undefined || typeof record.summary === 'string')
+		&& (record.status === undefined || typeof record.status === 'string')
 		&& (record.workspace === undefined || typeof record.workspace === 'string');
 }
 
@@ -169,5 +187,5 @@ function isStringArray(value: unknown): value is readonly string[] {
 }
 
 function isRecordActionMode(value: unknown): value is RecordActionMode {
-	return value === 'accepted' || value === 'rejected' || value === 'retired' || value === 'research';
+	return value === 'accepted' || value === 'rejected' || value === 'retired' || value === 'research' || value === 'specs';
 }

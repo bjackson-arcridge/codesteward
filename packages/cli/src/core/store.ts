@@ -1,5 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { defaultSpecsWorkflow } from './specs';
 import {
 	selectedHarnessInstallers,
 	type AgentHarnessInstaller,
@@ -21,6 +22,7 @@ const directoryLayout = [
 	'decisions/rejected',
 	'decisions/retired',
 	'research',
+	'specs',
 	'sessions',
 ] as const;
 
@@ -30,6 +32,11 @@ const decisionRecordDirectoryKeepFiles = [
 	'decisions/rejected/.gitkeep',
 	'decisions/retired/.gitkeep',
 	'research/.gitkeep',
+	'specs/.gitkeep',
+] as const;
+
+const storeSeedFiles = [
+	['specs/workflow.yml', defaultSpecsWorkflow()] as const,
 ] as const;
 
 const skillTemplateFiles = [
@@ -105,6 +112,10 @@ export async function initStore(projectRoot: string, options: InitOptions = {}):
 
 	for (const relativeFile of decisionRecordDirectoryKeepFiles) {
 		await ensureFile(path.join(paths.store, relativeFile), keepFileContents(), created, existing, paths.root);
+	}
+
+	for (const [relativeFile, contents] of storeSeedFiles) {
+		await ensureFile(path.join(paths.store, relativeFile), contents, created, existing, paths.root);
 	}
 
 	await ensureFile(paths.config, defaultConfig(), created, existing, paths.root);
@@ -203,7 +214,7 @@ function defaultConfig(): string {
 }
 
 function keepFileContents(): string {
-	return 'Keep this DR lifecycle directory present in fresh git worktrees.\n';
+	return 'Keep this Sundial store directory present in fresh git worktrees.\n';
 }
 
 function defaultDomains(): string {

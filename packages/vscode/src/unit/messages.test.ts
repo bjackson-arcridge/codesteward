@@ -223,6 +223,11 @@ describe('records message guards', () => {
 			records: [{ id: 'RES-1', title: 'Research', domain: 'vscode.webview', enabled: true, summary: 'API details to load before editing.' }],
 			actionMode: 'research',
 		}), true);
+		assert.equal(isRecordsHost({
+			kind: 'state',
+			records: [{ id: 'SPEC-0001', title: 'Alpha spec', domain: 'all', enabled: true, status: 'Active' }],
+			actionMode: 'specs',
+		}), true);
 	});
 
 	test('reject host state with malformed records metadata', () => {

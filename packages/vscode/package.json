@@ -114,6 +114,11 @@
         "icon": "$(edit)"
       },
       {
+        "command": "sundial.specs.openSpec",
+        "title": "Sundial: Open Spec",
+        "icon": "$(open-preview)"
+      },
+      {
         "command": "sundial.candidates.accept",
         "title": "Sundial: Accept Candidate",
         "icon": "$(check)"
@@ -160,6 +165,12 @@
         {
           "id": "sundial.research",
           "name": "RESEARCH",
+          "type": "webview",
+          "when": "sundial.workspaceInitialized"
+        },
+        {
+          "id": "sundial.specs",
+          "name": "SPECS",
           "type": "webview",
           "when": "sundial.workspaceInitialized"
         },

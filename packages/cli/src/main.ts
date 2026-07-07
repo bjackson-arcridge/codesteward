@@ -41,6 +41,15 @@ import {
 	StorePaths,
 	updateRuntimeAssets,
 } from './core/store';
+import {
+	createSpec,
+	findSpec,
+	listSpecs,
+	readSpecLanes,
+	renderSpecBoard,
+	setSpecStatus,
+	type SpecRecord,
+} from './core/specs';
 
 const packageJson = require('../package.json') as { readonly version: string };
 const cliVersion = packageJson.version;
@@ -73,6 +82,7 @@ Commands:
   dr promote  Move a rejected or retired DR back to accepted precedent
   dr delete   Remove a rejected or retired DR file from disk
   candidate   Create, list, show, accept, reject, retire, or dismiss candidates
+  spec        Create, list, show, update, or render implementation specs
   help        Show this help
 `;
 
@@ -143,6 +153,11 @@ export async function main(argv: readonly string[], io: Pick<NodeJS.Process, 'cw
 
 	if (command === 'candidate') {
 		await runCandidate(parsed, commandArgs, io);
+		return;
+	}
+
+	if (command === 'spec') {
+		await runSpec(parsed, commandArgs, io);
 		return;
 	}
 
@@ -483,6 +498,196 @@ async function runDr(
 
 	write(io.stderr, 'Usage: sundial dr (retrieve | get | list | enable | disable | retire | promote | delete)\n');
 	io.exitCode = 64;
+}
+
+async function runSpec(
+	options: CliOptions,
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
+): Promise<void> {
+	const [subcommand, ...subcommandArgs] = args;
+
+	if (subcommand === 'create') {
+		await runSpecCreate(options, subcommandArgs, io);
+		return;
+	}
+
+	if (subcommand === 'list') {
+		await runSpecList(options, subcommandArgs, io);
+		return;
+	}
+
+	if (subcommand === 'board') {
+		await runSpecBoard(options, subcommandArgs, io);
+		return;
+	}
+
+	if (subcommand === 'show') {
+		await runSpecShow(options, subcommandArgs, io);
+		return;
+	}
+
+	if (subcommand === 'status' || subcommand === 'update-status') {
+		await runSpecStatus(options, subcommandArgs, io);
+		return;
+	}
+
+	if (subcommand === 'lanes') {
+		await runSpecLanes(options, subcommandArgs, io);
+		return;
+	}
+
+	write(io.stderr, 'Usage: sundial spec (create | list | board | show | status | update-status | lanes)\n');
+	io.exitCode = 64;
+}
+
+async function runSpecCreate(
+	options: CliOptions,
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
+): Promise<void> {
+	const parsed = parseSpecCreateArgs(args, io);
+	if (parsed === undefined) {
+		return;
+	}
+
+	const paths = await requireStore(options.cwd, io);
+	if (paths === undefined) {
+		return;
+	}
+
+	try {
+		const result = await createSpec(paths, {
+			title: parsed.title,
+			status: parsed.status,
+			author: defaultAuthor(),
+			created: today(),
+		});
+
+		if (!options.quiet) {
+			write(io.stdout, `Created ${result.spec.id} ${result.spec.title}\n`);
+			write(io.stdout, `Status: ${result.spec.status}\n`);
+			write(io.stdout, `Path: ${formatPath(paths, result.spec.filePath)}\n`);
+		}
+	} catch (error) {
+		writeError(error, io);
+	}
+}
+
+async function runSpecList(
+	options: CliOptions,
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
+): Promise<void> {
+	if (args.length > 0) {
+		write(io.stderr, 'Usage: sundial spec list\n');
+		io.exitCode = 64;
+		return;
+	}
+
+	const paths = await requireStore(options.cwd, io);
+	if (paths === undefined || options.quiet) {
+		return;
+	}
+
+	for (const spec of await listSpecs(paths)) {
+		write(io.stdout, `${formatSpecListItem(spec)} Path: ${formatPath(paths, spec.filePath)}\n`);
+	}
+}
+
+async function runSpecShow(
+	options: CliOptions,
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
+): Promise<void> {
+	if (args.length !== 1) {
+		write(io.stderr, 'Usage: sundial spec show <id>\n');
+		io.exitCode = 64;
+		return;
+	}
+
+	const paths = await requireStore(options.cwd, io);
+	if (paths === undefined) {
+		return;
+	}
+
+	const spec = await findSpec(paths, args[0]);
+	if (spec === undefined) {
+		write(io.stderr, `No spec found with id "${args[0]}".\n`);
+		io.exitCode = 1;
+		return;
+	}
+
+	if (!options.quiet) {
+		write(io.stdout, await fs.readFile(spec.filePath, 'utf8'));
+	}
+}
+
+async function runSpecBoard(
+	options: CliOptions,
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
+): Promise<void> {
+	if (args.length > 0) {
+		write(io.stderr, 'Usage: sundial spec board\n');
+		io.exitCode = 64;
+		return;
+	}
+
+	const paths = await requireStore(options.cwd, io);
+	if (paths === undefined || options.quiet) {
+		return;
+	}
+
+	write(io.stdout, await renderSpecBoard(paths));
+}
+
+async function runSpecStatus(
+	options: CliOptions,
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
+): Promise<void> {
+	const parsed = parseSpecStatusArgs(args, io);
+	if (parsed === undefined) {
+		return;
+	}
+
+	const paths = await requireStore(options.cwd, io);
+	if (paths === undefined) {
+		return;
+	}
+
+	try {
+		const result = await setSpecStatus(paths, parsed.id, parsed.status, today());
+		if (!options.quiet) {
+			write(io.stdout, `Updated ${result.spec.id} ${result.spec.title}\n`);
+			write(io.stdout, `Status: ${result.previousStatus} -> ${result.spec.status}\n`);
+			write(io.stdout, `Path: ${formatPath(paths, result.spec.filePath)}\n`);
+		}
+	} catch (error) {
+		writeError(error, io);
+	}
+}
+
+async function runSpecLanes(
+	options: CliOptions,
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
+): Promise<void> {
+	if (args.length > 0) {
+		write(io.stderr, 'Usage: sundial spec lanes\n');
+		io.exitCode = 64;
+		return;
+	}
+
+	const paths = await requireStore(options.cwd, io);
+	if (paths === undefined || options.quiet) {
+		return;
+	}
+
+	for (const lane of await readSpecLanes(paths)) {
+		write(io.stdout, `${lane}\n`);
+	}
 }
 
 async function runDrRetrieve(
@@ -996,6 +1201,61 @@ function parseCandidateListArgs(
 	return { status };
 }
 
+function parseSpecCreateArgs(
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
+): { readonly title: string; readonly status: string | undefined } | undefined {
+	let title: string | undefined;
+	let status: string | undefined;
+
+	for (let index = 0; index < args.length; index += 1) {
+		const arg = args[index];
+		const value = args[index + 1];
+
+		if (arg === '--title') {
+			if (value === undefined) {
+				return usageError(specCreateUsage(), io);
+			}
+
+			title = value;
+			index += 1;
+			continue;
+		}
+
+		if (arg === '--status') {
+			if (value === undefined) {
+				return usageError(specCreateUsage(), io);
+			}
+
+			status = value;
+			index += 1;
+			continue;
+		}
+
+		return usageError(specCreateUsage(), io);
+	}
+
+	if (title === undefined || title.trim().length === 0) {
+		return usageError(specCreateUsage(), io);
+	}
+
+	return {
+		title: title.trim(),
+		status: status?.trim() || undefined,
+	};
+}
+
+function parseSpecStatusArgs(
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
+): { readonly id: string; readonly status: string } | undefined {
+	if (args.length !== 2 || args[0].trim().length === 0 || args[1].trim().length === 0) {
+		return usageError('Usage: sundial spec status <id> <status>\n', io);
+	}
+
+	return { id: args[0].trim(), status: args[1].trim() };
+}
+
 function parseCandidateRejectArgs(
 	args: readonly string[],
 	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
@@ -1297,6 +1557,10 @@ function candidateCreateUsage(): string {
 	return 'Usage: sundial candidate create --title <title> [--domain <domain> | --proposed-domain <domain> <description>] (--decision <text> | --pitfalls <text> | --decision <text> --pitfalls <text>) [--appendix <text>] [--ref <ref>]\n';
 }
 
+function specCreateUsage(): string {
+	return 'Usage: sundial spec create --title <title> [--status <lane>]\n';
+}
+
 function retrieveUsage(): string {
 	return 'Usage: sundial dr retrieve [--domain <domain>]...\n';
 }
@@ -1418,6 +1682,10 @@ function recordMatchesDomain(record: DecisionRecord, domain: string): boolean {
 
 function formatRecordListItem(record: DecisionRecord): string {
 	return `${getRecordId(record)} ${getRecordTitle(record)} Domain: ${getRecordDomain(record)}`;
+}
+
+function formatSpecListItem(spec: SpecRecord): string {
+	return `${spec.id} ${spec.title} Status: ${spec.status}`;
 }
 
 function renderRecordList(

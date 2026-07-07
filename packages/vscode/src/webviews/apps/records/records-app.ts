@@ -252,11 +252,15 @@ export class RecordsApp extends LitElement {
 					class="title-button"
 					type="button"
 					title=${record.title}
+					data-record-id=${record.id}
+					data-record-target="title"
 					@click=${() => this.send({ kind: 'preview', id: record.id })}
 				>${record.title}</button>
 				<span slot="meta">
 					<span class="id">${record.id}</span>
-					<cs-badge variant="inverse">${record.domain}</cs-badge>
+					${this.actionMode === 'specs'
+						? html`<cs-badge variant="inverse">${record.status ?? 'Planning'}</cs-badge>`
+						: html`<cs-badge variant="inverse">${record.domain}</cs-badge>`}
 					${record.enabled ? nothing : html`<cs-badge>disabled</cs-badge>`}
 					${record.workspace === undefined ? nothing : html`<span>${record.workspace}</span>`}
 				</span>
@@ -273,7 +277,9 @@ export class RecordsApp extends LitElement {
 		const baseActions = html`
 			<cs-icon-button
 				icon="open-preview"
-				label="View rendered markdown"
+				label=${this.actionMode === 'specs' ? 'Open spec' : 'View rendered markdown'}
+				data-record-id=${record.id}
+				data-record-target="preview"
 				@click=${() => this.send({ kind: 'preview', id: record.id })}
 			></cs-icon-button>
 			<cs-icon-button
@@ -315,7 +321,7 @@ export class RecordsApp extends LitElement {
 			`;
 		}
 
-		if (this.actionMode === 'research') {
+		if (this.actionMode === 'research' || this.actionMode === 'specs') {
 			return baseActions;
 		}
 
@@ -449,6 +455,11 @@ export class RecordsApp extends LitElement {
 					this.selectFilterForDiagnostics(message.filter, message.value);
 				}
 				return;
+			case 'diagnosticClickRecord':
+				if (this.diagnosticsEnabled) {
+					this.clickRecordForDiagnostics(message.id, message.target);
+				}
+				return;
 			default:
 				assertNever(message);
 		}
@@ -469,6 +480,12 @@ export class RecordsApp extends LitElement {
 
 		select.value = value ?? '';
 		select.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+	}
+
+	private clickRecordForDiagnostics(id: string, target: 'title' | 'preview'): void {
+		const selector = `[data-record-id="${CSS.escape(id)}"][data-record-target="${target}"]`;
+		const element = this.renderRoot.querySelector<HTMLElement>(selector);
+		element?.click();
 	}
 
 	private focusElement(element: HTMLElement): void {

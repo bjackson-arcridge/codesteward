@@ -7,10 +7,12 @@ import * as vscode from 'vscode';
 import {
 	activateExtension,
 	focusRecordsView,
+	focusSpecsView,
 	focusRetiredRecordsView,
 	type ExtensionDiagnostics,
 	useLocalSundialCli,
 	waitForActiveMarkdownPreview,
+	waitForActiveTextDocument,
 	waitForHistoricalRecordWebviewDiagnostics,
 	waitForWebviewDiagnostics,
 	wait,
@@ -20,6 +22,7 @@ const expectedAcceptedRecordCount = 3;
 const expectedRejectedRecordCount = 1;
 const expectedRetiredRecordCount = 1;
 const expectedActiveCandidateCount = 4;
+const expectedSpecCount = 1;
 const execFileAsync = promisify(execFile);
 
 suite('Scenario: records-and-candidates', () => {
@@ -36,6 +39,11 @@ suite('Scenario: records-and-candidates', () => {
 			diagnostics.activeCandidateCount,
 			expectedActiveCandidateCount,
 			`Expected ${expectedActiveCandidateCount} active candidates: ${JSON.stringify(diagnostics)}`,
+		);
+		assert.equal(
+			diagnostics.specsCount,
+			expectedSpecCount,
+			`Expected ${expectedSpecCount} specs: ${JSON.stringify(diagnostics)}`,
 		);
 		assert.equal(
 			diagnostics.rejectedRecordCount,
@@ -55,6 +63,9 @@ suite('Scenario: records-and-candidates', () => {
 		assert.equal(diagnostics.candidatesLastRendered?.candidateCount, diagnostics.candidatesLastState?.candidateCount);
 		assert.equal(diagnostics.candidatesLastRendered?.cardCount, diagnostics.candidatesLastState?.candidateCount);
 		assert.equal(diagnostics.candidatesLastRendered?.emptyVisible, false);
+		assert.equal(diagnostics.specsLastRendered?.recordCount, diagnostics.specsLastState?.recordCount);
+		assert.equal(diagnostics.specsLastRendered?.cardCount, diagnostics.specsLastState?.recordCount);
+		assert.equal(diagnostics.specsLastRendered?.emptyVisible, false);
 
 		const historicalDiagnostics = await waitForHistoricalRecordWebviewDiagnostics();
 		assert.equal(historicalDiagnostics.rejectedRecordsLastRendered?.recordCount, expectedRejectedRecordCount);
@@ -104,6 +115,19 @@ suite('Scenario: records-and-candidates', () => {
 		await vscode.commands.executeCommand('sundial.internal.candidates.click', 'CAND-0001', 'preview');
 
 		await waitForActiveMarkdownPreview(candidatePath);
+	});
+
+	test('clicking a spec opens its markdown source', async () => {
+		await activateExtension();
+		await waitForWebviewDiagnostics();
+		await focusSpecsView();
+
+		const specPath = path.join(workspaceRoot(), 'sundial', 'specs', 'SPEC-0001-fixture-spec-renders.md');
+
+		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+		await vscode.commands.executeCommand('sundial.internal.specs.click', 'SPEC-0001', 'title');
+
+		await waitForActiveTextDocument(specPath);
 	});
 
 	test('accepts and rejects candidates through the extension lifecycle', async () => {

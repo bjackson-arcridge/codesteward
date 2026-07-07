@@ -6,6 +6,7 @@ export interface ExtensionDiagnostics {
 	readonly rejectedRecordCount: number;
 	readonly retiredRecordCount: number;
 	readonly activeCandidateCount: number;
+	readonly specsCount: number;
 	readonly recordsLastState?: {
 		readonly recordCount: number;
 		readonly domainFilter?: string;
@@ -29,6 +30,14 @@ export interface ExtensionDiagnostics {
 		readonly recordCount: number;
 	};
 	readonly retiredRecordsLastRendered?: {
+		readonly recordCount: number;
+		readonly cardCount: number;
+		readonly emptyVisible: boolean;
+	};
+	readonly specsLastState?: {
+		readonly recordCount: number;
+	};
+	readonly specsLastRendered?: {
 		readonly recordCount: number;
 		readonly cardCount: number;
 		readonly emptyVisible: boolean;
@@ -82,11 +91,14 @@ export async function waitForWebviewDiagnostics(timeoutMs = 15000): Promise<Exte
 
 	while (Date.now() - started < timeoutMs) {
 		await focusRecordsView();
+		await focusSpecsView();
 		await focusCandidatesView();
 		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('sundial.internal.webviewDiagnostics');
 		if (
 			last.recordsLastState !== undefined
 			&& last.recordsLastRendered !== undefined
+			&& last.specsLastState !== undefined
+			&& last.specsLastRendered !== undefined
 			&& last.candidatesLastState !== undefined
 			&& last.candidatesLastRendered !== undefined
 		) {
@@ -142,6 +154,10 @@ export async function focusCandidatesView(): Promise<void> {
 	await focusView('sundial.candidates.focus');
 }
 
+export async function focusSpecsView(): Promise<void> {
+	await focusView('sundial.specs.focus');
+}
+
 export async function waitForActiveMarkdownPreview(filePath: string, timeoutMs = 5000): Promise<vscode.Tab> {
 	const started = Date.now();
 	const basename = path.basename(filePath);
@@ -160,6 +176,24 @@ export async function waitForActiveMarkdownPreview(filePath: string, timeoutMs =
 	}
 
 	throw new Error(`Timed out waiting for active markdown preview of ${basename}; last active tab was ${last}`);
+}
+
+export async function waitForActiveTextDocument(filePath: string, timeoutMs = 5000): Promise<vscode.TextEditor> {
+	const started = Date.now();
+	let last = 'none';
+
+	while (Date.now() - started < timeoutMs) {
+		const editor = vscode.window.activeTextEditor;
+		last = editor?.document.uri.fsPath ?? 'none';
+
+		if (editor !== undefined && path.resolve(editor.document.uri.fsPath) === path.resolve(filePath)) {
+			return editor;
+		}
+
+		await wait(100);
+	}
+
+	throw new Error(`Timed out waiting for active text document ${filePath}; last active document was ${last}`);
 }
 
 function isMarkdownPreviewTab(tab: vscode.Tab): boolean {

@@ -1,14 +1,14 @@
 ---
-id: CAND-0001
+id: DR-0028
 title: Research records store long-form reference material
-status: candidate
+status: accepted
 domain: governance.dr-retrieval
 created: 2026-07-07
-created_by: bjackson
 references:
   - sundial/research
+updated: 2026-07-07
+author: bjackson
 ---
-
 ## Decision
 
 Store research as non-governing Markdown reference records under sundial/research with shared domains and a short summary for list views; agents must explicitly open the research file before relying on long-form details.

@@ -27,6 +27,13 @@ export interface ResearchSummary {
 	readonly summary: string;
 }
 
+export interface SpecSummary {
+	readonly id: string;
+	readonly title: string;
+	readonly filePath: string;
+	readonly status: string;
+}
+
 export async function discoverSundialRoot(startDirectory: string): Promise<string | undefined> {
 	let current = path.resolve(startDirectory);
 
@@ -75,6 +82,18 @@ export async function listResearchSummaries(workspaceRoot: string): Promise<read
 
 	const records = await listMarkdownRecords(path.join(storeRoot, storeDirectoryName, 'research'), summarizeResearch);
 	return [...records].sort((left, right) => left.id.localeCompare(right.id));
+}
+
+export async function listSpecSummaries(workspaceRoot: string): Promise<readonly SpecSummary[]> {
+	const storeRoot = await discoverSundialRoot(workspaceRoot);
+	if (storeRoot === undefined) {
+		return [];
+	}
+
+	const records = await listMarkdownRecords(path.join(storeRoot, storeDirectoryName, 'specs'), summarizeSpec);
+	return [...records]
+		.filter(record => path.basename(record.filePath).toLowerCase() !== 'board.md')
+		.sort((left, right) => left.id.localeCompare(right.id));
 }
 
 export async function listKnownDomains(workspaceRoot: string): Promise<readonly string[]> {
@@ -160,6 +179,19 @@ async function summarizeResearch(filePath: string): Promise<ResearchSummary> {
 	};
 }
 
+async function summarizeSpec(filePath: string): Promise<SpecSummary> {
+	const markdown = await fs.readFile(filePath, 'utf8');
+	const frontmatter = parseFrontmatterScalars(markdown);
+	const id = frontmatter.get('id') ?? path.basename(filePath, '.md');
+
+	return {
+		id,
+		title: frontmatter.get('title') ?? id,
+		filePath,
+		status: frontmatter.get('status') ?? 'Backlog',
+	};
+}
+
 function parseFrontmatterScalars(markdown: string): Map<string, string> {
 	const scalars = new Map<string, string>();
 	const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(markdown);
@@ -205,6 +237,19 @@ async function directoryExists(directory: string): Promise<boolean> {
 	try {
 		const stat = await fs.stat(directory);
 		return stat.isDirectory();
+	} catch (error) {
+		if (isNodeError(error) && error.code === 'ENOENT') {
+			return false;
+		}
+
+		throw error;
+	}
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+	try {
+		const stat = await fs.stat(filePath);
+		return stat.isFile();
 	} catch (error) {
 		if (isNodeError(error) && error.code === 'ENOENT') {
 			return false;

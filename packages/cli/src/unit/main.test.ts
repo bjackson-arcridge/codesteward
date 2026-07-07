@@ -249,6 +249,55 @@ describe('bootstrapCommand', () => {
 		assert.equal(result.exitCode, undefined);
 	});
 
+	test('creates lists shows and updates specs through configured workflow lanes', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-spec-workflow-'));
+		const init = await initStore(root);
+
+		const lanes = await runCli(root, ['spec', 'lanes']);
+		const created = await runCli(root, ['spec', 'create', '--title', 'Embedded specs board MVP']);
+		const active = await runCli(root, ['spec', 'status', 'SPEC-0001', 'Active']);
+		const list = await runCli(root, ['spec', 'list']);
+		const shown = await runCli(root, ['spec', 'show', 'SPEC-0001']);
+		const board = await runCli(root, ['spec', 'board']);
+
+		assert.equal(lanes.stdout, 'Backlog\nTodo\nActive\nDone\n');
+		assert.match(created.stdout, /Created SPEC-0001 Embedded specs board MVP/);
+		assert.match(created.stdout, /Status: Backlog/);
+		assert.match(active.stdout, /Status: Backlog -> Active/);
+		assert.match(list.stdout, /SPEC-0001 Embedded specs board MVP Status: Active Path: sundial\/specs\/SPEC-0001-embedded-specs-board-mvp\.md/);
+		assert.match(shown.stdout, /id: SPEC-0001/);
+		assert.match(shown.stdout, /title: Embedded specs board MVP/);
+		assert.match(shown.stdout, /status: Active/);
+		assert.match(shown.stdout, /## Discovery/);
+		assert.match(shown.stdout, /## Test Log/);
+		assert.match(board.stdout, /## Active\n\n### Embedded specs board MVP/);
+		assert.match(board.stdout, /\[Open spec\]\(\.\/SPEC-0001-embedded-specs-board-mvp\.md\)/);
+		await assert.rejects(fs.access(path.join(init.paths.store, 'specs', 'board.md')));
+		assert.equal(created.stderr, '');
+		assert.equal(active.stderr, '');
+		assert.equal(board.stderr, '');
+	});
+
+	test('uses custom spec workflow lanes from yaml', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-spec-custom-lanes-'));
+		const init = await initStore(root);
+		await fs.writeFile(path.join(init.paths.store, 'specs', 'workflow.yml'), [
+			'lanes:',
+			'  - Icebox',
+			'  - Building',
+			'  - Shipped',
+			'',
+		].join('\n'), 'utf8');
+
+		const created = await runCli(root, ['spec', 'create', '--title', 'Custom lane spec', '--status', 'Building']);
+		const invalid = await runCli(root, ['spec', 'status', 'SPEC-0001', 'Active']);
+
+		assert.match(created.stdout, /Created SPEC-0001 Custom lane spec/);
+		assert.match(created.stdout, /Status: Building/);
+		assert.match(invalid.stderr, /Unknown spec status "Active"\. Known lanes: Icebox, Building, Shipped\./);
+		assert.equal(invalid.exitCode, 1);
+	});
+
 	test('reports validation state from the status command', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-status-validation-'));
 		const init = await initStore(root);
