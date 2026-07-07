@@ -166,7 +166,7 @@ function getCandidateFixturePath(filename: string): string {
 		throw new Error('Expected scenario workspace folder to be open');
 	}
 
-	return path.join(workspaceRoot, '.sundial', 'drs', 'candidates', filename);
+	return path.join(workspaceRoot, 'sundial', 'decisions', 'candidates', filename);
 }
 
 interface ExpectedRecordFilterDiagnostics {

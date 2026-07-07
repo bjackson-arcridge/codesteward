@@ -9,25 +9,25 @@ import {
 	type SkillTemplateSet,
 } from './harnesses';
 
-export const storeDirectoryName = '.sundial';
+export const storeDirectoryName = 'sundial';
 const sundialInstructionStartMarker = '<!-- sundial:agent-instructions -->';
 const sundialInstructionEndMarker = '<!-- /sundial:agent-instructions -->';
 const legacySundialInstructionStartMarker = '<!-- sundial:correction-feedback-loop -->';
 const legacySundialInstructionEndMarker = '<!-- /sundial:correction-feedback-loop -->';
 
 const directoryLayout = [
-	'drs/candidates',
-	'drs/accepted',
-	'drs/rejected',
-	'drs/retired',
+	'decisions/candidates',
+	'decisions/accepted',
+	'decisions/rejected',
+	'decisions/retired',
 	'sessions',
 ] as const;
 
 const decisionRecordDirectoryKeepFiles = [
-	'drs/candidates/.gitkeep',
-	'drs/accepted/.gitkeep',
-	'drs/rejected/.gitkeep',
-	'drs/retired/.gitkeep',
+	'decisions/candidates/.gitkeep',
+	'decisions/accepted/.gitkeep',
+	'decisions/rejected/.gitkeep',
+	'decisions/retired/.gitkeep',
 ] as const;
 
 const skillTemplateFiles = [
@@ -157,7 +157,7 @@ export async function countDecisionRecords(paths: StorePaths, status: DecisionRe
 
 export function decisionRecordDirectory(paths: StorePaths, status: DecisionRecordStatus): string {
 	const directoryName = status === 'candidate' ? 'candidates' : status;
-	return path.join(paths.store, 'drs', directoryName);
+	return path.join(paths.store, 'decisions', directoryName);
 }
 
 async function ensureDirectory(

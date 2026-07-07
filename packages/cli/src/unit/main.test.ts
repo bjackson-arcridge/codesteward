@@ -96,7 +96,7 @@ describe('bootstrapCommand', () => {
 	test('retrieves accepted DRs by hierarchical domain', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-domain-retrieve-'));
 		const init = await initStore(root);
-		const accepted = path.join(init.paths.store, 'drs', 'accepted');
+		const accepted = path.join(init.paths.store, 'decisions', 'accepted');
 		await fs.writeFile(init.paths.domains, [
 			'# Sundial Domains',
 			'',
@@ -252,7 +252,7 @@ describe('bootstrapCommand', () => {
 	test('reports validation state from the status command', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-status-validation-'));
 		const init = await initStore(root);
-		await fs.writeFile(path.join(init.paths.store, 'drs', 'accepted', 'DR-0001-invalid-domain.md'), acceptedRecord({
+		await fs.writeFile(path.join(init.paths.store, 'decisions', 'accepted', 'DR-0001-invalid-domain.md'), acceptedRecord({
 			id: 'DR-0001',
 			title: 'Invalid domain',
 			domain: 'api',
@@ -331,7 +331,7 @@ describe('bootstrapCommand', () => {
 	test('disables accepted DRs from retrieval and can enable them again', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-disable-retrieve-'));
 		const init = await initStore(root);
-		const accepted = path.join(init.paths.store, 'drs', 'accepted');
+		const accepted = path.join(init.paths.store, 'decisions', 'accepted');
 		await fs.writeFile(path.join(accepted, 'DR-0001-toggle.md'), acceptedRecord({
 			id: 'DR-0001',
 			title: 'Toggle retrieval',
@@ -354,28 +354,28 @@ describe('bootstrapCommand', () => {
 	test('groups DR lists by lifecycle state with domain on each row', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-dr-list-groups-'));
 		const init = await initStore(root);
-		const drs = path.join(init.paths.store, 'drs');
-		await fs.writeFile(path.join(drs, 'rejected', 'DR-0001-rejected.md'), acceptedRecord({
+		const decisions = path.join(init.paths.store, 'decisions');
+		await fs.writeFile(path.join(decisions, 'rejected', 'DR-0001-rejected.md'), acceptedRecord({
 			id: 'DR-0001',
 			title: 'Rejected record',
 			domain: 'cli',
 		}).replace('status: accepted', 'status: rejected'), 'utf8');
-		await fs.writeFile(path.join(drs, 'candidates', 'CAND-0001-candidate.md'), acceptedRecord({
+		await fs.writeFile(path.join(decisions, 'candidates', 'CAND-0001-candidate.md'), acceptedRecord({
 			id: 'CAND-0001',
 			title: 'Candidate record',
 			domain: 'governance',
 		}).replace('status: accepted', 'status: candidate'), 'utf8');
-		await fs.writeFile(path.join(drs, 'retired', 'DR-0002-retired.md'), acceptedRecord({
+		await fs.writeFile(path.join(decisions, 'retired', 'DR-0002-retired.md'), acceptedRecord({
 			id: 'DR-0002',
 			title: 'Retired record',
 			domain: 'cli',
 		}).replace('status: accepted', 'status: retired'), 'utf8');
-		await fs.writeFile(path.join(drs, 'accepted', 'DR-0003-active.md'), acceptedRecord({
+		await fs.writeFile(path.join(decisions, 'accepted', 'DR-0003-active.md'), acceptedRecord({
 			id: 'DR-0003',
 			title: 'Active record',
 			domain: 'cli',
 		}), 'utf8');
-		await fs.writeFile(path.join(drs, 'accepted', 'DR-0004-hidden.md'), acceptedRecord({
+		await fs.writeFile(path.join(decisions, 'accepted', 'DR-0004-hidden.md'), acceptedRecord({
 			id: 'DR-0004',
 			title: 'Hidden record',
 			domain: 'cli',
@@ -402,7 +402,7 @@ describe('bootstrapCommand', () => {
 	test('retires and promotes accepted DRs', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-dr-promote-'));
 		const init = await initStore(root);
-		const accepted = path.join(init.paths.store, 'drs', 'accepted');
+		const accepted = path.join(init.paths.store, 'decisions', 'accepted');
 		await fs.writeFile(path.join(accepted, 'DR-0001-retired.md'), acceptedRecord({
 			id: 'DR-0001',
 			title: 'Retired record',
@@ -420,7 +420,7 @@ describe('bootstrapCommand', () => {
 		const retiredList = await runCli(root, ['dr', 'list', '--status', 'retired']);
 		const promoted = await runCli(root, ['dr', 'promote', 'DR-0001', '--from', 'retired']);
 		const acceptedAfterPromote = await runCli(root, ['dr', 'list', '--status', 'accepted']);
-		const retiredWithoutReplacementMarkdown = await fs.readFile(path.join(init.paths.store, 'drs', 'retired', 'DR-0002-no-replacement.md'), 'utf8');
+		const retiredWithoutReplacementMarkdown = await fs.readFile(path.join(init.paths.store, 'decisions', 'retired', 'DR-0002-no-replacement.md'), 'utf8');
 
 		assert.match(retired.stdout, /Retired DR-0001 by DR-0003/);
 		assert.match(retiredWithoutReplacement.stdout, /Retired DR-0002/);
@@ -463,8 +463,8 @@ describe('bootstrapCommand', () => {
 	test('deletes rejected and retired DR files', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-dr-delete-'));
 		const init = await initStore(root);
-		const rejected = path.join(init.paths.store, 'drs', 'rejected');
-		const retired = path.join(init.paths.store, 'drs', 'retired');
+		const rejected = path.join(init.paths.store, 'decisions', 'rejected');
+		const retired = path.join(init.paths.store, 'decisions', 'retired');
 		const rejectedPath = path.join(rejected, 'DR-0001-rejected.md');
 		const retiredPath = path.join(retired, 'DR-0002-retired.md');
 		await fs.writeFile(rejectedPath, acceptedRecord({
@@ -484,7 +484,7 @@ describe('bootstrapCommand', () => {
 		const retiredList = await runCli(root, ['dr', 'list', '--status', 'retired']);
 
 		assert.match(deletedRejected.stdout, /Deleted DR-0001 Rejected record \(rejected\)/);
-		assert.match(deletedRejected.stdout, /\.sundial\/drs\/rejected\/DR-0001-rejected\.md/);
+		assert.match(deletedRejected.stdout, /sundial\/decisions\/rejected\/DR-0001-rejected\.md/);
 		assert.match(deletedRetired.stdout, /Deleted DR-0002 Retired record \(retired\)/);
 		assert.equal(rejectedList.stdout, '');
 		assert.equal(retiredList.stdout, '');
@@ -495,7 +495,7 @@ describe('bootstrapCommand', () => {
 	test('cats raw DR markdown by id', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-appendix-'));
 		const init = await initStore(root);
-		const accepted = path.join(init.paths.store, 'drs', 'accepted');
+		const accepted = path.join(init.paths.store, 'decisions', 'accepted');
 		const markdown = acceptedRecord({
 			id: 'DR-0001',
 			title: 'Appendix',

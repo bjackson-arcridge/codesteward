@@ -25,7 +25,7 @@ Initialize a project:
 sundial init --root /path/to/project --claude --codex
 ```
 
-`init` always creates `.sundial/` and starter domains. Runtime assets are opt-in:
+`init` always creates `sundial/` and starter domains. Runtime assets are opt-in:
 
 - `--claude` writes missing Claude Code project assets to `.claude/skills/` and `.claude/CLAUDE.md` from CLI templates.
 - `--codex` writes missing Codex project assets to `.agents/skills/` and `AGENTS.md` from CLI templates.
@@ -37,7 +37,7 @@ Refresh installed skill files later without rerunning store init:
 sundial update --claude --codex
 ```
 
-The update command discovers the nearest ancestor `.sundial` store by default; pass `--root /path/to/project` to target a specific project. Sundial-owned instruction blocks in files such as `AGENTS.md` and `.claude/CLAUDE.md` are repaired or refreshed without overwriting user-authored content outside those blocks.
+The update command discovers the nearest ancestor `sundial` store by default; pass `--root /path/to/project` to target a specific project. Sundial-owned instruction blocks in files such as `AGENTS.md` and `.claude/CLAUDE.md` are repaired or refreshed without overwriting user-authored content outside those blocks.
 
 ## How it works
 
@@ -48,9 +48,9 @@ The update command discovers the nearest ancestor `.sundial` store by default; p
 
 ```text
 project/
-  .sundial/
+  sundial/
     domains.md
-    drs/
+    decisions/
       accepted/
         adr-001-testing-strategy.md
         dr-014-agent-permissions.md
@@ -90,7 +90,7 @@ Notes:
 
 - Enabled accepted DRs are the only precedent retrieved by `dr retrieve`.
 - Repeat `--domain` on one `dr retrieve` call to retrieve all relevant domain branches together.
-- Candidate DRs can include a proposed domain with a description; accepting the DR appends that proposal to `.sundial/domains.md`.
+- Candidate DRs can include a proposed domain with a description; accepting the DR appends that proposal to `sundial/domains.md`.
 - DRs can include a `## Appendix` section for human-facing explanatory context; short and medium retrieval omit it.
 
 ## VS Code

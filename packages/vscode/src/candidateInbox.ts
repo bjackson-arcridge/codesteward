@@ -1,6 +1,8 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
+const storeDirectoryName = 'sundial';
+
 export interface CandidateSummary {
 	readonly id: string;
 	readonly title: string;
@@ -21,7 +23,7 @@ export async function discoverSundialRoot(startDirectory: string): Promise<strin
 	let current = path.resolve(startDirectory);
 
 	for (;;) {
-		if (await directoryExists(path.join(current, '.sundial'))) {
+		if (await directoryExists(path.join(current, storeDirectoryName))) {
 			return current;
 		}
 
@@ -40,7 +42,7 @@ export async function listCandidateSummaries(workspaceRoot: string): Promise<rea
 		return [];
 	}
 
-	const records = await listMarkdownRecords(path.join(storeRoot, '.sundial', 'drs', 'candidates'), summarizeCandidate);
+	const records = await listMarkdownRecords(path.join(storeRoot, storeDirectoryName, 'decisions', 'candidates'), summarizeCandidate);
 	return [...records].sort((left, right) => left.id.localeCompare(right.id));
 }
 
@@ -53,7 +55,7 @@ export async function listDecisionRecordSummaries(
 		return [];
 	}
 
-	const records = await listMarkdownRecords(path.join(storeRoot, '.sundial', 'drs', status), summarizeDecisionRecord);
+	const records = await listMarkdownRecords(path.join(storeRoot, storeDirectoryName, 'decisions', status), summarizeDecisionRecord);
 	return [...records].sort((left, right) => left.id.localeCompare(right.id));
 }
 
@@ -63,7 +65,7 @@ export async function listKnownDomains(workspaceRoot: string): Promise<readonly 
 		return [];
 	}
 
-	const domainsPath = path.join(storeRoot, '.sundial', 'domains.md');
+	const domainsPath = path.join(storeRoot, storeDirectoryName, 'domains.md');
 	let markdown: string;
 
 	try {

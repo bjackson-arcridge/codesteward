@@ -10,7 +10,7 @@ describe('validateStore', () => {
 	test('includes validation failures in the validation result', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-validation-'));
 		const init = await initStore(root);
-		await fs.writeFile(path.join(init.paths.store, 'drs', 'accepted', 'DR-0001-invalid.md'), [
+		await fs.writeFile(path.join(init.paths.store, 'decisions', 'accepted', 'DR-0001-invalid.md'), [
 			'---',
 			'id: DR-0001',
 			'title: Invalid',
@@ -31,7 +31,7 @@ describe('validateStore', () => {
 	test('warns about broken local reference pointers', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-validation-references-'));
 		const init = await initStore(root);
-		await fs.writeFile(path.join(init.paths.store, 'drs', 'accepted', 'DR-0001-reference.md'), [
+		await fs.writeFile(path.join(init.paths.store, 'decisions', 'accepted', 'DR-0001-reference.md'), [
 			'---',
 			'id: DR-0001',
 			'title: Reference',

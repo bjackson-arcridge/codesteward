@@ -41,7 +41,7 @@ const acceptedDr = [
 
 describe('decision record parsing and validation', () => {
 	test('parses frontmatter lists and markdown sections', () => {
-		const record = parseDecisionRecord(acceptedDr, '/repo/.sundial/drs/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
+	const record = parseDecisionRecord(acceptedDr, '/repo/sundial/decisions/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
 
 		assert.equal(getRecordId(record), 'DR-0001');
 		assert.equal(getRecordDomain(record), 'cli');
@@ -60,7 +60,7 @@ describe('decision record parsing and validation', () => {
 			'CLI.',
 			'',
 		].join('\n'));
-		const record = parseDecisionRecord(acceptedDr, '/repo/.sundial/drs/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
+		const record = parseDecisionRecord(acceptedDr, '/repo/sundial/decisions/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
 
 		const result = validateDecisionRecord(record, vocabulary);
 
@@ -80,7 +80,7 @@ describe('decision record parsing and validation', () => {
 			'author: codex',
 			'---',
 			'',
-		].join('\n'), '/repo/.sundial/drs/accepted/DR-0002-missing-decision.md', 'accepted');
+		].join('\n'), '/repo/sundial/decisions/accepted/DR-0002-missing-decision.md', 'accepted');
 
 		const result = validateDecisionRecord(record, parseDomainVocabulary([
 			'## Domains',
@@ -121,7 +121,7 @@ describe('decision record parsing and validation', () => {
 			'- Reusing a single HTTP client across tenants leaks auth headers.',
 			'- Caching response bodies before the streaming layer breaks chunked encoding.',
 			'',
-		].join('\n'), '/repo/.sundial/drs/accepted/DR-0010-pitfalls-only.md', 'accepted');
+		].join('\n'), '/repo/sundial/decisions/accepted/DR-0010-pitfalls-only.md', 'accepted');
 
 		const result = validateDecisionRecord(record, vocabulary);
 
@@ -148,7 +148,7 @@ describe('decision record parsing and validation', () => {
 			'',
 			'Use domain.',
 			'',
-		].join('\n'), '/repo/.sundial/drs/accepted/DR-0003-legacy-dimension.md', 'accepted');
+		].join('\n'), '/repo/sundial/decisions/accepted/DR-0003-legacy-dimension.md', 'accepted');
 
 		const result = validateDecisionRecord(record, parseDomainVocabulary(''));
 
@@ -173,7 +173,7 @@ describe('decision record parsing and validation', () => {
 			'',
 			'Use sections for staged detail.',
 			'',
-		].join('\n'), '/repo/.sundial/drs/accepted/DR-0005-removed-fields.md', 'accepted');
+		].join('\n'), '/repo/sundial/decisions/accepted/DR-0005-removed-fields.md', 'accepted');
 
 		const result = validateDecisionRecord(record, parseDomainVocabulary(''));
 
@@ -187,11 +187,11 @@ describe('decision record parsing and validation', () => {
 		const disabled = parseDecisionRecord(acceptedDr.replace(
 			'status: accepted\n',
 			'status: accepted\nenabled: false\n',
-		), '/repo/.sundial/drs/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
+		), '/repo/sundial/decisions/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
 		const invalid = parseDecisionRecord(acceptedDr.replace(
 			'status: accepted\n',
 			'status: accepted\nenabled: no\n',
-		), '/repo/.sundial/drs/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
+		), '/repo/sundial/decisions/accepted/DR-0001-repository-transaction-boundaries.md', 'accepted');
 		const vocabulary = parseDomainVocabulary([
 			'## Domains',
 			'',
@@ -207,10 +207,10 @@ describe('decision record parsing and validation', () => {
 	});
 
 	test('lists records from lifecycle folders in deterministic id order', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-drs-'));
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-decisions-'));
 		const init = await initStore(root);
-		const firstPath = path.join(init.paths.store, 'drs', 'accepted', 'DR-0002-second.md');
-		const secondPath = path.join(init.paths.store, 'drs', 'accepted', 'DR-0001-first.md');
+		const firstPath = path.join(init.paths.store, 'decisions', 'accepted', 'DR-0002-second.md');
+		const secondPath = path.join(init.paths.store, 'decisions', 'accepted', 'DR-0001-first.md');
 
 		await fs.writeFile(firstPath, acceptedDr.replaceAll('DR-0001', 'DR-0002'), 'utf8');
 		await fs.writeFile(secondPath, acceptedDr, 'utf8');

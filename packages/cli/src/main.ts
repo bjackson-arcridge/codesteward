@@ -58,11 +58,11 @@ Usage:
   sundial [--cwd <path>] [--quiet] [--no-session-log] [--version] <command>
 
 Commands:
-  init        Create or update the project-local .sundial store at an explicit root
+  init        Create or update the project-local sundial store at an explicit root
   update      Update installed skill files for the discovered or explicit project root
   status      Report store health, counts, and validation state
   bootstrap   Run an LLM-backed bootstrap that creates candidates via the CLI
-  domains     List known domains from .sundial/domains.md
+  domains     List known domains from sundial/domains.md
   dr retrieve Retrieve visible accepted DRs by relevant domains
   dr get      Cat DR markdown files by id
   dr list     List DRs by status
@@ -1225,16 +1225,16 @@ function bootstrapPrompt(paths: StorePaths): string {
 		'Goal:',
 		'- Inspect existing project instructions, markdown documentation, and representative source code.',
 		'- Find consequential project-specific decisions that should become Sundial Decision Record candidates.',
-		'- Create candidates only by running the public Sundial CLI. Do not write .sundial files directly.',
+		'- Create candidates only by running the public Sundial CLI. Do not write sundial files directly.',
 		'',
 		'Important candidate creation contract:',
 		`- Use this command shape: sundial --cwd ${shellQuote(root)} candidate create --title "<title>" --domain "<domain>" --decision "<terse guidance>"`,
-		'- Use --proposed-domain <domain> "<description>" instead of --domain when the domain is not already listed in .sundial/domains.md.',
+		'- Use --proposed-domain <domain> "<description>" instead of --domain when the domain is not already listed in sundial/domains.md.',
 		'- A candidate may have --decision, --pitfalls, or both. At least one is required.',
 		'- Pitfalls discipline: similar to decision, but some information is better conveyed as what not to do instead of what to do. CRITICAL: Pitfalls and Decisions do not repeat each other. All information should be net-new.',
 		'- Add --appendix "<human-facing context>" only when explanatory background helps reviewers; do not put governing guidance there.',
 		'- Add --ref <path-or-symbol> when useful, repeated for each reference.',
-		'- Use existing domains from .sundial/domains.md when possible. Proposed domains are for truly useful missing terms.',
+		'- Use existing domains from sundial/domains.md when possible. Proposed domains are for truly useful missing terms.',
 		'- Every DR candidate must go through `sundial candidate create`; do not create markdown files manually.',
 		'',
 		'What to inspect:',
@@ -1833,7 +1833,7 @@ async function requireStore(
 	const paths = await discoverStore(cwd);
 
 	if (paths === undefined) {
-		write(io.stderr, 'No .sundial store found. Run sundial init --root <path> first.\n');
+		write(io.stderr, 'No sundial store found. Run sundial init --root <path> first.\n');
 		io.exitCode = 1;
 		return undefined;
 	}
@@ -1848,7 +1848,7 @@ async function requireStoreAtRoot(
 	const paths = getStorePaths(root);
 
 	if (!await pathExists(paths.store)) {
-		write(io.stderr, `No .sundial store found at ${paths.root}. Run sundial init --root ${paths.root} first.\n`);
+		write(io.stderr, `No sundial store found at ${paths.root}. Run sundial init --root ${paths.root} first.\n`);
 		io.exitCode = 1;
 		return undefined;
 	}

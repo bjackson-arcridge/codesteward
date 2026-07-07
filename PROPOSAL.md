@@ -65,7 +65,7 @@ To support retrieval and context selection, each DR carries three levels of deta
 - **Medium guidance**: the practical rule the agent should apply, plus applies-when and does-not-apply-when notes.
 - **Full record**: rationale, rejected alternatives, consequences, and reference implementations.
 
-DRs also carry tags. Tags are not purely free-form: the allowed tag universe lives in `.sundial/tags.md`, a separate markdown document the engineer can review and edit. V1 retrieval is tag-addressed: the agent selects known tags, the CLI returns accepted DRs matching those tags, and detail expands from short to medium to full only as needed.
+DRs also carry tags. Tags are not purely free-form: the allowed tag universe lives in `sundial/tags.md`, a separate markdown document the engineer can review and edit. V1 retrieval is tag-addressed: the agent selects known tags, the CLI returns accepted DRs matching those tags, and detail expands from short to medium to full only as needed.
 
 Reference implementations make DRs living patterns:
 
@@ -94,7 +94,7 @@ Candidates appear in Sundial's Candidate Inbox. The engineer can:
 
 This keeps stewardship outside the LLM's conversational flow. The model proposes; the engineer curates.
 
-On disk, candidates live under `.sundial/drs/candidates/`, not in a separate top-level `.sundial/candidates/` directory. Acceptance moves a candidate into `.sundial/drs/accepted/`; rejection or supersession moves it into the corresponding DR lifecycle folder.
+On disk, candidates live under `sundial/decisions/candidates/`, not in a separate top-level `sundial/candidates/` directory. Acceptance moves a candidate into `sundial/decisions/accepted/`; rejection or supersession moves it into the corresponding DR lifecycle folder.
 
 We will ship an optional VS Code extension to make managing the the Candidate Inbox easier. Candidates are plain markdown files, so the engineer can also review, edit, accept, reject, or reorganize them directly in a text editor. The extension is a convenient stewardship UI over files, not the only way to manage them.
 
@@ -163,7 +163,7 @@ The integration tiers are:
 - **Skills + CLI**: most portable baseline. Review checklists run inside the main skill workflow.
 - **Optional adapters**: MCP, hooks, editor integrations, and CI jobs may wrap the CLI later, but governance logic must remain exercisable through skills plus CLI.
 
-The VS Code extension is the human stewardship surface. It is not the source of truth; the CLI and `.sundial/` store are.
+The VS Code extension is the human stewardship surface. It is not the source of truth; the CLI and `sundial/` store are.
 
 ---
 

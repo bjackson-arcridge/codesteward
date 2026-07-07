@@ -8,9 +8,9 @@ Marketplace id: `arcridge.sundial`.
 
 Sundial initializes a project-local Decision Record repository backed by plain Markdown files:
 
-- `.sundial/drs/accepted/` stores reviewed decisions agents should follow.
-- `.sundial/drs/candidates/` stores proposed decisions waiting for human review.
-- `.sundial/domains.md` keeps the domain vocabulary reviewable in source control.
+- `sundial/decisions/accepted/` stores reviewed decisions agents should follow.
+- `sundial/decisions/candidates/` stores proposed decisions waiting for human review.
+- `sundial/domains.md` keeps the domain vocabulary reviewable in source control.
 
 During initialization, Sundial can also install agent runtime assets:
 

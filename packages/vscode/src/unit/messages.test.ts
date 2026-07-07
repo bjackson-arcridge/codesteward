@@ -85,7 +85,7 @@ describe('candidates message guards', () => {
 	test('accept host state with candidate entries and providers', () => {
 		assert.equal(isCandidatesHost({
 			kind: 'state',
-			candidates: [{ id: 'CAND-1', title: 'Foo', filePath: '/repo/.sundial/drs/candidates/CAND-1.md' }],
+			candidates: [{ id: 'CAND-1', title: 'Foo', filePath: '/repo/sundial/decisions/candidates/CAND-1.md' }],
 			installedProviders: ['claude'],
 			hasAcceptedRecords: true,
 		}), true);
@@ -137,8 +137,8 @@ describe('candidates message guards', () => {
 	});
 
 	test('accept all defined client commands', () => {
-		assert.equal(isCandidatesClient({ kind: 'preview', id: 'CAND-1', filePath: '/repo/.sundial/drs/candidates/CAND-1.md' }), true);
-		assert.equal(isCandidatesClient({ kind: 'edit', id: 'CAND-1', filePath: '/repo/.sundial/drs/candidates/CAND-1.md' }), true);
+		assert.equal(isCandidatesClient({ kind: 'preview', id: 'CAND-1', filePath: '/repo/sundial/decisions/candidates/CAND-1.md' }), true);
+		assert.equal(isCandidatesClient({ kind: 'edit', id: 'CAND-1', filePath: '/repo/sundial/decisions/candidates/CAND-1.md' }), true);
 		assert.equal(isCandidatesClient({ kind: 'open', id: 'CAND-1' }), true);
 		assert.equal(isCandidatesClient({ kind: 'accept', id: 'CAND-1' }), true);
 		assert.equal(isCandidatesClient({ kind: 'reject', id: 'CAND-1', reason: '' }), true);

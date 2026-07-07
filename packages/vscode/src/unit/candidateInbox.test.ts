@@ -14,7 +14,7 @@ describe('listCandidateSummaries', () => {
 
 	test('reads candidate title, id, and path', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-vscode-candidates-'));
-		const directory = path.join(root, '.sundial', 'drs', 'candidates');
+		const directory = path.join(root, 'sundial', 'decisions', 'candidates');
 		await fs.mkdir(directory, { recursive: true });
 		await fs.writeFile(path.join(directory, 'CAND-0001-test.md'), [
 			'---',
@@ -34,9 +34,9 @@ describe('listCandidateSummaries', () => {
 
 	test('reads accepted decision records and known domains', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-vscode-records-'));
-		const accepted = path.join(root, '.sundial', 'drs', 'accepted');
+		const accepted = path.join(root, 'sundial', 'decisions', 'accepted');
 		await fs.mkdir(accepted, { recursive: true });
-		await fs.writeFile(path.join(root, '.sundial', 'domains.md'), [
+		await fs.writeFile(path.join(root, 'sundial', 'domains.md'), [
 			'# Sundial Domains',
 			'',
 			'## Domains',
@@ -71,10 +71,10 @@ describe('listCandidateSummaries', () => {
 	test('discovers accepted records from a nested workspace folder', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-vscode-nested-'));
 		const nested = path.join(root, 'packages', 'vscode');
-		const accepted = path.join(root, '.sundial', 'drs', 'accepted');
+		const accepted = path.join(root, 'sundial', 'decisions', 'accepted');
 		await fs.mkdir(nested, { recursive: true });
 		await fs.mkdir(accepted, { recursive: true });
-		await fs.writeFile(path.join(root, '.sundial', 'domains.md'), [
+		await fs.writeFile(path.join(root, 'sundial', 'domains.md'), [
 			'# Sundial Domains',
 			'',
 			'## Domains',

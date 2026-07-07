@@ -91,13 +91,13 @@ sundial candidate retire CAND-0001 --by DR-0001
 sundial candidate retire CAND-0001
 ```
 
-`init` always creates `.sundial/` and starter domains. Runtime assets are opt-in:
+`init` always creates `sundial/` and starter domains. Runtime assets are opt-in:
 
 - `--claude` writes missing Claude Code project assets to `.claude/skills/` and `.claude/CLAUDE.md` from CLI templates.
 - `--codex` writes missing Codex project assets to `.agents/skills/` and `AGENTS.md` from CLI templates.
 - Pass both flags to bootstrap both runtimes.
 
-Use `sundial update --claude --codex` to refresh installed generated skill files later without rerunning store initialization. The update command discovers the nearest ancestor `.sundial` store by default; pass `--root /path/to/project` to target a specific project. Sundial-owned instruction blocks in files such as `AGENTS.md` and `.claude/CLAUDE.md` are repaired or refreshed without overwriting user-authored content outside those blocks.
+Use `sundial update --claude --codex` to refresh installed generated skill files later without rerunning store initialization. The update command discovers the nearest ancestor `sundial` store by default; pass `--root /path/to/project` to target a specific project. Sundial-owned instruction blocks in files such as `AGENTS.md` and `.claude/CLAUDE.md` are repaired or refreshed without overwriting user-authored content outside those blocks.
 
 ## VS Code
 
@@ -107,5 +107,5 @@ The extension contributes a `Sundial` activity bar view with a Candidate Inbox, 
 
 - Enabled accepted DRs are the only precedent retrieved by `dr retrieve`.
 - Repeat `--domain` on one `dr retrieve` call to retrieve all relevant domain branches together.
-- Candidate DRs can include a proposed domain with a description; accepting the DR appends that proposal to `.sundial/domains.md`.
+- Candidate DRs can include a proposed domain with a description; accepting the DR appends that proposal to `sundial/domains.md`.
 - DRs can include a `## Appendix` section for human-facing explanatory context; short and medium retrieval omit it.

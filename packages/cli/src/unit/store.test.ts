@@ -11,23 +11,23 @@ describe('store bootstrap', () => {
 		const first = await initStore(root);
 		const second = await initStore(root);
 
-		assert.ok(first.created.includes('.sundial/config.json'));
-		assert.ok(first.created.includes('.sundial/domains.md'));
-		assert.ok(first.created.includes('.sundial/drs/retired'));
-		assert.ok(first.created.includes('.sundial/drs/accepted/.gitkeep'));
-		assert.ok(first.created.includes('.sundial/drs/candidates/.gitkeep'));
-		assert.ok(first.created.includes('.sundial/drs/rejected/.gitkeep'));
-		assert.ok(first.created.includes('.sundial/drs/retired/.gitkeep'));
+		assert.ok(first.created.includes('sundial/config.json'));
+		assert.ok(first.created.includes('sundial/domains.md'));
+		assert.ok(first.created.includes('sundial/decisions/retired'));
+		assert.ok(first.created.includes('sundial/decisions/accepted/.gitkeep'));
+		assert.ok(first.created.includes('sundial/decisions/candidates/.gitkeep'));
+		assert.ok(first.created.includes('sundial/decisions/rejected/.gitkeep'));
+		assert.ok(first.created.includes('sundial/decisions/retired/.gitkeep'));
 		assert.equal(first.created.includes('AGENTS.md'), false);
-		assert.ok(second.existing.includes('.sundial/config.json'));
-		assert.ok(second.existing.includes('.sundial/drs/accepted/.gitkeep'));
+		assert.ok(second.existing.includes('sundial/config.json'));
+		assert.ok(second.existing.includes('sundial/decisions/accepted/.gitkeep'));
 
 		await fs.mkdir(path.join(root, 'src', 'nested'), { recursive: true });
 		const discovered = await discoverStore(path.join(root, 'src', 'nested'));
 		assert.equal(discovered?.root, root);
 		assert.equal(await countDecisionRecords(first.paths, 'accepted'), 0);
-		assert.equal(await fs.readFile(path.join(root, '.sundial', 'drs', 'accepted', '.gitkeep'), 'utf8'), 'Keep this DR lifecycle directory present in fresh git worktrees.\n');
-		assert.rejects(fs.access(path.join(root, '.sundial', 'agent')));
+		assert.equal(await fs.readFile(path.join(root, 'sundial', 'decisions', 'accepted', '.gitkeep'), 'utf8'), 'Keep this DR lifecycle directory present in fresh git worktrees.\n');
+		assert.rejects(fs.access(path.join(root, 'sundial', 'agent')));
 	});
 
 	test('bootstraps Claude Code assets in .claude when opted in', async () => {
