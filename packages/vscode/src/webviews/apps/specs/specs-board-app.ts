@@ -381,6 +381,13 @@ export class SpecsBoardApp extends LitElement {
 						@click=${() => this.send({ kind: 'open', id: spec.id, ...(spec.workspace === undefined ? {} : { workspace: spec.workspace }) })}
 					></cs-icon-button>
 					<cs-icon-button
+						icon="archive"
+						label="Archive spec"
+						data-spec-id=${spec.id}
+						data-spec-target="archive"
+						@click=${() => this.send({ kind: 'move', id: spec.id, status: 'Archive', ...(spec.workspace === undefined ? {} : { workspace: spec.workspace }) })}
+					></cs-icon-button>
+					<cs-icon-button
 						icon="trash"
 						label="Delete spec"
 						data-spec-id=${spec.id}
@@ -403,11 +410,20 @@ export class SpecsBoardApp extends LitElement {
 				this.applyState(message);
 				return;
 			case 'diagnosticClickSpec':
-				this.send({
-					kind: message.target === 'open' ? 'open' : 'delete',
-					id: message.id,
-					...(message.workspace === undefined ? {} : { workspace: message.workspace }),
-				});
+				if (message.target === 'archive') {
+					this.send({
+						kind: 'move',
+						id: message.id,
+						status: 'Archive',
+						...(message.workspace === undefined ? {} : { workspace: message.workspace }),
+					});
+				} else {
+					this.send({
+						kind: message.target === 'open' ? 'open' : 'delete',
+						id: message.id,
+						...(message.workspace === undefined ? {} : { workspace: message.workspace }),
+					});
+				}
 				return;
 			case 'diagnosticCreateSpec':
 				this.send({

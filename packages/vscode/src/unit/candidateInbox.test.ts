@@ -9,6 +9,7 @@ import {
 	listDecisionRecordSummaries,
 	listKnownDomains,
 	listResearchSummaries,
+	listSidebarSpecSummaries,
 	listSpecLanes,
 	listSpecSummaries,
 } from '../candidateInbox';
@@ -142,10 +143,27 @@ describe('listCandidateSummaries', () => {
 		await fs.mkdir(specs, { recursive: true });
 		await fs.writeFile(path.join(specs, 'board.md'), '# Sundial Specs\n\n## Planning\n', 'utf8');
 		await fs.writeFile(path.join(specs, 'workflow.yml'), [
-			'lanes:',
-			'  - Backlog',
-			'  - Implementation',
-			'  - Done',
+			'statuses:',
+			'  - name: Backlog',
+			'    kanban:',
+			'      visible: true',
+			'    sidebar:',
+			'      visible: true',
+			'  - name: Implementation',
+			'    kanban:',
+			'      visible: true',
+			'    sidebar:',
+			'      visible: true',
+			'  - name: Done',
+			'    kanban:',
+			'      visible: true',
+			'    sidebar:',
+			'      visible: true',
+			'  - name: Archive',
+			'    kanban:',
+			'      visible: false',
+			'    sidebar:',
+			'      visible: false',
 			'',
 		].join('\n'), 'utf8');
 		await fs.writeFile(path.join(specs, 'SPEC-0001-alpha.md'), [
@@ -158,10 +176,22 @@ describe('listCandidateSummaries', () => {
 			'## Discovery',
 			'',
 		].join('\n'), 'utf8');
+		await fs.writeFile(path.join(specs, 'SPEC-0002-archived.md'), [
+			'---',
+			'id: SPEC-0002',
+			'title: Archived spec',
+			'status: Archive',
+			'---',
+			'',
+			'## Discovery',
+			'',
+		].join('\n'), 'utf8');
 
 		const records = await listSpecSummaries(root);
+		const sidebarRecords = await listSidebarSpecSummaries(root);
 
-		assert.deepEqual(records.map(record => record.title), ['Alpha spec']);
+		assert.deepEqual(records.map(record => record.title), ['Alpha spec', 'Archived spec']);
+		assert.deepEqual(sidebarRecords.map(record => record.title), ['Alpha spec']);
 		assert.equal(records[0]?.id, 'SPEC-0001');
 		assert.equal(records[0]?.status, 'Implementation');
 		assert.equal(records[0]?.filePath.endsWith('SPEC-0001-alpha.md'), true);

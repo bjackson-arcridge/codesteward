@@ -50,6 +50,10 @@ Use either `--domain <known-domain>` or `--proposed-domain <domain> "<descriptio
 
 If you make a mistake and are corrected by the user, either in design, patterns, implementation choices, or structure, check for a Decision Record that would have covered that mistake. If no DR exists, propose a new DR candidate to cover it.
 
+## Broad Testing After Major Features
+
+After implementing any major feature, run the broad local regression set before finalizing: `npm run check-types`, `npm run lint`, `npm run test:unit`, and `npm test`. If a suite cannot run in the current environment, report the skipped command and the concrete blocker.
+
 <!-- sundial:agent-instructions -->
 ## Sundial
 Sundial is the tool used to manage all persistent memory and decisions for this project.
@@ -100,4 +104,8 @@ Use either `--domain <known-domain>` or `--proposed-domain <domain> "<descriptio
 ## Sundial Correction Feedback Loop
 
 If you make a mistake and are corrected by the user, either in design, patterns, implementation choices, or structure, check for a Decision Record that would have covered that mistake. If no DR exists, propose a new DR candidate to cover it.
+
+## Broad Testing After Major Features
+
+After implementing any major feature, run the broad local regression set before finalizing: `npm run check-types`, `npm run lint`, `npm run test:unit`, and `npm test`. If a suite cannot run in the current environment, report the skipped command and the concrete blocker.
 <!-- /sundial:agent-instructions -->

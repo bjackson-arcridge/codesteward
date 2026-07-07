@@ -36,7 +36,35 @@ describe('store bootstrap', () => {
 		assert.equal(await countDecisionRecords(first.paths, 'accepted'), 0);
 		assert.equal(await fs.readFile(path.join(root, 'sundial', 'research', '.gitkeep'), 'utf8'), 'Keep this Sundial store directory present in fresh git worktrees.\n');
 		assert.equal(await fs.readFile(path.join(root, 'sundial', 'specs', '.gitkeep'), 'utf8'), 'Keep this Sundial store directory present in fresh git worktrees.\n');
-		assert.equal(await fs.readFile(path.join(root, 'sundial', 'specs', 'workflow.yml'), 'utf8'), 'lanes:\n  - Backlog\n  - Todo\n  - Active\n  - Done\n');
+		assert.equal(await fs.readFile(path.join(root, 'sundial', 'specs', 'workflow.yml'), 'utf8'), [
+			'statuses:',
+			'  - name: Backlog',
+			'    kanban:',
+			'      visible: true',
+			'    sidebar:',
+			'      visible: true',
+			'  - name: Todo',
+			'    kanban:',
+			'      visible: true',
+			'    sidebar:',
+			'      visible: true',
+			'  - name: Active',
+			'    kanban:',
+			'      visible: true',
+			'    sidebar:',
+			'      visible: true',
+			'  - name: Done',
+			'    kanban:',
+			'      visible: true',
+			'    sidebar:',
+			'      visible: true',
+			'  - name: Archive',
+			'    kanban:',
+			'      visible: false',
+			'    sidebar:',
+			'      visible: true',
+			'',
+		].join('\n'));
 		await assert.rejects(fs.access(path.join(root, 'sundial', 'specs', 'board.md')));
 		assert.equal(await fs.readFile(path.join(root, 'sundial', 'decisions', 'accepted', '.gitkeep'), 'utf8'), 'Keep this Sundial store directory present in fresh git worktrees.\n');
 		assert.rejects(fs.access(path.join(root, 'sundial', 'agent')));

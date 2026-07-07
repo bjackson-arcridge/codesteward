@@ -20,7 +20,7 @@ export type HostToWebview =
 		workspaces?: readonly string[];
 		diagnosticsEnabled?: boolean;
 	}
-	| { kind: 'diagnosticClickSpec'; id: string; workspace?: string; target: 'open' | 'delete' }
+	| { kind: 'diagnosticClickSpec'; id: string; workspace?: string; target: 'open' | 'archive' | 'delete' }
 	| { kind: 'diagnosticCreateSpec'; title: string; status: string; workspace?: string }
 	| { kind: 'diagnosticMoveSpec'; id: string; status: string; workspace?: string }
 	| { kind: 'diagnosticDeleteSpec'; id: string; workspace?: string };
@@ -62,7 +62,7 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 	if (message.kind === 'diagnosticClickSpec') {
 		return typeof message.id === 'string'
 			&& (message.workspace === undefined || typeof message.workspace === 'string')
-			&& (message.target === 'open' || message.target === 'delete');
+			&& (message.target === 'open' || message.target === 'archive' || message.target === 'delete');
 	}
 
 	if (message.kind === 'diagnosticCreateSpec') {

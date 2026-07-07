@@ -9,6 +9,7 @@ import {
 	listDecisionRecordSummaries,
 	listKnownDomains,
 	listResearchSummaries,
+	listSidebarSpecSummaries,
 	listSpecLanes,
 	listSpecSummaries,
 	defaultSpecLanes,
@@ -848,7 +849,7 @@ async function collectResearch(
 async function collectSpecs(): Promise<readonly RecordSummary[]> {
 	const stores = await collectWorkspaceStores();
 	const all = await Promise.all(stores.map(async store => {
-		const records = await listSpecSummaries(store.root);
+		const records = await listSidebarSpecSummaries(store.root);
 		return records.map(record => ({
 			id: record.id,
 			title: record.title,
@@ -872,9 +873,6 @@ async function collectSpecBoardState(): Promise<SpecsBoardState> {
 	const lanes: string[] = [];
 	for (const lane of perStore.flatMap(item => item.lanes)) {
 		pushUnique(lanes, lane);
-	}
-	for (const spec of perStore.flatMap(item => item.specs)) {
-		pushUnique(lanes, spec.status);
 	}
 	if (lanes.length === 0) {
 		lanes.push(...defaultSpecLanes);

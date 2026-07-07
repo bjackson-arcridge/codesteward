@@ -35,6 +35,12 @@ export interface SpecSummary {
 	readonly status: string;
 }
 
+interface SpecWorkflowStatus {
+	readonly name: string;
+	readonly kanbanVisible: boolean;
+	readonly sidebarVisible: boolean;
+}
+
 export async function discoverSundialRoot(startDirectory: string): Promise<string | undefined> {
 	let current = path.resolve(startDirectory);
 
@@ -97,10 +103,22 @@ export async function listSpecSummaries(workspaceRoot: string): Promise<readonly
 		.sort((left, right) => left.id.localeCompare(right.id));
 }
 
+export async function listSidebarSpecSummaries(workspaceRoot: string): Promise<readonly SpecSummary[]> {
+	const statuses = await listSpecWorkflowStatuses(workspaceRoot);
+	const visibleStatuses = new Set(statuses.filter(status => status.sidebarVisible).map(status => status.name));
+	return (await listSpecSummaries(workspaceRoot)).filter(spec => visibleStatuses.has(spec.status));
+}
+
 export async function listSpecLanes(workspaceRoot: string): Promise<readonly string[]> {
+	return (await listSpecWorkflowStatuses(workspaceRoot))
+		.filter(status => status.kanbanVisible)
+		.map(status => status.name);
+}
+
+async function listSpecWorkflowStatuses(workspaceRoot: string): Promise<readonly SpecWorkflowStatus[]> {
 	const storeRoot = await discoverSundialRoot(workspaceRoot);
 	if (storeRoot === undefined) {
-		return defaultSpecLanes;
+		return defaultWorkflowStatuses();
 	}
 
 	const workflowPath = path.join(storeRoot, storeDirectoryName, 'specs', 'workflow.yml');
@@ -109,14 +127,14 @@ export async function listSpecLanes(workspaceRoot: string): Promise<readonly str
 		contents = await fs.readFile(workflowPath, 'utf8');
 	} catch (error) {
 		if (isNodeError(error) && error.code === 'ENOENT') {
-			return defaultSpecLanes;
+			return defaultWorkflowStatuses();
 		}
 
 		throw error;
 	}
 
-	const lanes = parseWorkflowLanes(contents);
-	return lanes.length === 0 ? defaultSpecLanes : lanes;
+	const statuses = parseWorkflowStatuses(contents);
+	return statuses.length === 0 ? defaultWorkflowStatuses() : statuses;
 }
 
 export async function listKnownDomains(workspaceRoot: string): Promise<readonly string[]> {
@@ -232,31 +250,85 @@ function parseFrontmatterScalars(markdown: string): Map<string, string> {
 	return scalars;
 }
 
-function parseWorkflowLanes(markdown: string): readonly string[] {
-	const lanes: string[] = [];
-	let inLanes = false;
+function defaultWorkflowStatuses(): readonly SpecWorkflowStatus[] {
+	return [
+		...defaultSpecLanes.map(name => ({
+			name,
+			kanbanVisible: true,
+			sidebarVisible: true,
+		})),
+		{
+			name: 'Archive',
+			kanbanVisible: false,
+			sidebarVisible: true,
+		},
+	];
+}
+
+function parseWorkflowStatuses(markdown: string): readonly SpecWorkflowStatus[] {
+	const statuses: SpecWorkflowStatus[] = [];
+	let inStatuses = false;
+	let current: { name: string; kanbanVisible: boolean; sidebarVisible: boolean } | undefined;
+	let visibilityScope: 'kanban' | 'sidebar' | undefined;
+	const commit = (): void => {
+		if (current !== undefined && current.name.length > 0) {
+			statuses.push(current);
+		}
+	};
+
 	for (const line of markdown.split(/\r?\n/)) {
-		if (/^\s*lanes:\s*$/.test(line)) {
-			inLanes = true;
+		if (/^\s*statuses:\s*$/.test(line)) {
+			inStatuses = true;
 			continue;
 		}
 
-		if (!inLanes) {
-			continue;
-		}
-
-		const item = /^\s*-\s+(.+?)\s*$/.exec(line);
-		if (item !== null) {
-			lanes.push(stripYamlString(item[1]));
+		if (!inStatuses) {
 			continue;
 		}
 
 		if (line.trim().length > 0 && !line.startsWith(' ') && !line.startsWith('\t')) {
 			break;
 		}
+
+		const namedItem = /^\s*-\s+name:\s+(.+?)\s*$/.exec(line);
+		if (namedItem !== null) {
+			commit();
+			current = {
+				name: stripYamlString(namedItem[1]),
+				kanbanVisible: true,
+				sidebarVisible: true,
+			};
+			visibilityScope = undefined;
+			continue;
+		}
+
+		const scope = /^\s*(kanban|sidebar):\s*$/.exec(line);
+		if (scope !== null) {
+			visibilityScope = scope[1] as 'kanban' | 'sidebar';
+			continue;
+		}
+
+		const visible = /^\s*visible:\s*(true|false)\s*$/i.exec(line);
+		if (visible !== null && current !== undefined && visibilityScope !== undefined) {
+			const value = visible[1].toLowerCase() === 'true';
+			if (visibilityScope === 'kanban') {
+				current.kanbanVisible = value;
+			} else {
+				current.sidebarVisible = value;
+			}
+		}
 	}
 
-	return [...new Set(lanes.filter(lane => lane.length > 0))];
+	commit();
+	const names = new Set<string>();
+	return statuses.filter(status => {
+		if (names.has(status.name)) {
+			return false;
+		}
+
+		names.add(status.name);
+		return true;
+	});
 }
 
 function stripYamlString(value: string): string {

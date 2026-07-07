@@ -47,6 +47,7 @@ import {
 	findSpec,
 	listSpecs,
 	readSpecLanes,
+	readSpecStatuses,
 	renderSpecBoard,
 	setSpecStatus,
 	type SpecRecord,
@@ -585,9 +586,8 @@ async function runSpecList(
 	args: readonly string[],
 	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
 ): Promise<void> {
-	if (args.length > 0) {
-		write(io.stderr, 'Usage: sundial spec list\n');
-		io.exitCode = 64;
+	const parsed = parseSpecListArgs(args, io);
+	if (parsed === undefined) {
 		return;
 	}
 
@@ -596,7 +596,16 @@ async function runSpecList(
 		return;
 	}
 
-	for (const spec of await listSpecs(paths)) {
+	if (parsed.status !== undefined) {
+		try {
+			requireKnownSpecStatus(parsed.status, await readSpecStatuses(paths));
+		} catch (error) {
+			writeError(error, io);
+			return;
+		}
+	}
+
+	for (const spec of (await listSpecs(paths)).filter(spec => parsed.status === undefined || spec.status === parsed.status)) {
 		write(io.stdout, `${formatSpecListItem(spec)} Path: ${formatPath(paths, spec.filePath)}\n`);
 	}
 }
@@ -1278,6 +1287,31 @@ function parseSpecCreateArgs(
 	};
 }
 
+function parseSpecListArgs(
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
+): { readonly status: string | undefined } | undefined {
+	let status: string | undefined;
+
+	for (let index = 0; index < args.length; index += 1) {
+		const arg = args[index];
+		const value = args[index + 1];
+		if (arg === '--status') {
+			if (value === undefined || value.trim().length === 0) {
+				return usageError('Usage: sundial spec list [--status <status>]\n', io);
+			}
+
+			status = value.trim();
+			index += 1;
+			continue;
+		}
+
+		return usageError('Usage: sundial spec list [--status <status>]\n', io);
+	}
+
+	return { status };
+}
+
 function parseSpecStatusArgs(
 	args: readonly string[],
 	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
@@ -1287,6 +1321,12 @@ function parseSpecStatusArgs(
 	}
 
 	return { id: args[0].trim(), status: args[1].trim() };
+}
+
+function requireKnownSpecStatus(status: string, statuses: readonly string[]): void {
+	if (!statuses.includes(status)) {
+		throw new Error(`Unknown spec status "${status}". Known statuses: ${statuses.join(', ')}.`);
+	}
 }
 
 function parseCandidateRejectArgs(

@@ -30,4 +30,16 @@ describe('Specs board add form', () => {
 		assert.match(source, /kind: 'move'/);
 		assert.match(source, /status: lane/);
 	});
+
+	test('archives cards through the typed move command and keeps delete separate', () => {
+		const source = readSpecsBoardAppSource();
+
+		assert.match(source, /icon="archive"/);
+		assert.match(source, /label="Archive spec"/);
+		assert.match(source, /data-spec-target="archive"/);
+		assert.match(source, /kind: 'move'/);
+		assert.match(source, /status: 'Archive'/);
+		assert.match(source, /icon="trash"/);
+		assert.match(source, /kind: 'delete'/);
+	});
 });

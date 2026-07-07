@@ -1,7 +1,7 @@
 ---
 id: SPEC-0001
 title: Fixture spec renders by title
-status: Implementation
+status: Active
 ---
 
 # Fixture spec renders by title

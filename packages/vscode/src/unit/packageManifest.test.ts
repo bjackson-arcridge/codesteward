@@ -19,6 +19,10 @@ function readPackageManifest(): PackageManifest {
 	return JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as PackageManifest;
 }
 
+function readExtensionSource(): string {
+	return fs.readFileSync(path.resolve(__dirname, '../../src/extension.ts'), 'utf8');
+}
+
 describe('package manifest contributions', () => {
 	test('does not show bootstrap as a candidates view title button', () => {
 		const manifest = readPackageManifest();
@@ -43,5 +47,13 @@ describe('package manifest contributions', () => {
 			commands.some(item => item.command === 'sundial.specs.openBoard'),
 			true,
 		);
+	});
+
+	test('routes spec board moves through the CLI status command', () => {
+		const source = readExtensionSource();
+
+		assert.match(source, /if \(message\.kind === 'move'\) {\s*await moveSpecFromBoard\(message\.id, message\.status, message\.workspace, specsProvider, specsBoardPanel\);/);
+		assert.match(source, /await runLifecycle\(record\.id, \['spec', 'status', record\.id, status\], filePath\);/);
+		assert.doesNotMatch(source, /frontmatter[\s\S]{0,120}message\.status/);
 	});
 });

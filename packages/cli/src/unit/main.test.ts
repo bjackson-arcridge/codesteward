@@ -256,7 +256,10 @@ describe('bootstrapCommand', () => {
 		const lanes = await runCli(root, ['spec', 'lanes']);
 		const created = await runCli(root, ['spec', 'create', '--title', 'Embedded specs board MVP']);
 		const active = await runCli(root, ['spec', 'status', 'SPEC-0001', 'Active']);
+		const archived = await runCli(root, ['spec', 'status', 'SPEC-0001', 'Archive']);
 		const list = await runCli(root, ['spec', 'list']);
+		const filteredList = await runCli(root, ['spec', 'list', '--status', 'Archive']);
+		const activeList = await runCli(root, ['spec', 'list', '--status', 'Active']);
 		const shown = await runCli(root, ['spec', 'show', 'SPEC-0001']);
 		const board = await runCli(root, ['spec', 'board']);
 		const deleted = await runCli(root, ['spec', 'delete', 'SPEC-0001']);
@@ -266,20 +269,24 @@ describe('bootstrapCommand', () => {
 		assert.match(created.stdout, /Created SPEC-0001 Embedded specs board MVP/);
 		assert.match(created.stdout, /Status: Backlog/);
 		assert.match(active.stdout, /Status: Backlog -> Active/);
-		assert.match(list.stdout, /SPEC-0001 Embedded specs board MVP Status: Active Path: sundial\/specs\/SPEC-0001-embedded-specs-board-mvp\.md/);
+		assert.match(archived.stdout, /Status: Active -> Archive/);
+		assert.match(list.stdout, /SPEC-0001 Embedded specs board MVP Status: Archive Path: sundial\/specs\/SPEC-0001-embedded-specs-board-mvp\.md/);
+		assert.match(filteredList.stdout, /SPEC-0001 Embedded specs board MVP Status: Archive/);
+		assert.equal(activeList.stdout, '');
 		assert.match(shown.stdout, /id: SPEC-0001/);
 		assert.match(shown.stdout, /title: Embedded specs board MVP/);
-		assert.match(shown.stdout, /status: Active/);
+		assert.match(shown.stdout, /status: Archive/);
 		assert.match(shown.stdout, /## Discovery/);
 		assert.match(shown.stdout, /## Test Log/);
-		assert.match(board.stdout, /## Active\n\n### Embedded specs board MVP/);
-		assert.match(board.stdout, /\[Open spec\]\(\.\/SPEC-0001-embedded-specs-board-mvp\.md\)/);
+		assert.doesNotMatch(board.stdout, /## Archive/);
+		assert.doesNotMatch(board.stdout, /### Embedded specs board MVP/);
 		assert.match(deleted.stdout, /Deleted SPEC-0001 Embedded specs board MVP/);
 		assert.equal(listAfterDelete.stdout, '');
 		await assert.rejects(fs.access(path.join(init.paths.store, 'specs', 'SPEC-0001-embedded-specs-board-mvp.md')));
 		await assert.rejects(fs.access(path.join(init.paths.store, 'specs', 'board.md')));
 		assert.equal(created.stderr, '');
 		assert.equal(active.stderr, '');
+		assert.equal(archived.stderr, '');
 		assert.equal(board.stderr, '');
 		assert.equal(deleted.stderr, '');
 	});
@@ -288,19 +295,35 @@ describe('bootstrapCommand', () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-spec-custom-lanes-'));
 		const init = await initStore(root);
 		await fs.writeFile(path.join(init.paths.store, 'specs', 'workflow.yml'), [
-			'lanes:',
-			'  - Icebox',
-			'  - Building',
-			'  - Shipped',
+			'statuses:',
+			'  - name: Icebox',
+			'    kanban:',
+			'      visible: true',
+			'    sidebar:',
+			'      visible: true',
+			'  - name: Building',
+			'    kanban:',
+			'      visible: true',
+			'    sidebar:',
+			'      visible: true',
+			'  - name: Shipped',
+			'    kanban:',
+			'      visible: false',
+			'    sidebar:',
+			'      visible: true',
 			'',
 		].join('\n'), 'utf8');
 
 		const created = await runCli(root, ['spec', 'create', '--title', 'Custom lane spec', '--status', 'Building']);
+		const shipped = await runCli(root, ['spec', 'status', 'SPEC-0001', 'Shipped']);
+		const lanes = await runCli(root, ['spec', 'lanes']);
 		const invalid = await runCli(root, ['spec', 'status', 'SPEC-0001', 'Active']);
 
 		assert.match(created.stdout, /Created SPEC-0001 Custom lane spec/);
 		assert.match(created.stdout, /Status: Building/);
-		assert.match(invalid.stderr, /Unknown spec status "Active"\. Known lanes: Icebox, Building, Shipped\./);
+		assert.match(shipped.stdout, /Status: Building -> Shipped/);
+		assert.equal(lanes.stdout, 'Icebox\nBuilding\n');
+		assert.match(invalid.stderr, /Unknown spec status "Active"\. Known statuses: Icebox, Building, Shipped\./);
 		assert.equal(invalid.exitCode, 1);
 	});
 

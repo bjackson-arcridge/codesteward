@@ -8,6 +8,16 @@ export const defaultSpecLanes = ['Backlog', 'Todo', 'Active', 'Done'] as const;
 const specsDirectoryName = 'specs';
 const workflowFileName = 'workflow.yml';
 
+export interface SpecWorkflowStatus {
+	readonly name: string;
+	readonly kanbanVisible: boolean;
+	readonly sidebarVisible: boolean;
+}
+
+export interface SpecWorkflow {
+	readonly statuses: readonly SpecWorkflowStatus[];
+}
+
 export interface SpecRecord {
 	readonly id: string;
 	readonly title: string;
@@ -47,27 +57,43 @@ export function specsWorkflowPath(paths: StorePaths): string {
 
 export function defaultSpecsWorkflow(): string {
 	return [
-		'lanes:',
-		...defaultSpecLanes.map(lane => `  - ${lane}`),
+		'statuses:',
+		...defaultWorkflow().statuses.flatMap(status => [
+			`  - name: ${status.name}`,
+			'    kanban:',
+			`      visible: ${status.kanbanVisible ? 'true' : 'false'}`,
+			'    sidebar:',
+			`      visible: ${status.sidebarVisible ? 'true' : 'false'}`,
+		]),
 		'',
 	].join('\n');
 }
 
-export async function readSpecLanes(paths: StorePaths): Promise<readonly string[]> {
+export async function readSpecWorkflow(paths: StorePaths): Promise<SpecWorkflow> {
 	const workflowPath = specsWorkflowPath(paths);
 	if (!await fileExists(workflowPath)) {
-		return defaultSpecLanes;
+		return defaultWorkflow();
 	}
 
 	const contents = await fs.readFile(workflowPath, 'utf8');
-	const lanes = parseWorkflowLanes(contents);
-	return lanes.length === 0 ? defaultSpecLanes : lanes;
+	const workflow = parseSpecWorkflow(contents);
+	return workflow.statuses.length === 0 ? defaultWorkflow() : workflow;
+}
+
+export async function readSpecLanes(paths: StorePaths): Promise<readonly string[]> {
+	return (await readSpecWorkflow(paths)).statuses
+		.filter(status => status.kanbanVisible)
+		.map(status => status.name);
+}
+
+export async function readSpecStatuses(paths: StorePaths): Promise<readonly string[]> {
+	return (await readSpecWorkflow(paths)).statuses.map(status => status.name);
 }
 
 export async function createSpec(paths: StorePaths, input: SpecCreateInput): Promise<SpecCreateResult> {
-	const lanes = await readSpecLanes(paths);
-	const status = input.status ?? lanes[0] ?? defaultSpecLanes[0];
-	requireValidSpecStatus(status, lanes);
+	const workflow = await readSpecWorkflow(paths);
+	const status = input.status ?? workflow.statuses.find(item => item.kanbanVisible)?.name ?? workflow.statuses[0]?.name ?? defaultSpecLanes[0];
+	requireValidSpecStatus(status, workflow.statuses.map(item => item.name));
 
 	const id = await nextSpecId(paths);
 	const filePath = path.join(specsDirectory(paths), `${id}-${slugify(input.title)}.md`);
@@ -111,8 +137,8 @@ export async function findSpec(paths: StorePaths, id: string): Promise<SpecRecor
 }
 
 export async function setSpecStatus(paths: StorePaths, id: string, status: string, updated: string): Promise<SpecStatusResult> {
-	const lanes = await readSpecLanes(paths);
-	requireValidSpecStatus(status, lanes);
+	const statuses = await readSpecStatuses(paths);
+	requireValidSpecStatus(status, statuses);
 	const spec = await requireSpec(paths, id);
 	const markdown = await fs.readFile(spec.filePath, 'utf8');
 	const { frontmatter, body } = parseMarkdownWithFrontmatter(markdown);
@@ -224,31 +250,111 @@ function renderSpecBoardMarkdown(specs: readonly SpecRecord[], lanes: readonly s
 	return lines.join('\n');
 }
 
-function parseWorkflowLanes(markdown: string): readonly string[] {
-	const lanes: string[] = [];
-	let inLanes = false;
+function defaultWorkflow(): SpecWorkflow {
+	return {
+		statuses: [
+			...defaultSpecLanes.map(name => ({
+				name,
+				kanbanVisible: true,
+				sidebarVisible: true,
+			})),
+			{
+				name: 'Archive',
+				kanbanVisible: false,
+				sidebarVisible: true,
+			},
+		],
+	};
+}
+
+function parseSpecWorkflow(markdown: string): SpecWorkflow {
+	return { statuses: parseWorkflowStatuses(markdown) };
+}
+
+function parseWorkflowStatuses(markdown: string): readonly SpecWorkflowStatus[] {
+	const statuses: SpecWorkflowStatus[] = [];
+	let inStatuses = false;
+	let current: { name: string; kanbanVisible: boolean; sidebarVisible: boolean } | undefined;
+	let visibilityScope: 'kanban' | 'sidebar' | undefined;
+
+	const commit = (): void => {
+		if (current !== undefined && current.name.length > 0) {
+			statuses.push(current);
+		}
+	};
+
 	for (const line of markdown.split(/\r?\n/)) {
-		if (/^\s*lanes:\s*$/.test(line)) {
-			inLanes = true;
+		if (/^\s*statuses:\s*$/.test(line)) {
+			inStatuses = true;
 			continue;
 		}
 
-		if (!inLanes) {
-			continue;
-		}
-
-		const item = /^\s*-\s+(.+?)\s*$/.exec(line);
-		if (item !== null) {
-			lanes.push(stripYamlString(item[1]));
+		if (!inStatuses) {
 			continue;
 		}
 
 		if (line.trim().length > 0 && !line.startsWith(' ') && !line.startsWith('\t')) {
 			break;
 		}
+
+		const namedItem = /^\s*-\s+name:\s+(.+?)\s*$/.exec(line);
+		if (namedItem !== null) {
+			commit();
+			current = {
+				name: stripYamlString(namedItem[1]),
+				kanbanVisible: true,
+				sidebarVisible: true,
+			};
+			visibilityScope = undefined;
+			continue;
+		}
+
+		const scalarItem = /^\s*-\s+(.+?)\s*$/.exec(line);
+		if (scalarItem !== null) {
+			commit();
+			current = {
+				name: stripYamlString(scalarItem[1]),
+				kanbanVisible: true,
+				sidebarVisible: true,
+			};
+			visibilityScope = undefined;
+			continue;
+		}
+
+		const scope = /^\s*(kanban|sidebar):\s*$/.exec(line);
+		if (scope !== null) {
+			visibilityScope = scope[1] as 'kanban' | 'sidebar';
+			continue;
+		}
+
+		const visible = /^\s*visible:\s*(true|false)\s*$/i.exec(line);
+		if (visible !== null && current !== undefined && visibilityScope !== undefined) {
+			const value = visible[1].toLowerCase() === 'true';
+			if (visibilityScope === 'kanban') {
+				current.kanbanVisible = value;
+			} else {
+				current.sidebarVisible = value;
+			}
+		}
 	}
 
-	return [...new Set(lanes.filter(lane => lane.length > 0))];
+	commit();
+	return uniqueStatuses(statuses);
+}
+
+function uniqueStatuses(statuses: readonly SpecWorkflowStatus[]): readonly SpecWorkflowStatus[] {
+	const names = new Set<string>();
+	const unique: SpecWorkflowStatus[] = [];
+	for (const status of statuses) {
+		if (status.name.length === 0 || names.has(status.name)) {
+			continue;
+		}
+
+		names.add(status.name);
+		unique.push(status);
+	}
+
+	return unique;
 }
 
 function stripYamlString(value: string): string {
@@ -257,7 +363,7 @@ function stripYamlString(value: string): string {
 
 function requireValidSpecStatus(status: string, lanes: readonly string[]): void {
 	if (!lanes.includes(status)) {
-		throw new Error(`Unknown spec status "${status}". Known lanes: ${lanes.join(', ')}.`);
+		throw new Error(`Unknown spec status "${status}". Known statuses: ${lanes.join(', ')}.`);
 	}
 }
 

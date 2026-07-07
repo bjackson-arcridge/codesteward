@@ -1,12 +1,11 @@
 ---
 id: SPEC-0002
 title: Specs archive workflow
-status: Backlog
+status: Done
 created: 2026-07-07
 updated: 2026-07-07
 created_by: bjackson
 ---
-
 # Specs archive workflow
 
 ## Discovery
@@ -67,12 +66,19 @@ created_by: bjackson
 
 ## Open Questions
 
-- Should workflow configuration add `sidebar.visible` when sidebar-specific hiding becomes necessary, or wait until a concrete sidebar use case requires it?
+- Resolved: workflow configuration includes `sidebar.visible`; the VS Code specs sidebar honors it even though current project workflow keeps archived specs sidebar-visible.
 
 ## Implementation Log
 
 - 2026-07-07: Created this planning spec.
 - 2026-07-07: Clarified that archive is additive and does not replace delete.
 - 2026-07-07: Resolved visibility/listing questions: Archive uses `kanban.visible: false`, remains in unfiltered CLI lists, and should be list-filterable by status.
+- 2026-07-07: Implemented `statuses:` workflow entries with `kanban.visible` and `sidebar.visible`.
+- 2026-07-07: Added `Archive` as a hidden Kanban status in the default and project workflows.
+- 2026-07-07: Added `sundial spec list --status <status>` filtering and hidden-status status updates.
+- 2026-07-07: Added a specs board archive action that sends a typed `move` message to `Archive`; delete remains a separate action.
 
 ## Test Log
+
+- 2026-07-07: `npm --workspace packages/cli run test:unit`
+- 2026-07-07: `npm --workspace packages/vscode run test:unit`

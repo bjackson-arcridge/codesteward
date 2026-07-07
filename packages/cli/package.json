@@ -1,6 +1,6 @@
 {
   "name": "@arcridge/sundial",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Sundial project-local CLI and Decision Record store logic.",
   "license": "Apache-2.0",
   "author": "arcridge",

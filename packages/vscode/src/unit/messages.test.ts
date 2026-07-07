@@ -309,6 +309,7 @@ describe('specs board message guards', () => {
 			diagnosticsEnabled: true,
 		}), true);
 		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'open' }), true);
+		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'archive' }), true);
 		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'delete', workspace: 'repo' }), true);
 		assert.equal(isSpecsHost({ kind: 'diagnosticCreateSpec', title: 'New spec', status: 'Backlog' }), true);
 		assert.equal(isSpecsHost({ kind: 'diagnosticMoveSpec', id: 'SPEC-0001', status: 'Active' }), true);

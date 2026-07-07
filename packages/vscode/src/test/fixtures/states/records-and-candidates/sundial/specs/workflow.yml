@@ -1,5 +1,21 @@
-lanes:
-  - Backlog
-  - Todo
-  - Active
-  - Done
+statuses:
+  - name: Backlog
+    kanban:
+      visible: true
+    sidebar:
+      visible: true
+  - name: Todo
+    kanban:
+      visible: true
+    sidebar:
+      visible: true
+  - name: Active
+    kanban:
+      visible: true
+    sidebar:
+      visible: true
+  - name: Done
+    kanban:
+      visible: true
+    sidebar:
+      visible: true
