@@ -182,6 +182,36 @@ describe('store bootstrap', () => {
 		assert.equal(claudeDesignSkill, sharedDesignSkill);
 		assert.equal(sharedDesignSkill, await readTemplate('skills/generic/decision-aware-design/SKILL.md'));
 	});
+
+	test('keeps shared spec-driven guidance across duplicated decision-aware skill templates', async () => {
+		const templates = [
+			'skills/claude/decision-aware-design/SKILL.md',
+			'skills/claude/decision-aware-implement/SKILL.md',
+			'skills/codex/decision-aware-design/SKILL.md',
+			'skills/codex/decision-aware-implement/SKILL.md',
+			'skills/generic/decision-aware-design/SKILL.md',
+			'skills/generic/decision-aware-implement/SKILL.md',
+		] as const;
+		const sharedFragments = [
+			'sundial spec create --title "<title>" [--status <lane>]',
+			'sundial spec lanes',
+			'Do not hand-create spec files or `board.md`.',
+			'packages/cli/src/core/specs.ts#renderSpecMarkdown',
+			'Discovery, Applicable Decision Records, Applicable Research Notes, Planned Approach, Rejected Alternatives, Test Plan, Open Questions, Implementation Log, and Test Log.',
+			'sundial spec status <id> <status>',
+			'sundial spec update-status <id> <status>',
+			'Edit the spec markdown body directly',
+			'Keep specs living and forward-looking',
+			'Rejected Alternatives, Implementation Log, and Test Log',
+		] as const;
+
+		for (const template of templates) {
+			const contents = await readTemplate(template);
+			for (const fragment of sharedFragments) {
+				assert.ok(contents.includes(fragment), `${template} is missing shared spec guidance: ${fragment}`);
+			}
+		}
+	});
 });
 
 async function readTemplate(relativePath: string): Promise<string> {

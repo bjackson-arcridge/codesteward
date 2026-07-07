@@ -15,6 +15,8 @@ Store research when it captures specific facts a future model could get wrong, i
 
 Do not store generic best practices, broad summaries that would fit better as a DR, speculation, or facts that were not actually verified.
 
+Research notes record only findings and unknowns. Do not include recommendations, next steps, implementation plans, design implications, or governing rules.
+
 ## File Format
 
 Create or update a Markdown file in `sundial/research/` with frontmatter:
@@ -31,7 +33,7 @@ updated: 2026-07-07
 
 ## Research
 
-Long-form notes, exact signatures, examples, constraints, and citations or file references.
+Long-form findings, unknowns, exact signatures, examples, constraints, and citations or file references.
 ```
 
 Use the next available `RES-####` id. Keep `summary` to one or two sentences; it is shown in list views beside decisions. Put the detailed material in the body so agents must actively open the research file before relying on it.
@@ -40,5 +42,5 @@ Use the next available `RES-####` id. Keep `summary` to one or two sentences; it
 
 1. Run `sundial domains` and choose the narrowest relevant domain.
 2. Check existing files in `sundial/research/` for related material before creating a new record.
-3. Write specific, sourced details in the body. Include local file references, official docs URLs, command output context, or dates when they matter.
+3. Write specific, sourced findings and unknowns in the body. Include local file references, official docs URLs, command output context, or dates when they matter.
 4. Tell the user which research file you created or updated.
