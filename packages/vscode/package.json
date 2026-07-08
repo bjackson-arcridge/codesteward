@@ -209,6 +209,12 @@
           "type": "string",
           "default": "sundial",
           "description": "Path to the Sundial CLI executable."
+        },
+        "sundial.comments.renderInlineBubbles": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Render HTML comments in Markdown files as inline chat bubbles."
         }
       }
     },

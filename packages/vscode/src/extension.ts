@@ -28,6 +28,7 @@ import type { SpecCard, SpecsRenderDiagnostic } from './webviews/specs/messages'
 import type { WebviewToHost as WelcomeWebviewToHost, WelcomeRenderDiagnostic } from './webviews/welcome/messages';
 import { renderMarkdownPreviewSource } from './markdownPreview';
 import { sundialCliCommand, sundialCliInstallArgs } from './sundialCli';
+import { MarkdownCommentBubbleDecorations } from './commentBubbles';
 
 const execFileAsync = promisify(execFile);
 const markdownPreviewScheme = 'sundial-preview';
@@ -97,6 +98,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	activeMarkdownPreviewProvider = markdownPreviewProvider;
 	context.subscriptions.push(markdownPreviewProvider);
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(markdownPreviewScheme, markdownPreviewProvider));
+	context.subscriptions.push(new MarkdownCommentBubbleDecorations());
 	context.subscriptions.push({
 		dispose: () => {
 			if (activeMarkdownPreviewProvider === markdownPreviewProvider) {

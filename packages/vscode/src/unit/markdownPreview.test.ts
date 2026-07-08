@@ -71,4 +71,28 @@ describe('renderMarkdownPreviewSource', () => {
 	test('leaves markdown without frontmatter unchanged', () => {
 		assert.equal(renderMarkdownPreviewSource('## Decision\n\nNo frontmatter.\n'), '## Decision\n\nNo frontmatter.\n');
 	});
+
+	test('renders HTML comments as chat bubbles in preview source', () => {
+		const rendered = renderMarkdownPreviewSource([
+			'---',
+			'title: Commented',
+			'---',
+			'',
+			'Before',
+			'<!-- plain <text>',
+			'second line -->',
+			'After',
+			'',
+		].join('\n'));
+
+		assert.equal(rendered, [
+			'# Commented',
+			'**domain:** all',
+			'',
+			'Before',
+			'<div style="margin: 0.35em 0 0.35em 0.5in; padding: 10px; border: 1px solid currentColor; border-radius: 0.5em; width: calc(100% - 0.5in); box-sizing: border-box;">plain &lt;text&gt;<br>second line</div>',
+			'After',
+			'',
+		].join('\n'));
+	});
 });

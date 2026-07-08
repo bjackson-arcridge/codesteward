@@ -28,6 +28,7 @@ Provider plugins are customization/capability packaging surfaces, not the primar
 
 The launch prompt should be intentionally small: one line that names the phase, points at the spec, and tells the provider to use the relevant Sundial skill/instructions. The detailed behavior for planning, implementation, and review belongs in skills and managed agent instructions rather than in a large prompt assembled by the VS Code extension.
 
+
 ## Applicable Decision Records
 
 - DR-0001 Codex bootstrap uses full-auto sandbox.

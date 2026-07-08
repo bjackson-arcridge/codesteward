@@ -10,6 +10,9 @@ interface MenuContribution {
 interface PackageManifest {
 	readonly contributes?: {
 		readonly commands?: readonly MenuContribution[];
+		readonly configuration?: {
+			readonly properties?: Record<string, { readonly type?: string; readonly default?: unknown; readonly scope?: string; readonly description?: string }>;
+		};
 		readonly menus?: Record<string, readonly MenuContribution[]>;
 	};
 }
@@ -74,5 +77,17 @@ describe('package manifest contributions', () => {
 		assert.match(source, /createFileSystemWatcher\('\*\*\/sundial\/\{decisions,research,specs\}\/\*\*\/\*\.\{md,yml,yaml\}'\)/);
 		assert.match(source, /await refreshGovernanceViews\(welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider, researchProvider, specsProvider\);/);
 		assert.match(source, /await specsBoardPanel\.refresh\(\);/);
+	});
+
+	test('contributes a resource-scoped setting for markdown comment bubbles', () => {
+		const manifest = readPackageManifest();
+		const setting = manifest.contributes?.configuration?.properties?.['sundial.comments.renderInlineBubbles'];
+
+		assert.deepEqual(setting, {
+			type: 'boolean',
+			default: true,
+			scope: 'resource',
+			description: 'Render HTML comments in Markdown files as inline chat bubbles.',
+		});
 	});
 });
