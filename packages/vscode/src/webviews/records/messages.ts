@@ -24,6 +24,8 @@ export interface RecordRenderDiagnostic {
 	readonly domainSelectOptionCount?: number;
 	readonly groupCount?: number;
 	readonly openBoardButtonVisible?: boolean;
+	readonly specAddFormVisible?: boolean;
+	readonly specDeleteActionCount?: number;
 }
 
 export type HostToWebview =
@@ -33,17 +35,25 @@ export type HostToWebview =
 		domainFilter?: string;
 		domainOptions?: readonly string[];
 		specGroups?: readonly SpecRecordGroup[];
+		specStatusOptions?: readonly string[];
+		workspaces?: readonly string[];
 		actionMode?: RecordActionMode;
 		emptyText?: string;
 		diagnosticsEnabled?: boolean;
 	}
 	| { kind: 'diagnosticSelectFilter'; filter: 'domain'; value?: string }
-	| { kind: 'diagnosticClickRecord'; id: string; target: 'title' | 'preview' };
+	| { kind: 'diagnosticClickRecord'; id: string; target: 'title' | 'preview' | 'delete'; workspace?: string }
+	| { kind: 'diagnosticCreateSpec'; title: string; status?: string; workspace?: string }
+	| { kind: 'diagnosticMoveSpec'; id: string; status: string; workspace?: string }
+	| { kind: 'diagnosticDeleteSpec'; id: string; workspace?: string; skipConfirmation?: boolean };
 
 export type WebviewToHost =
 	| { kind: 'preview'; id: string }
 	| { kind: 'edit'; id: string }
 	| { kind: 'openBoard' }
+	| { kind: 'createSpec'; title: string; status: string; workspace?: string }
+	| { kind: 'moveSpec'; id: string; status: string; workspace?: string }
+	| { kind: 'deleteSpec'; id: string; workspace?: string; skipConfirmation?: boolean }
 	| { kind: 'setDomainFilter'; domainFilter?: string }
 	| { kind: 'toggleSpecGroup'; status: string; collapsed: boolean }
 	| { kind: 'toggleEnabled'; id: string; enabled: boolean }
@@ -65,6 +75,8 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 		domainFilter?: unknown;
 		domainOptions?: unknown;
 		specGroups?: unknown;
+		specStatusOptions?: unknown;
+		workspaces?: unknown;
 		actionMode?: unknown;
 		emptyText?: unknown;
 		diagnosticsEnabled?: unknown;
@@ -72,11 +84,34 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 		value?: unknown;
 		id?: unknown;
 		target?: unknown;
+		title?: unknown;
+		status?: unknown;
+		workspace?: unknown;
+		skipConfirmation?: unknown;
 	};
+
+	if (message.kind === 'diagnosticCreateSpec') {
+		return typeof message.title === 'string'
+			&& (message.status === undefined || typeof message.status === 'string')
+			&& (message.workspace === undefined || typeof message.workspace === 'string');
+	}
+
+	if (message.kind === 'diagnosticMoveSpec') {
+		return typeof message.id === 'string'
+			&& typeof message.status === 'string'
+			&& (message.workspace === undefined || typeof message.workspace === 'string');
+	}
+
+	if (message.kind === 'diagnosticDeleteSpec') {
+		return typeof message.id === 'string'
+			&& (message.workspace === undefined || typeof message.workspace === 'string')
+			&& (message.skipConfirmation === undefined || typeof message.skipConfirmation === 'boolean');
+	}
 
 	if (message.kind === 'diagnosticClickRecord') {
 		return typeof message.id === 'string'
-			&& (message.target === 'title' || message.target === 'preview');
+			&& (message.target === 'title' || message.target === 'preview' || message.target === 'delete')
+			&& (message.workspace === undefined || typeof message.workspace === 'string');
 	}
 
 	if (message.kind === 'diagnosticSelectFilter') {
@@ -97,6 +132,14 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 	}
 
 	if (message.specGroups !== undefined && !isSpecRecordGroupArray(message.specGroups)) {
+		return false;
+	}
+
+	if (message.specStatusOptions !== undefined && !isStringArray(message.specStatusOptions)) {
+		return false;
+	}
+
+	if (message.workspaces !== undefined && !isStringArray(message.workspaces)) {
 		return false;
 	}
 
@@ -128,6 +171,7 @@ function isRecordSummary(value: unknown): value is RecordSummary {
 		summary?: unknown;
 		status?: unknown;
 		workspace?: unknown;
+		skipConfirmation?: unknown;
 	};
 	return typeof record.id === 'string'
 		&& typeof record.title === 'string'
@@ -173,6 +217,9 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 		retiredBy?: unknown;
 		status?: unknown;
 		collapsed?: unknown;
+		title?: unknown;
+		workspace?: unknown;
+		skipConfirmation?: unknown;
 	};
 	if (message.kind === 'preview'
 		|| message.kind === 'edit'
@@ -198,6 +245,24 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 		return typeof message.status === 'string' && typeof message.collapsed === 'boolean';
 	}
 
+	if (message.kind === 'createSpec') {
+		return typeof message.title === 'string'
+			&& typeof message.status === 'string'
+			&& (message.workspace === undefined || typeof message.workspace === 'string');
+	}
+
+	if (message.kind === 'moveSpec') {
+		return typeof message.id === 'string'
+			&& typeof message.status === 'string'
+			&& (message.workspace === undefined || typeof message.workspace === 'string');
+	}
+
+	if (message.kind === 'deleteSpec') {
+		return typeof message.id === 'string'
+			&& (message.workspace === undefined || typeof message.workspace === 'string')
+			&& (message.skipConfirmation === undefined || typeof message.skipConfirmation === 'boolean');
+	}
+
 	if (message.kind === 'rendered') {
 		return isRecordRenderDiagnostic(message.diagnostic);
 	}
@@ -220,6 +285,8 @@ function isRecordRenderDiagnostic(value: unknown): value is RecordRenderDiagnost
 		domainSelectOptionCount?: unknown;
 		groupCount?: unknown;
 		openBoardButtonVisible?: unknown;
+		specAddFormVisible?: unknown;
+		specDeleteActionCount?: unknown;
 	};
 	return typeof diagnostic.recordCount === 'number'
 		&& typeof diagnostic.cardCount === 'number'
@@ -227,7 +294,9 @@ function isRecordRenderDiagnostic(value: unknown): value is RecordRenderDiagnost
 		&& (diagnostic.domainFilter === undefined || typeof diagnostic.domainFilter === 'string')
 		&& (diagnostic.domainSelectOptionCount === undefined || typeof diagnostic.domainSelectOptionCount === 'number')
 		&& (diagnostic.groupCount === undefined || typeof diagnostic.groupCount === 'number')
-		&& (diagnostic.openBoardButtonVisible === undefined || typeof diagnostic.openBoardButtonVisible === 'boolean');
+		&& (diagnostic.openBoardButtonVisible === undefined || typeof diagnostic.openBoardButtonVisible === 'boolean')
+		&& (diagnostic.specAddFormVisible === undefined || typeof diagnostic.specAddFormVisible === 'boolean')
+		&& (diagnostic.specDeleteActionCount === undefined || typeof diagnostic.specDeleteActionCount === 'number');
 }
 
 function isStringArray(value: unknown): value is readonly string[] {

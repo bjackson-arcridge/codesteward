@@ -54,10 +54,16 @@ describe('package manifest contributions', () => {
 		);
 	});
 
-	test('routes spec board moves through the CLI status command', () => {
+	test('routes spec sidebar and board moves through the CLI status command', () => {
 		const source = readExtensionSource();
 
-		assert.match(source, /if \(message\.kind === 'move'\) {\s*await moveSpecFromBoard\(message\.id, message\.status, message\.workspace, specsProvider, specsBoardPanel\);/);
+		assert.match(source, /if \(message\.kind === 'moveSpec'\) {\s*await moveSpec\(message\.id, message\.status, message\.workspace, specsProvider, specsBoardPanel\);/);
+		assert.match(source, /if \(message\.kind === 'move'\) {\s*await moveSpec\(message\.id, message\.status, message\.workspace, specsProvider, specsBoardPanel\);/);
+		assert.match(source, /if \(message\.kind === 'createSpec'\) {\s*await createSpec\(message\.title, message\.status, message\.workspace, specsProvider, specsBoardPanel\);/);
+		assert.match(source, /if \(message\.kind === 'deleteSpec'\) {\s*await deleteSpec\(message\.id, message\.workspace, specsProvider, specsBoardPanel, message\.skipConfirmation === true\);/);
+		assert.match(source, /const output = await runSundial\(root, \['spec', 'create', '--title', title, '--status', status\]\);/);
+		assert.match(source, /await openMarkdownSource\(createdPath\);/);
+		assert.match(source, /stores\.map\(store => listSpecLanes\(store\.root\)\)/);
 		assert.match(source, /await runLifecycle\(record\.id, \['spec', 'status', record\.id, status\], filePath\);/);
 		assert.doesNotMatch(source, /frontmatter[\s\S]{0,120}message\.status/);
 	});

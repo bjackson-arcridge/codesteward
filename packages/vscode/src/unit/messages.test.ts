@@ -232,8 +232,15 @@ describe('records message guards', () => {
 				collapsed: false,
 				records: [{ id: 'SPEC-0001', title: 'Alpha spec', domain: 'all', enabled: true, status: 'Active' }],
 			}],
+			specStatusOptions: ['Backlog', 'Active'],
+			workspaces: ['repo'],
 			actionMode: 'specs',
 		}), true);
+		assert.equal(isRecordsHost({ kind: 'diagnosticClickRecord', id: 'SPEC-0001', target: 'delete', workspace: 'repo' }), true);
+		assert.equal(isRecordsHost({ kind: 'diagnosticCreateSpec', title: 'New spec' }), true);
+		assert.equal(isRecordsHost({ kind: 'diagnosticCreateSpec', title: 'New spec', status: 'Backlog', workspace: 'repo' }), true);
+		assert.equal(isRecordsHost({ kind: 'diagnosticMoveSpec', id: 'SPEC-0001', status: 'Archive', workspace: 'repo' }), true);
+		assert.equal(isRecordsHost({ kind: 'diagnosticDeleteSpec', id: 'SPEC-0001', workspace: 'repo', skipConfirmation: true }), true);
 	});
 
 	test('reject host state with malformed records metadata', () => {
@@ -262,6 +269,10 @@ describe('records message guards', () => {
 			records: [],
 			actionMode: 'archived',
 		}), false);
+		assert.equal(isRecordsHost({ kind: 'diagnosticClickRecord', id: 'SPEC-0001', target: 'edit' }), false);
+		assert.equal(isRecordsHost({ kind: 'diagnosticCreateSpec', status: 'Backlog' }), false);
+		assert.equal(isRecordsHost({ kind: 'diagnosticMoveSpec', id: 'SPEC-0001' }), false);
+		assert.equal(isRecordsHost({ kind: 'diagnosticDeleteSpec', id: 'SPEC-0001', skipConfirmation: 'yes' }), false);
 		assert.equal(isRecordsHost({
 			kind: 'state',
 			records: [],
@@ -280,6 +291,9 @@ describe('records message guards', () => {
 		assert.equal(isRecordsClient({ kind: 'promote', id: 'CAND-1' }), true);
 		assert.equal(isRecordsClient({ kind: 'delete', id: 'CAND-1' }), true);
 		assert.equal(isRecordsClient({ kind: 'openBoard' }), true);
+		assert.equal(isRecordsClient({ kind: 'createSpec', title: 'New spec', status: 'Backlog', workspace: 'repo' }), true);
+		assert.equal(isRecordsClient({ kind: 'moveSpec', id: 'SPEC-0001', status: 'Archive', workspace: 'repo' }), true);
+		assert.equal(isRecordsClient({ kind: 'deleteSpec', id: 'SPEC-0001', workspace: 'repo', skipConfirmation: true }), true);
 		assert.equal(isRecordsClient({ kind: 'toggleSpecGroup', status: 'Active', collapsed: true }), true);
 		assert.equal(isRecordsClient({ kind: 'clearFilters' }), true);
 		assert.equal(isRecordsClient({ kind: 'requestRefresh' }), true);
@@ -293,6 +307,8 @@ describe('records message guards', () => {
 				domainSelectOptionCount: 2,
 				groupCount: 3,
 				openBoardButtonVisible: true,
+				specAddFormVisible: true,
+				specDeleteActionCount: 1,
 			},
 		}), true);
 	});
@@ -303,6 +319,9 @@ describe('records message guards', () => {
 		assert.equal(isRecordsClient({ kind: 'toggleEnabled', id: 'DR-1', enabled: 'false' }), false);
 		assert.equal(isRecordsClient({ kind: 'retire', id: 'DR-1' }), false);
 		assert.equal(isRecordsClient({ kind: 'toggleSpecGroup', status: 'Active' }), false);
+		assert.equal(isRecordsClient({ kind: 'createSpec', title: 'New spec' }), false);
+		assert.equal(isRecordsClient({ kind: 'moveSpec', id: 'SPEC-0001' }), false);
+		assert.equal(isRecordsClient({ kind: 'deleteSpec', id: 'SPEC-0001', skipConfirmation: 'yes' }), false);
 		assert.equal(isRecordsClient({
 			kind: 'rendered',
 			diagnostic: { recordCount: 1, cardCount: '1', emptyVisible: false },

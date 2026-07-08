@@ -1,5 +1,6 @@
 import * as assert from 'assert';
 import { execFile } from 'node:child_process';
+import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
 import * as vscode from 'vscode';
@@ -130,6 +131,31 @@ suite('Scenario: records-and-candidates', () => {
 		await waitForActiveTextDocument(specPath);
 	});
 
+	test('creates, moves, and deletes specs from the sidebar', async () => {
+		await useLocalSundialCli();
+		await activateExtension();
+		await waitForWebviewDiagnostics();
+		await focusSpecsView();
+
+		await vscode.commands.executeCommand('sundial.internal.specs.create', 'Sidebar default spec');
+		const created = await waitForSpecByTitle('Sidebar default spec');
+		assert.equal(await readSpecStatus(created.filePath), 'Backlog');
+		await waitForActiveTextDocument(created.filePath);
+		await waitForSpecsCount(expectedSpecCount + 1);
+
+		await vscode.commands.executeCommand('sundial.specs.openBoard');
+		await waitForSpecsBoardCount(expectedSpecCount + 1);
+
+		await vscode.commands.executeCommand('sundial.internal.specs.move', created.id, 'Archive');
+		await waitForSpecStatus(created.filePath, 'Archive');
+		await waitForSpecsCount(expectedSpecCount + 1);
+		await waitForSpecsBoardCount(expectedSpecCount + 1);
+
+		await vscode.commands.executeCommand('sundial.internal.specs.delete', created.id);
+		await waitForSpecDeleted(created.filePath);
+		await waitForSpecsCount(expectedSpecCount);
+	});
+
 	test('accepts and rejects candidates through the extension lifecycle', async () => {
 		await useLocalSundialCli();
 		await activateExtension();
@@ -230,6 +256,73 @@ function localSundialCliPath(): string {
 	return path.resolve(extension.extensionPath, '..', 'cli', 'dist', 'main.js');
 }
 
+interface SpecFile {
+	readonly id: string;
+	readonly filePath: string;
+}
+
+async function waitForSpecByTitle(title: string, timeoutMs = 10000): Promise<SpecFile> {
+	const started = Date.now();
+	let lastFiles: readonly string[] = [];
+
+	while (Date.now() - started < timeoutMs) {
+		const specsDir = path.join(workspaceRoot(), 'sundial', 'specs');
+		const files = (await fs.readdir(specsDir)).filter(file => /^SPEC-\d+-.+\.md$/.test(file));
+		lastFiles = files;
+		for (const file of files) {
+			const filePath = path.join(specsDir, file);
+			const text = await fs.readFile(filePath, 'utf8');
+			if (text.includes(`title: ${title}`)) {
+				return {
+					id: file.match(/^(SPEC-\d+)/)?.[1] ?? path.basename(file, '.md'),
+					filePath,
+				};
+			}
+		}
+
+		await wait(100);
+	}
+
+	throw new Error(`Timed out waiting for spec "${title}"; saw files ${JSON.stringify(lastFiles)}`);
+}
+
+async function readSpecStatus(filePath: string): Promise<string | undefined> {
+	const text = await fs.readFile(filePath, 'utf8');
+	return text.match(/^status:\s*(.+)$/m)?.[1]?.trim();
+}
+
+async function waitForSpecStatus(filePath: string, status: string, timeoutMs = 10000): Promise<void> {
+	const started = Date.now();
+	let lastStatus: string | undefined;
+
+	while (Date.now() - started < timeoutMs) {
+		lastStatus = await readSpecStatus(filePath);
+		if (lastStatus === status) {
+			return;
+		}
+
+		await wait(100);
+	}
+
+	throw new Error(`Timed out waiting for ${path.basename(filePath)} status ${status}; last status was ${lastStatus}`);
+}
+
+async function waitForSpecDeleted(filePath: string, timeoutMs = 10000): Promise<void> {
+	const started = Date.now();
+
+	while (Date.now() - started < timeoutMs) {
+		try {
+			await fs.access(filePath);
+		} catch {
+			return;
+		}
+
+		await wait(100);
+	}
+
+	throw new Error(`Timed out waiting for deleted spec ${filePath}`);
+}
+
 interface ExpectedRecordFilterDiagnostics {
 	readonly recordCount: number;
 	readonly domainFilter?: string;
@@ -290,6 +383,49 @@ async function waitForGovernanceCounts(
 	}
 
 	throw new Error(`Timed out waiting for governance counts: ${JSON.stringify({ expected, last })}`);
+}
+
+async function waitForSpecsCount(expectedSpecCount: number, timeoutMs = 10000): Promise<ExtensionDiagnostics> {
+	const started = Date.now();
+	let last: ExtensionDiagnostics | undefined;
+
+	while (Date.now() - started < timeoutMs) {
+		await focusSpecsView();
+		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('sundial.internal.webviewDiagnostics');
+		if (
+			last.specsCount === expectedSpecCount
+			&& last.specsLastState?.recordCount === expectedSpecCount
+			&& last.specsLastRendered?.recordCount === expectedSpecCount
+			&& last.specsLastRendered?.cardCount === expectedSpecCount
+			&& last.specsLastRendered?.specAddFormVisible === true
+			&& last.specsLastRendered?.specDeleteActionCount === expectedSpecCount
+		) {
+			return last;
+		}
+
+		await wait(100);
+	}
+
+	throw new Error(`Timed out waiting for specs count: ${JSON.stringify({ expectedSpecCount, last })}`);
+}
+
+async function waitForSpecsBoardCount(expectedSpecCount: number, timeoutMs = 10000): Promise<ExtensionDiagnostics> {
+	const started = Date.now();
+	let last: ExtensionDiagnostics | undefined;
+
+	while (Date.now() - started < timeoutMs) {
+		last = await vscode.commands.executeCommand<ExtensionDiagnostics>('sundial.internal.webviewDiagnostics');
+		if (
+			last.specsBoardLastState?.specCount === expectedSpecCount
+			&& last.specsBoardLastRendered?.specCount === expectedSpecCount
+		) {
+			return last;
+		}
+
+		await wait(100);
+	}
+
+	throw new Error(`Timed out waiting for specs board count: ${JSON.stringify({ expectedSpecCount, last })}`);
 }
 
 async function waitForReturnedRecordsViewCount(expectedRecordCount: number): Promise<ExtensionDiagnostics> {

@@ -28,4 +28,23 @@ describe('Records app specs sidebar mode', () => {
 		assert.match(source, /kind: 'toggleSpecGroup'/);
 		assert.match(source, /this\.renderRecord\(record, \{ showStatusBadge: false \}\)/);
 	});
+
+	test('renders specs sidebar create, delete, and drag controls', () => {
+		const source = readRecordsAppSource();
+
+		assert.match(source, /private renderSpecAddForm\(\)/);
+		assert.match(source, /data-action="add-spec"/);
+		assert.match(source, /<input name="title" type="text" aria-label="Spec title" placeholder="New spec" autocomplete="off" \/>/);
+		assert.doesNotMatch(source, /<span>Status<\/span>/);
+		assert.doesNotMatch(source, /name="status"/);
+		assert.match(source, /private defaultSpecStatus\(\): string/);
+		assert.match(source, /return statuses\.includes\('Backlog'\) \? 'Backlog' : statuses\[0\] \?\? '';/);
+		assert.match(source, /kind: 'createSpec'/);
+		assert.match(source, /kind: 'deleteSpec'/);
+		assert.match(source, /data-record-target="delete"/);
+		assert.doesNotMatch(source, /if \(this\.actionMode === 'research' \|\| this\.actionMode === 'specs'\)/);
+		assert.match(source, /\?draggable=\$\{isSpec\}/);
+		assert.match(source, /@drop=\$\{\(event: DragEvent\) => this\.handleSpecGroupDrop\(event, group\.status\)\}/);
+		assert.match(source, /kind: 'moveSpec'/);
+	});
 });

@@ -41,6 +41,20 @@ export interface ExtensionDiagnostics {
 		readonly recordCount: number;
 		readonly cardCount: number;
 		readonly emptyVisible: boolean;
+		readonly groupCount?: number;
+		readonly openBoardButtonVisible?: boolean;
+		readonly specAddFormVisible?: boolean;
+		readonly specDeleteActionCount?: number;
+	};
+	readonly specsBoardLastState?: {
+		readonly laneCount: number;
+		readonly specCount: number;
+	};
+	readonly specsBoardLastRendered?: {
+		readonly laneCount: number;
+		readonly specCount: number;
+		readonly cardCount: number;
+		readonly emptyVisible: boolean;
 	};
 	readonly candidatesLastState?: {
 		readonly candidateCount: number;

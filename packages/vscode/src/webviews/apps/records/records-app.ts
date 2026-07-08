@@ -65,6 +65,24 @@ export class RecordsApp extends LitElement {
 				outline-offset: -1px;
 			}
 
+			input {
+				width: 100%;
+				min-width: 0;
+				height: 26px;
+				box-sizing: border-box;
+				padding: 3px 6px;
+				border: 1px solid var(--vscode-input-border, var(--vscode-widget-border, var(--cs-card-border)));
+				border-radius: 2px;
+				background: var(--vscode-input-background);
+				color: var(--vscode-input-foreground);
+				font: inherit;
+			}
+
+			input:focus {
+				outline: 1px solid var(--cs-focus);
+				outline-offset: -1px;
+			}
+
 			.id {
 				font-family: var(--vscode-editor-font-family);
 			}
@@ -95,6 +113,45 @@ export class RecordsApp extends LitElement {
 				cursor: pointer;
 			}
 
+			.spec-add-form {
+				display: grid;
+				grid-template-columns: minmax(0, 1fr) auto;
+				gap: 4px;
+				align-items: center;
+				margin: 0 0 8px;
+				padding: 0 0 8px;
+				border-bottom: 1px solid var(--cs-card-border);
+			}
+
+			.spec-add-form[data-has-workspaces='true'] {
+				grid-template-columns: minmax(0, 1fr) minmax(72px, 108px) auto;
+			}
+
+			.spec-add-button {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				gap: 6px;
+				min-height: 26px;
+				box-sizing: border-box;
+				padding: 3px 8px;
+				border: 1px solid var(--vscode-button-border, transparent);
+				border-radius: 2px;
+				background: var(--cs-button-bg);
+				color: var(--cs-button-fg);
+				font: inherit;
+				cursor: pointer;
+			}
+
+			.spec-add-button:hover {
+				background: var(--cs-button-hover);
+			}
+
+			.spec-add-button:focus-visible {
+				outline: 1px solid var(--cs-focus);
+				outline-offset: 2px;
+			}
+
 			.specs-launcher:hover {
 				background: var(--cs-button-hover);
 			}
@@ -107,6 +164,11 @@ export class RecordsApp extends LitElement {
 
 			.spec-group {
 				margin: 0 0 8px;
+			}
+
+			.spec-group[data-drop-target='true'] .group-toggle {
+				outline: 1px solid var(--cs-focus);
+				outline-offset: 1px;
 			}
 
 			.group-toggle {
@@ -149,6 +211,15 @@ export class RecordsApp extends LitElement {
 				display: grid;
 				gap: 6px;
 				margin-top: 4px;
+			}
+
+			cs-card.spec-card {
+				cursor: grab;
+			}
+
+			cs-card.spec-card[dragging='true'] {
+				opacity: 0.55;
+				cursor: grabbing;
 			}
 
 			@media (min-width: 260px) {
@@ -244,6 +315,9 @@ export class RecordsApp extends LitElement {
 	private promptReturnTarget?: HTMLElement;
 	@state() private records: readonly RecordSummary[] = [];
 	@state() private specGroups: readonly SpecRecordGroup[] = [];
+	@state() private specStatusOptions: readonly string[] = [];
+	@state() private workspaces: readonly string[] = [];
+	@state() private selectedWorkspace = '';
 	@state() private domainFilter?: string;
 	@state() private domainOptions: readonly string[] = [];
 	@state() private filtersEnabled = false;
@@ -251,6 +325,8 @@ export class RecordsApp extends LitElement {
 	@state() private emptyText = 'No accepted decision records yet.';
 	@state() private diagnosticsEnabled = false;
 	@state() private retirePromptRecordId?: string;
+	@state() private draggedSpec?: Pick<RecordSummary, 'id' | 'status' | 'workspace'>;
+	@state() private dragTargetStatus?: string;
 
 	connectedCallback(): void {
 		super.connectedCallback();
@@ -292,6 +368,8 @@ export class RecordsApp extends LitElement {
 				...(this.actionMode === 'specs' ? {
 					groupCount: this.renderRoot.querySelectorAll('.spec-group').length,
 					openBoardButtonVisible: this.renderRoot.querySelector('[data-action="open-kanban"]') !== null,
+					specAddFormVisible: this.renderRoot.querySelector('[data-action="add-spec"]') !== null,
+					specDeleteActionCount: this.renderRoot.querySelectorAll('[data-record-target="delete"]').length,
 				} : {}),
 			},
 		});
@@ -321,9 +399,33 @@ export class RecordsApp extends LitElement {
 				<cs-icon icon="list-tree"></cs-icon>
 				<span>Open Kanban View</span>
 			</button>
+			${this.renderSpecAddForm()}
 			${this.records.length === 0
 				? html`<div class="empty">${this.emptyText}</div>`
 				: this.renderSpecGroups()}
+		`;
+	}
+
+	private renderSpecAddForm() {
+		return html`
+			<form
+				class="spec-add-form"
+				data-action="add-spec"
+				data-has-workspaces=${this.workspaces.length > 1 ? 'true' : 'false'}
+				aria-label="Add spec"
+				@submit=${this.handleCreateSpec}
+			>
+				<input name="title" type="text" aria-label="Spec title" placeholder="New spec" autocomplete="off" />
+				${this.workspaces.length <= 1 ? nothing : html`
+					<select name="workspace" aria-label="Workspace" .value=${this.selectedWorkspace} @change=${this.handleWorkspaceChange}>
+						${this.workspaces.map(workspace => html`<option value=${workspace}>${workspace}</option>`)}
+					</select>
+				`}
+				<button class="spec-add-button" type="submit">
+					<cs-icon icon="add"></cs-icon>
+					<span>Add</span>
+				</button>
+			</form>
 		`;
 	}
 
@@ -337,7 +439,15 @@ export class RecordsApp extends LitElement {
 	private renderSpecGroup(group: SpecRecordGroup) {
 		const collapsed = group.collapsed === true;
 		return html`
-			<section class="spec-group" data-spec-group=${group.status}>
+			<section
+				class="spec-group"
+				data-spec-group=${group.status}
+				data-drop-target=${this.dragTargetStatus === group.status ? 'true' : 'false'}
+				@dragenter=${(event: DragEvent) => this.handleSpecGroupDragEnter(event, group.status)}
+				@dragover=${this.handleSpecGroupDragOver}
+				@dragleave=${(event: DragEvent) => this.handleSpecGroupDragLeave(event, group.status)}
+				@drop=${(event: DragEvent) => this.handleSpecGroupDrop(event, group.status)}
+			>
 				<button
 					class="group-toggle"
 					type="button"
@@ -376,8 +486,16 @@ export class RecordsApp extends LitElement {
 	private renderRecord(record: RecordSummary, options: { readonly showStatusBadge?: boolean } = {}) {
 		const retirePromptOpen = this.actionMode === 'accepted' && this.retirePromptRecordId === record.id;
 		const showStatusBadge = options.showStatusBadge ?? true;
+		const isSpec = this.actionMode === 'specs';
 		return html`
-			<cs-card>
+			<cs-card
+				class=${isSpec ? 'spec-card' : ''}
+				?draggable=${isSpec}
+				dragging=${this.draggedSpec?.id === record.id && this.draggedSpec?.workspace === record.workspace ? 'true' : 'false'}
+				data-spec-id=${record.id}
+				@dragstart=${(event: DragEvent) => this.handleSpecDragStart(event, record)}
+				@dragend=${this.handleSpecDragEnd}
+			>
 				<button
 					slot="title"
 					class="title-button"
@@ -385,6 +503,7 @@ export class RecordsApp extends LitElement {
 					title=${record.title}
 					data-record-id=${record.id}
 					data-record-target="title"
+					data-record-workspace=${record.workspace ?? nothing}
 					@click=${() => this.send({ kind: 'preview', id: record.id })}
 				>${record.title}</button>
 				<span slot="meta">
@@ -407,12 +526,30 @@ export class RecordsApp extends LitElement {
 	}
 
 	private renderActions(record: RecordSummary) {
+		if (this.actionMode === 'specs') {
+			return html`
+				<cs-icon-button
+					icon="trash"
+					label="Delete spec"
+					data-record-id=${record.id}
+					data-record-target="delete"
+					data-record-workspace=${record.workspace ?? nothing}
+					@click=${() => this.send({
+						kind: 'deleteSpec',
+						id: record.id,
+						...(record.workspace === undefined ? {} : { workspace: record.workspace }),
+					})}
+				></cs-icon-button>
+			`;
+		}
+
 		const baseActions = html`
-			<cs-icon-button
-				icon="open-preview"
-				label=${this.actionMode === 'specs' ? 'Open spec' : 'View rendered markdown'}
+				<cs-icon-button
+					icon="open-preview"
+					label="View rendered markdown"
 				data-record-id=${record.id}
 				data-record-target="preview"
+				data-record-workspace=${record.workspace ?? nothing}
 				@click=${() => this.send({ kind: 'preview', id: record.id })}
 			></cs-icon-button>
 			<cs-icon-button
@@ -454,7 +591,7 @@ export class RecordsApp extends LitElement {
 			`;
 		}
 
-		if (this.actionMode === 'research' || this.actionMode === 'specs') {
+		if (this.actionMode === 'research') {
 			return baseActions;
 		}
 
@@ -570,12 +707,15 @@ export class RecordsApp extends LitElement {
 				this.host.setState(message);
 				this.records = message.records;
 				this.specGroups = message.specGroups ?? [];
+				this.specStatusOptions = message.specStatusOptions ?? [];
+				this.workspaces = message.workspaces ?? [];
 				this.domainFilter = message.domainFilter;
 				this.domainOptions = message.domainOptions ?? [];
 				this.filtersEnabled = message.domainOptions !== undefined;
 				this.actionMode = message.actionMode ?? 'accepted';
 				this.emptyText = message.emptyText ?? 'No accepted decision records yet.';
 				this.diagnosticsEnabled = message.diagnosticsEnabled === true;
+				this.updateWorkspaceSelection();
 				if (
 					this.retirePromptRecordId !== undefined
 					&& (this.actionMode !== 'accepted' || !message.records.some(record => record.id === this.retirePromptRecordId))
@@ -591,7 +731,37 @@ export class RecordsApp extends LitElement {
 				return;
 			case 'diagnosticClickRecord':
 				if (this.diagnosticsEnabled) {
-					this.clickRecordForDiagnostics(message.id, message.target);
+					this.clickRecordForDiagnostics(message.id, message.target, message.workspace);
+				}
+				return;
+			case 'diagnosticCreateSpec':
+				if (this.diagnosticsEnabled) {
+					this.send({
+						kind: 'createSpec',
+						title: message.title,
+						status: message.status ?? this.defaultSpecStatus(),
+						...(message.workspace === undefined ? {} : { workspace: message.workspace }),
+					});
+				}
+				return;
+			case 'diagnosticMoveSpec':
+				if (this.diagnosticsEnabled) {
+					this.send({
+						kind: 'moveSpec',
+						id: message.id,
+						status: message.status,
+						...(message.workspace === undefined ? {} : { workspace: message.workspace }),
+					});
+				}
+				return;
+			case 'diagnosticDeleteSpec':
+				if (this.diagnosticsEnabled) {
+					this.send({
+						kind: 'deleteSpec',
+						id: message.id,
+						...(message.workspace === undefined ? {} : { workspace: message.workspace }),
+						...(message.skipConfirmation === true ? { skipConfirmation: true } : {}),
+					});
 				}
 				return;
 			default:
@@ -614,6 +784,157 @@ export class RecordsApp extends LitElement {
 		this.send({ kind: 'toggleSpecGroup', status: group.status, collapsed });
 	}
 
+	private handleCreateSpec = (event: SubmitEvent): void => {
+		event.preventDefault();
+		const form = event.currentTarget;
+		if (!(form instanceof HTMLFormElement)) {
+			return;
+		}
+
+		const data = new FormData(form);
+		const title = formValue(data, 'title').trim();
+		const status = this.defaultSpecStatus();
+		const workspace = formValue(data, 'workspace').trim() || undefined;
+		if (title.length === 0 || status.length === 0) {
+			return;
+		}
+
+		this.send({
+			kind: 'createSpec',
+			title,
+			status,
+			...(workspace === undefined ? {} : { workspace }),
+		});
+		const titleInput = form.querySelector<HTMLInputElement>('input[name="title"]');
+		if (titleInput !== null) {
+			titleInput.value = '';
+		}
+	};
+
+	private handleWorkspaceChange = (event: Event): void => {
+		const target = event.currentTarget;
+		if (target instanceof HTMLSelectElement) {
+			this.selectedWorkspace = target.value;
+		}
+	};
+
+	private handleSpecDragStart(event: DragEvent, record: RecordSummary): void {
+		if (event.dataTransfer === null) {
+			return;
+		}
+
+		const status = record.status ?? '';
+		if (status.length === 0) {
+			return;
+		}
+
+		this.draggedSpec = {
+			id: record.id,
+			status,
+			...(record.workspace === undefined ? {} : { workspace: record.workspace }),
+		};
+		event.dataTransfer.effectAllowed = 'move';
+		event.dataTransfer.setData('application/vnd.sundial.spec+json', JSON.stringify(this.draggedSpec));
+		event.dataTransfer.setData('text/plain', record.id);
+	}
+
+	private readonly handleSpecDragEnd = (): void => {
+		this.draggedSpec = undefined;
+		this.dragTargetStatus = undefined;
+	};
+
+	private handleSpecGroupDragEnter(event: DragEvent, status: string): void {
+		if (this.draggedSpec === undefined) {
+			return;
+		}
+
+		event.preventDefault();
+		this.dragTargetStatus = status;
+	}
+
+	private readonly handleSpecGroupDragOver = (event: DragEvent): void => {
+		if (this.draggedSpec === undefined) {
+			return;
+		}
+
+		event.preventDefault();
+		if (event.dataTransfer !== null) {
+			event.dataTransfer.dropEffect = 'move';
+		}
+	};
+
+	private handleSpecGroupDragLeave(event: DragEvent, status: string): void {
+		if (event.currentTarget instanceof HTMLElement
+			&& event.relatedTarget instanceof Node
+			&& event.currentTarget.contains(event.relatedTarget)) {
+			return;
+		}
+
+		if (this.dragTargetStatus === status) {
+			this.dragTargetStatus = undefined;
+		}
+	}
+
+	private handleSpecGroupDrop(event: DragEvent, status: string): void {
+		event.preventDefault();
+		this.dragTargetStatus = undefined;
+		const spec = this.specFromDragEvent(event);
+		if (spec === undefined || spec.status === status) {
+			return;
+		}
+
+		this.send({
+			kind: 'moveSpec',
+			id: spec.id,
+			status,
+			...(spec.workspace === undefined ? {} : { workspace: spec.workspace }),
+		});
+	}
+
+	private specFromDragEvent(event: DragEvent): Pick<RecordSummary, 'id' | 'status' | 'workspace'> | undefined {
+		const raw = event.dataTransfer?.getData('application/vnd.sundial.spec+json');
+		if (raw === undefined || raw.length === 0) {
+			return undefined;
+		}
+
+		try {
+			const value = JSON.parse(raw) as { id?: unknown; status?: unknown; workspace?: unknown };
+			if (typeof value.id !== 'string'
+				|| typeof value.status !== 'string'
+				|| (value.workspace !== undefined && typeof value.workspace !== 'string')) {
+				return undefined;
+			}
+
+			return {
+				id: value.id,
+				status: value.status,
+				...(value.workspace === undefined ? {} : { workspace: value.workspace }),
+			};
+		} catch {
+			return undefined;
+		}
+	}
+
+	private effectiveSpecStatusOptions(): readonly string[] {
+		if (this.specStatusOptions.length > 0) {
+			return this.specStatusOptions;
+		}
+
+		const groups = this.specGroups.length === 0 ? groupRecordsByStatus(this.records) : this.specGroups;
+		return groups.map(group => group.status);
+	}
+
+	private defaultSpecStatus(): string {
+		const statuses = this.effectiveSpecStatusOptions();
+		return statuses.includes('Backlog') ? 'Backlog' : statuses[0] ?? '';
+	}
+
+	private updateWorkspaceSelection(): void {
+		if (this.workspaces.length > 0 && !this.workspaces.includes(this.selectedWorkspace)) {
+			this.selectedWorkspace = this.workspaces[0];
+		}
+	}
+
 	private selectFilterForDiagnostics(filter: 'domain', value: string | undefined): void {
 		const select = this.renderRoot.querySelector<HTMLSelectElement>(`select[data-filter="${filter}"]`);
 		if (select === null) {
@@ -624,8 +945,9 @@ export class RecordsApp extends LitElement {
 		select.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 	}
 
-	private clickRecordForDiagnostics(id: string, target: 'title' | 'preview'): void {
-		const selector = `[data-record-id="${CSS.escape(id)}"][data-record-target="${target}"]`;
+	private clickRecordForDiagnostics(id: string, target: 'title' | 'preview' | 'delete', workspace: string | undefined): void {
+		const workspaceSelector = workspace === undefined ? '' : `[data-record-workspace="${CSS.escape(workspace)}"]`;
+		const selector = `[data-record-id="${CSS.escape(id)}"][data-record-target="${target}"]${workspaceSelector}`;
 		const element = this.renderRoot.querySelector<HTMLElement>(selector);
 		element?.click();
 	}
@@ -660,4 +982,9 @@ function filterValue<Key extends 'domainFilter'>(
 	key: Key,
 ): Partial<Record<Key, string>> {
 	return value.length === 0 ? {} : { [key]: value } as Partial<Record<Key, string>>;
+}
+
+function formValue(data: FormData, key: string): string {
+	const value = data.get(key);
+	return typeof value === 'string' ? value : '';
 }

@@ -10,6 +10,8 @@ export interface RecordFilterOptions {
 export interface RecordsServices {
 	readonly listRecords: () => Promise<readonly RecordSummary[]>;
 	readonly listSpecGroups?: () => Promise<readonly SpecRecordGroup[]>;
+	readonly listSpecStatusOptions?: () => Promise<readonly string[]>;
+	readonly listWorkspaces?: () => Promise<readonly string[]>;
 	readonly listFilterOptions?: () => Promise<RecordFilterOptions>;
 	readonly getDomainFilter?: () => string | undefined;
 	readonly actionMode?: RecordActionMode;
@@ -72,24 +74,66 @@ export class RecordsWebviewProvider implements vscode.WebviewViewProvider {
 		}
 	}
 
-	clickRecordForDiagnostics(id: string, target: 'title' | 'preview'): void {
+	clickRecordForDiagnostics(id: string, target: 'title' | 'preview' | 'delete', workspace?: string): void {
 		for (const router of this.routers) {
-			router.post({ kind: 'diagnosticClickRecord', id, target });
+			router.post({
+				kind: 'diagnosticClickRecord',
+				id,
+				target,
+				...(workspace === undefined ? {} : { workspace }),
+			});
+		}
+	}
+
+	createSpecForDiagnostics(title: string, status?: string, workspace?: string): void {
+		for (const router of this.routers) {
+			router.post({
+				kind: 'diagnosticCreateSpec',
+				title,
+				...(status === undefined ? {} : { status }),
+				...(workspace === undefined ? {} : { workspace }),
+			});
+		}
+	}
+
+	moveSpecForDiagnostics(id: string, status: string, workspace?: string): void {
+		for (const router of this.routers) {
+			router.post({
+				kind: 'diagnosticMoveSpec',
+				id,
+				status,
+				...(workspace === undefined ? {} : { workspace }),
+			});
+		}
+	}
+
+	deleteSpecForDiagnostics(id: string, workspace?: string, skipConfirmation = false): void {
+		for (const router of this.routers) {
+			router.post({
+				kind: 'diagnosticDeleteSpec',
+				id,
+				...(workspace === undefined ? {} : { workspace }),
+				...(skipConfirmation ? { skipConfirmation } : {}),
+			});
 		}
 	}
 
 	private async buildState(): Promise<HostToWebview> {
-		const [records, filterOptions] = await Promise.all([
+		const [records, filterOptions, specGroups, specStatusOptions, workspaces] = await Promise.all([
 			this.services.listRecords(),
 			this.services.listFilterOptions?.(),
+			this.services.listSpecGroups?.(),
+			this.services.listSpecStatusOptions?.(),
+			this.services.listWorkspaces?.(),
 		]);
-		const specGroups = await this.services.listSpecGroups?.();
 		const domainFilter = this.services.getDomainFilter?.();
 		const diagnosticsEnabled = this.services.diagnosticsEnabled?.() === true;
 		return {
 			kind: 'state',
 			records,
 			...(specGroups === undefined ? {} : { specGroups }),
+			...(specStatusOptions === undefined ? {} : { specStatusOptions }),
+			...(workspaces === undefined ? {} : { workspaces }),
 			...(domainFilter === undefined ? {} : { domainFilter }),
 			...(filterOptions === undefined ? {} : {
 				domainOptions: filterOptions.domains,

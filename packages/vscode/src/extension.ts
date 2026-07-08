@@ -278,6 +278,8 @@ export function activate(context: vscode.ExtensionContext): void {
 			return records;
 		},
 		listSpecGroups: () => collectSpecGroups(context),
+		listSpecStatusOptions: collectSpecStatusOptions,
+		listWorkspaces: collectSpecWorkspaceOptions,
 		actionMode: 'specs',
 		emptyText: 'No specs yet.',
 		title: 'Specs',
@@ -314,6 +316,21 @@ export function activate(context: vscode.ExtensionContext): void {
 			if (message.kind === 'toggleSpecGroup') {
 				await setSpecGroupCollapsed(context, message.status, message.collapsed);
 				await specsProvider.refresh();
+				return;
+			}
+
+			if (message.kind === 'createSpec') {
+				await createSpec(message.title, message.status, message.workspace, specsProvider, specsBoardPanel);
+				return;
+			}
+
+			if (message.kind === 'moveSpec') {
+				await moveSpec(message.id, message.status, message.workspace, specsProvider, specsBoardPanel);
+				return;
+			}
+
+			if (message.kind === 'deleteSpec') {
+				await deleteSpec(message.id, message.workspace, specsProvider, specsBoardPanel, message.skipConfirmation === true);
 			}
 		},
 	});
@@ -347,17 +364,17 @@ export function activate(context: vscode.ExtensionContext): void {
 			}
 
 			if (message.kind === 'create') {
-				await createSpecFromBoard(message.title, message.status, message.workspace, specsProvider, specsBoardPanel);
+				await createSpec(message.title, message.status, message.workspace, specsProvider, specsBoardPanel);
 				return;
 			}
 
 			if (message.kind === 'move') {
-				await moveSpecFromBoard(message.id, message.status, message.workspace, specsProvider, specsBoardPanel);
+				await moveSpec(message.id, message.status, message.workspace, specsProvider, specsBoardPanel);
 				return;
 			}
 
 			if (message.kind === 'delete') {
-				await deleteSpecFromBoard(message.id, message.workspace, specsProvider, specsBoardPanel);
+				await deleteSpec(message.id, message.workspace, specsProvider, specsBoardPanel);
 			}
 		},
 	});
@@ -588,7 +605,19 @@ export function activate(context: vscode.ExtensionContext): void {
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'sundial.internal.specs.click',
-			(id: string, target: 'title' | 'preview') => specsProvider.clickRecordForDiagnostics(id, target),
+			(id: string, target: 'title' | 'preview' | 'delete', workspace?: string) => specsProvider.clickRecordForDiagnostics(id, target, workspace),
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'sundial.internal.specs.create',
+			(title: string, status?: string, workspace?: string) => specsProvider.createSpecForDiagnostics(title, status, workspace),
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'sundial.internal.specs.move',
+			(id: string, status: string, workspace?: string) => specsProvider.moveSpecForDiagnostics(id, status, workspace),
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'sundial.internal.specs.delete',
+			(id: string, workspace?: string) => specsProvider.deleteSpecForDiagnostics(id, workspace, true),
 		));
 	}
 	context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
@@ -909,6 +938,27 @@ async function collectSpecGroups(context: vscode.ExtensionContext): Promise<read
 	}));
 }
 
+async function collectSpecStatusOptions(): Promise<readonly string[]> {
+	const stores = await collectWorkspaceStores();
+	const statuses: string[] = [];
+	for (const lanes of await Promise.all(stores.map(store => listSpecLanes(store.root)))) {
+		for (const lane of lanes) {
+			pushUnique(statuses, lane);
+		}
+	}
+
+	if (statuses.length === 0) {
+		statuses.push(...defaultSpecLanes);
+	}
+
+	return statuses;
+}
+
+async function collectSpecWorkspaceOptions(): Promise<readonly string[]> {
+	const stores = await collectWorkspaceStores();
+	return stores.length <= 1 ? [] : stores.map(store => store.name);
+}
+
 async function setSpecGroupCollapsed(
 	context: vscode.ExtensionContext,
 	status: string,
@@ -1130,7 +1180,7 @@ async function openSpec(id: string | undefined, workspace?: string): Promise<voi
 	await openMarkdownSource(filePath);
 }
 
-async function createSpecFromBoard(
+async function createSpec(
 	title: string,
 	status: string,
 	workspace: string | undefined,
@@ -1143,14 +1193,28 @@ async function createSpecFromBoard(
 	}
 
 	try {
-		await runSundial(root, ['spec', 'create', '--title', title, '--status', status]);
+		const output = await runSundial(root, ['spec', 'create', '--title', title, '--status', status]);
+		const createdPath = pathFromCommandOutput(root, output);
 		await refreshSpecViews(specsProvider, specsBoardPanel);
+		await openMarkdownSource(createdPath);
 	} catch (error) {
 		showCommandError(error);
 	}
 }
 
-async function moveSpecFromBoard(
+function pathFromCommandOutput(root: string, output: string): string | undefined {
+	const match = /^Path:\s*(.+)$/m.exec(output);
+	if (match === null) {
+		return undefined;
+	}
+
+	const outputPath = match[1].trim();
+	return path.isAbsolute(outputPath)
+		? outputPath
+		: path.join(root, ...outputPath.split('/'));
+}
+
+async function moveSpec(
 	id: string,
 	status: string,
 	workspace: string | undefined,
@@ -1167,11 +1231,12 @@ async function moveSpecFromBoard(
 	await refreshSpecViews(specsProvider, specsBoardPanel);
 }
 
-async function deleteSpecFromBoard(
+async function deleteSpec(
 	id: string,
 	workspace: string | undefined,
 	specsProvider: RecordsWebviewProvider,
 	specsBoardPanel: SpecsBoardPanel,
+	skipConfirmation = false,
 ): Promise<void> {
 	const record = await specForCommand(id, workspace);
 	const filePath = await resolveSpecPath(record);
@@ -1179,13 +1244,15 @@ async function deleteSpecFromBoard(
 		return;
 	}
 
-	const action = await vscode.window.showWarningMessage(
-		`Delete ${record.id}? This removes ${path.basename(filePath)} from disk.`,
-		{ modal: true },
-		'Delete File',
-	);
-	if (action !== 'Delete File') {
-		return;
+	if (!skipConfirmation) {
+		const action = await vscode.window.showWarningMessage(
+			`Delete ${record.id}? This removes ${path.basename(filePath)} from disk.`,
+			{ modal: true },
+			'Delete File',
+		);
+		if (action !== 'Delete File') {
+			return;
+		}
 	}
 
 	await runLifecycle(record.id, ['spec', 'delete', record.id], filePath);

@@ -58,7 +58,6 @@ If VS Code cannot find the CLI on `PATH`, set `sundial.cliPath` to the executabl
 Sundial keeps its records in Markdown so they stay easy to review, diff, and edit. These companion extensions make that editing loop more comfortable:
 
 - **Markdown Inline Editor** by CodeSmith: edit Markdown with a more direct, document-like flow while keeping the source file as the source of truth.
-- **Markco - Markdown Comments** by Oren Maoz: add and manage comments in Markdown files, which is especially useful when reviewing specs, research notes, and candidate decisions.
 
 ## Commands
 
