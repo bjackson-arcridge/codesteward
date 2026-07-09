@@ -3,6 +3,8 @@ export interface SpecCard {
 	readonly title: string;
 	readonly status: string;
 	readonly workspace?: string;
+	readonly worktreeSpawnDisabled?: boolean;
+	readonly activeWorktree?: boolean;
 }
 
 export interface SpecsRenderDiagnostic {
@@ -10,6 +12,7 @@ export interface SpecsRenderDiagnostic {
 	readonly specCount: number;
 	readonly cardCount: number;
 	readonly emptyVisible: boolean;
+	readonly worktreeActionCount?: number;
 }
 
 export type HostToWebview =
@@ -20,13 +23,14 @@ export type HostToWebview =
 		workspaces?: readonly string[];
 		diagnosticsEnabled?: boolean;
 	}
-	| { kind: 'diagnosticClickSpec'; id: string; workspace?: string; target: 'open' | 'archive' | 'delete' }
+	| { kind: 'diagnosticClickSpec'; id: string; workspace?: string; target: 'open' | 'worktree' | 'archive' | 'delete' }
 	| { kind: 'diagnosticCreateSpec'; title: string; status: string; workspace?: string }
 	| { kind: 'diagnosticMoveSpec'; id: string; status: string; workspace?: string }
 	| { kind: 'diagnosticDeleteSpec'; id: string; workspace?: string };
 
 export type WebviewToHost =
 	| { kind: 'open'; id: string; workspace?: string }
+	| { kind: 'spawnWorktree'; id: string; workspace?: string }
 	| { kind: 'create'; title: string; status: string; workspace?: string }
 	| { kind: 'move'; id: string; status: string; workspace?: string }
 	| { kind: 'delete'; id: string; workspace?: string }
@@ -62,7 +66,7 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 	if (message.kind === 'diagnosticClickSpec') {
 		return typeof message.id === 'string'
 			&& (message.workspace === undefined || typeof message.workspace === 'string')
-			&& (message.target === 'open' || message.target === 'archive' || message.target === 'delete');
+			&& (message.target === 'open' || message.target === 'worktree' || message.target === 'archive' || message.target === 'delete');
 	}
 
 	if (message.kind === 'diagnosticCreateSpec') {
@@ -99,7 +103,7 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 		diagnostic?: unknown;
 	};
 
-	if (message.kind === 'open' || message.kind === 'delete') {
+	if (message.kind === 'open' || message.kind === 'spawnWorktree' || message.kind === 'delete') {
 		return typeof message.id === 'string'
 			&& (message.workspace === undefined || typeof message.workspace === 'string');
 	}
@@ -133,11 +137,15 @@ function isSpecCard(value: unknown): value is SpecCard {
 		title?: unknown;
 		status?: unknown;
 		workspace?: unknown;
+		worktreeSpawnDisabled?: unknown;
+		activeWorktree?: unknown;
 	};
 	return typeof spec.id === 'string'
 		&& typeof spec.title === 'string'
 		&& typeof spec.status === 'string'
-		&& (spec.workspace === undefined || typeof spec.workspace === 'string');
+		&& (spec.workspace === undefined || typeof spec.workspace === 'string')
+		&& (spec.worktreeSpawnDisabled === undefined || typeof spec.worktreeSpawnDisabled === 'boolean')
+		&& (spec.activeWorktree === undefined || typeof spec.activeWorktree === 'boolean');
 }
 
 function isSpecsRenderDiagnostic(value: unknown): value is SpecsRenderDiagnostic {
@@ -150,11 +158,13 @@ function isSpecsRenderDiagnostic(value: unknown): value is SpecsRenderDiagnostic
 		specCount?: unknown;
 		cardCount?: unknown;
 		emptyVisible?: unknown;
+		worktreeActionCount?: unknown;
 	};
 	return typeof diagnostic.laneCount === 'number'
 		&& typeof diagnostic.specCount === 'number'
 		&& typeof diagnostic.cardCount === 'number'
-		&& typeof diagnostic.emptyVisible === 'boolean';
+		&& typeof diagnostic.emptyVisible === 'boolean'
+		&& (diagnostic.worktreeActionCount === undefined || typeof diagnostic.worktreeActionCount === 'number');
 }
 
 function isStringArray(value: unknown): value is readonly string[] {

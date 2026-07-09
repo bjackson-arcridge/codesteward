@@ -6,6 +6,8 @@ export interface RecordSummary {
 	readonly summary?: string;
 	readonly status?: string;
 	readonly workspace?: string;
+	readonly worktreeSpawnDisabled?: boolean;
+	readonly activeWorktree?: boolean;
 }
 
 export interface SpecRecordGroup {
@@ -25,6 +27,7 @@ export interface RecordRenderDiagnostic {
 	readonly groupCount?: number;
 	readonly openBoardButtonVisible?: boolean;
 	readonly specAddFormVisible?: boolean;
+	readonly specWorktreeActionCount?: number;
 	readonly specDeleteActionCount?: number;
 }
 
@@ -42,7 +45,7 @@ export type HostToWebview =
 		diagnosticsEnabled?: boolean;
 	}
 	| { kind: 'diagnosticSelectFilter'; filter: 'domain'; value?: string }
-	| { kind: 'diagnosticClickRecord'; id: string; target: 'title' | 'preview' | 'delete'; workspace?: string }
+	| { kind: 'diagnosticClickRecord'; id: string; target: 'title' | 'preview' | 'worktree' | 'delete'; workspace?: string }
 	| { kind: 'diagnosticCreateSpec'; title: string; status?: string; workspace?: string }
 	| { kind: 'diagnosticMoveSpec'; id: string; status: string; workspace?: string }
 	| { kind: 'diagnosticDeleteSpec'; id: string; workspace?: string; skipConfirmation?: boolean };
@@ -53,6 +56,7 @@ export type WebviewToHost =
 	| { kind: 'openBoard' }
 	| { kind: 'createSpec'; title: string; status: string; workspace?: string }
 	| { kind: 'moveSpec'; id: string; status: string; workspace?: string }
+	| { kind: 'spawnSpecWorktree'; id: string; workspace?: string }
 	| { kind: 'deleteSpec'; id: string; workspace?: string; skipConfirmation?: boolean }
 	| { kind: 'setDomainFilter'; domainFilter?: string }
 	| { kind: 'toggleSpecGroup'; status: string; collapsed: boolean }
@@ -110,7 +114,7 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 
 	if (message.kind === 'diagnosticClickRecord') {
 		return typeof message.id === 'string'
-			&& (message.target === 'title' || message.target === 'preview' || message.target === 'delete')
+			&& (message.target === 'title' || message.target === 'preview' || message.target === 'worktree' || message.target === 'delete')
 			&& (message.workspace === undefined || typeof message.workspace === 'string');
 	}
 
@@ -171,6 +175,8 @@ function isRecordSummary(value: unknown): value is RecordSummary {
 		summary?: unknown;
 		status?: unknown;
 		workspace?: unknown;
+		worktreeSpawnDisabled?: unknown;
+		activeWorktree?: unknown;
 		skipConfirmation?: unknown;
 	};
 	return typeof record.id === 'string'
@@ -179,7 +185,9 @@ function isRecordSummary(value: unknown): value is RecordSummary {
 		&& typeof record.enabled === 'boolean'
 		&& (record.summary === undefined || typeof record.summary === 'string')
 		&& (record.status === undefined || typeof record.status === 'string')
-		&& (record.workspace === undefined || typeof record.workspace === 'string');
+		&& (record.workspace === undefined || typeof record.workspace === 'string')
+		&& (record.worktreeSpawnDisabled === undefined || typeof record.worktreeSpawnDisabled === 'boolean')
+		&& (record.activeWorktree === undefined || typeof record.activeWorktree === 'boolean');
 }
 
 function isSpecRecordGroupArray(value: unknown): value is readonly SpecRecordGroup[] {
@@ -257,6 +265,11 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 			&& (message.workspace === undefined || typeof message.workspace === 'string');
 	}
 
+	if (message.kind === 'spawnSpecWorktree') {
+		return typeof message.id === 'string'
+			&& (message.workspace === undefined || typeof message.workspace === 'string');
+	}
+
 	if (message.kind === 'deleteSpec') {
 		return typeof message.id === 'string'
 			&& (message.workspace === undefined || typeof message.workspace === 'string')
@@ -286,6 +299,7 @@ function isRecordRenderDiagnostic(value: unknown): value is RecordRenderDiagnost
 		groupCount?: unknown;
 		openBoardButtonVisible?: unknown;
 		specAddFormVisible?: unknown;
+		specWorktreeActionCount?: unknown;
 		specDeleteActionCount?: unknown;
 	};
 	return typeof diagnostic.recordCount === 'number'
@@ -296,6 +310,7 @@ function isRecordRenderDiagnostic(value: unknown): value is RecordRenderDiagnost
 		&& (diagnostic.groupCount === undefined || typeof diagnostic.groupCount === 'number')
 		&& (diagnostic.openBoardButtonVisible === undefined || typeof diagnostic.openBoardButtonVisible === 'boolean')
 		&& (diagnostic.specAddFormVisible === undefined || typeof diagnostic.specAddFormVisible === 'boolean')
+		&& (diagnostic.specWorktreeActionCount === undefined || typeof diagnostic.specWorktreeActionCount === 'number')
 		&& (diagnostic.specDeleteActionCount === undefined || typeof diagnostic.specDeleteActionCount === 'number');
 }
 

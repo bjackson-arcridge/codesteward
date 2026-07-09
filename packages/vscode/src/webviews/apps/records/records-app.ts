@@ -222,6 +222,16 @@ export class RecordsApp extends LitElement {
 				cursor: grabbing;
 			}
 
+			cs-card.spec-card[active-worktree='true'] {
+				border-color: var(--vscode-gitDecoration-addedResourceForeground, var(--cs-focus));
+				background: color-mix(in srgb, var(--cs-card-bg) 82%, var(--vscode-gitDecoration-addedResourceForeground, var(--cs-focus)) 18%);
+			}
+
+			.active-worktree-label {
+				color: var(--vscode-gitDecoration-addedResourceForeground, var(--cs-focus));
+				font-weight: 600;
+			}
+
 			@media (min-width: 260px) {
 				.filters {
 					grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -369,6 +379,7 @@ export class RecordsApp extends LitElement {
 					groupCount: this.renderRoot.querySelectorAll('.spec-group').length,
 					openBoardButtonVisible: this.renderRoot.querySelector('[data-action="open-kanban"]') !== null,
 					specAddFormVisible: this.renderRoot.querySelector('[data-action="add-spec"]') !== null,
+					specWorktreeActionCount: this.renderRoot.querySelectorAll('[data-record-target="worktree"]').length,
 					specDeleteActionCount: this.renderRoot.querySelectorAll('[data-record-target="delete"]').length,
 				} : {}),
 			},
@@ -492,6 +503,7 @@ export class RecordsApp extends LitElement {
 				class=${isSpec ? 'spec-card' : ''}
 				?draggable=${isSpec}
 				dragging=${this.draggedSpec?.id === record.id && this.draggedSpec?.workspace === record.workspace ? 'true' : 'false'}
+				active-worktree=${record.activeWorktree === true ? 'true' : 'false'}
 				data-spec-id=${record.id}
 				@dragstart=${(event: DragEvent) => this.handleSpecDragStart(event, record)}
 				@dragend=${this.handleSpecDragEnd}
@@ -507,7 +519,7 @@ export class RecordsApp extends LitElement {
 					@click=${() => this.send({ kind: 'preview', id: record.id })}
 				>${record.title}</button>
 				<span slot="meta">
-					<span class="id">${record.id}</span>
+					<span class=${record.activeWorktree === true ? 'id active-worktree-label' : 'id'}>${record.id}${record.activeWorktree === true ? ' [Active Worktree]' : ''}</span>
 					${this.actionMode === 'specs'
 						? showStatusBadge
 						? html`<cs-badge variant="inverse">${record.status ?? 'Planning'}</cs-badge>`
@@ -527,7 +539,21 @@ export class RecordsApp extends LitElement {
 
 	private renderActions(record: RecordSummary) {
 		if (this.actionMode === 'specs') {
+			const spawnWorktreeDisabled = record.worktreeSpawnDisabled === true;
 			return html`
+				<cs-icon-button
+					icon="repo-forked"
+					label=${spawnWorktreeDisabled ? 'Spawn worktree unavailable from a worktree' : 'Spawn worktree'}
+					?disabled=${spawnWorktreeDisabled}
+					data-record-id=${record.id}
+					data-record-target="worktree"
+					data-record-workspace=${record.workspace ?? nothing}
+					@click=${() => this.send({
+						kind: 'spawnSpecWorktree',
+						id: record.id,
+						...(record.workspace === undefined ? {} : { workspace: record.workspace }),
+					})}
+				></cs-icon-button>
 				<cs-icon-button
 					icon="trash"
 					label="Delete spec"
@@ -945,7 +971,7 @@ export class RecordsApp extends LitElement {
 		select.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 	}
 
-	private clickRecordForDiagnostics(id: string, target: 'title' | 'preview' | 'delete', workspace: string | undefined): void {
+	private clickRecordForDiagnostics(id: string, target: 'title' | 'preview' | 'worktree' | 'delete', workspace: string | undefined): void {
 		const workspaceSelector = workspace === undefined ? '' : `[data-record-workspace="${CSS.escape(workspace)}"]`;
 		const selector = `[data-record-id="${CSS.escape(id)}"][data-record-target="${target}"]${workspaceSelector}`;
 		const element = this.renderRoot.querySelector<HTMLElement>(selector);

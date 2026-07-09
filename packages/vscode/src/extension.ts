@@ -29,6 +29,7 @@ import type { WebviewToHost as WelcomeWebviewToHost, WelcomeRenderDiagnostic } f
 import { renderMarkdownPreviewSource } from './markdownPreview';
 import { sundialCliCommand, sundialCliInstallArgs } from './sundialCli';
 import { MarkdownCommentBubbleDecorations } from './commentBubbles';
+import { gitWorktreeContext, spawnSpecWorktree as runSpecWorktreeLaunch, type SpawnSpecWorktreeResult } from './specWorktrees';
 
 const execFileAsync = promisify(execFile);
 const markdownPreviewScheme = 'sundial-preview';
@@ -331,6 +332,11 @@ export function activate(context: vscode.ExtensionContext): void {
 				return;
 			}
 
+			if (message.kind === 'spawnSpecWorktree') {
+				await spawnSpecWorktree(message.id, message.workspace);
+				return;
+			}
+
 			if (message.kind === 'deleteSpec') {
 				await deleteSpec(message.id, message.workspace, specsProvider, specsBoardPanel, message.skipConfirmation === true);
 			}
@@ -372,6 +378,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
 			if (message.kind === 'move') {
 				await moveSpec(message.id, message.status, message.workspace, specsProvider, specsBoardPanel);
+				return;
+			}
+
+			if (message.kind === 'spawnWorktree') {
+				await spawnSpecWorktree(message.id, message.workspace);
 				return;
 			}
 
@@ -498,6 +509,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.research.editSource', (id?: string) => editResearchSource(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.openBoard', () => specsBoardPanel.reveal()));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.openSpec', (id?: string) => openSpec(id)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.spawnWorktree', (id?: string, workspace?: string) => spawnSpecWorktree(id, workspace)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.open', (id?: string) => previewCandidate(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.editSource', (id?: string) => editCandidateSource(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.accept', (id?: string) => {
@@ -607,7 +619,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'sundial.internal.specs.click',
-			(id: string, target: 'title' | 'preview' | 'delete', workspace?: string) => specsProvider.clickRecordForDiagnostics(id, target, workspace),
+			(id: string, target: 'title' | 'preview' | 'worktree' | 'delete', workspace?: string) => specsProvider.clickRecordForDiagnostics(id, target, workspace),
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'sundial.internal.specs.create',
@@ -894,7 +906,10 @@ async function collectResearch(
 async function collectSpecs(): Promise<readonly RecordSummary[]> {
 	const stores = await collectWorkspaceStores();
 	const all = await Promise.all(stores.map(async store => {
-		const records = await listSidebarSpecSummaries(store.root);
+		const [records, worktreeContext] = await Promise.all([
+			listSidebarSpecSummaries(store.root),
+			gitWorktreeContext(store.root),
+		]);
 		return records.map(record => ({
 			id: record.id,
 			title: record.title,
@@ -902,6 +917,8 @@ async function collectSpecs(): Promise<readonly RecordSummary[]> {
 			enabled: true,
 			status: record.status,
 			...(stores.length > 1 ? { workspace: store.name } : {}),
+			...(worktreeContext.linked ? { worktreeSpawnDisabled: true } : {}),
+			...(specMatchesWorktreePrefix(record.id, worktreeContext.specPrefix) ? { activeWorktree: true } : {}),
 		} satisfies RecordSummary));
 	}));
 
@@ -912,7 +929,10 @@ async function collectSpecGroups(context: vscode.ExtensionContext): Promise<read
 	const stores = await collectWorkspaceStores();
 	const collapsed = new Set(context.workspaceState.get<readonly string[]>(specsCollapsedGroupsStateKey) ?? []);
 	const all = await Promise.all(stores.map(async store => {
-		const groups = await listSidebarSpecGroups(store.root);
+		const [groups, worktreeContext] = await Promise.all([
+			listSidebarSpecGroups(store.root),
+			gitWorktreeContext(store.root),
+		]);
 		return groups.map(group => ({
 			status: group.status,
 			records: group.specs.map(spec => ({
@@ -922,6 +942,8 @@ async function collectSpecGroups(context: vscode.ExtensionContext): Promise<read
 				enabled: true,
 				status: spec.status,
 				...(stores.length > 1 ? { workspace: store.name } : {}),
+				...(worktreeContext.linked ? { worktreeSpawnDisabled: true } : {}),
+				...(specMatchesWorktreePrefix(spec.id, worktreeContext.specPrefix) ? { activeWorktree: true } : {}),
 			} satisfies RecordSummary)),
 		}));
 	}));
@@ -982,6 +1004,7 @@ async function collectSpecBoardState(): Promise<SpecsBoardState> {
 		store,
 		lanes: await listSpecLanes(store.root),
 		specs: await listSpecSummaries(store.root),
+		worktreeContext: await gitWorktreeContext(store.root),
 	})));
 	const lanes: string[] = [];
 	for (const lane of perStore.flatMap(item => item.lanes)) {
@@ -996,6 +1019,8 @@ async function collectSpecBoardState(): Promise<SpecsBoardState> {
 		title: spec.title,
 		status: spec.status,
 		...(stores.length > 1 ? { workspace: item.store.name } : {}),
+		...(item.worktreeContext.linked ? { worktreeSpawnDisabled: true } : {}),
+		...(specMatchesWorktreePrefix(spec.id, item.worktreeContext.specPrefix) ? { activeWorktree: true } : {}),
 	} satisfies SpecCard)));
 
 	return {
@@ -1072,6 +1097,10 @@ function pushUnique(values: string[], value: string): void {
 	if (value.length > 0 && !values.includes(value)) {
 		values.push(value);
 	}
+}
+
+function specMatchesWorktreePrefix(specId: string, specPrefix: string | undefined): boolean {
+	return specPrefix !== undefined && specId.toUpperCase() === specPrefix;
 }
 
 async function collectCandidates(): Promise<readonly CandidateSummary[]> {
@@ -1180,6 +1209,72 @@ async function openSpec(id: string | undefined, workspace?: string): Promise<voi
 	}
 
 	await openMarkdownSource(filePath);
+}
+
+async function spawnSpecWorktree(id: string | undefined, workspace?: string): Promise<void> {
+	const record = await specForCommand(id, workspace);
+	const filePath = await resolveSpecPath(record);
+	if (record === undefined || filePath === undefined) {
+		return;
+	}
+
+	const workspaceRoot = await workspaceRootForPath(filePath);
+	if (workspaceRoot === undefined) {
+		void vscode.window.showWarningMessage(`No Sundial workspace found for "${record.id}".`);
+		return;
+	}
+
+	const result = await runSpecWorktreeLaunch({
+		workspaceRoot,
+		specPath: filePath,
+		promptBranchName: async defaultBranch => vscode.window.showInputBox({
+			prompt: 'Branch name for the new worktree',
+			value: defaultBranch,
+			ignoreFocusOut: true,
+		}),
+		confirmOpenExistingWorktree: async (worktreePath, branch) => {
+			const action = await vscode.window.showInformationMessage(
+				`Branch "${branch}" is already checked out at ${worktreePath}.`,
+				'Open Worktree',
+				'Cancel',
+			);
+			return action === 'Open Worktree';
+		},
+		openFolder: async worktreePath => {
+			await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(worktreePath), { forceNewWindow: true });
+		},
+		withProgress: async (title, task) => vscode.window.withProgress(
+			{
+				location: vscode.ProgressLocation.Notification,
+				title,
+				cancellable: false,
+			},
+			() => task(),
+		),
+	});
+
+	showSpawnSpecWorktreeResult(result);
+}
+
+function showSpawnSpecWorktreeResult(result: SpawnSpecWorktreeResult): void {
+	if (result.kind === 'created') {
+		void vscode.window.showInformationMessage(`Created worktree "${result.branch}" at ${result.worktreePath}.`);
+		return;
+	}
+
+	if (result.kind === 'openedExisting') {
+		void vscode.window.showInformationMessage(`Opened existing worktree "${result.branch}".`);
+		return;
+	}
+
+	if (result.kind === 'failed') {
+		void vscode.window.showErrorMessage(result.message);
+		return;
+	}
+
+	if (result.kind === 'cancelled' && result.reason === 'existingWorktreeDeclined') {
+		void vscode.window.showWarningMessage('Branch is already checked out in another worktree; no new worktree was created.');
+	}
 }
 
 async function createSpec(

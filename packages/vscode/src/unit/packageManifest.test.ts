@@ -37,7 +37,7 @@ describe('package manifest contributions', () => {
 		);
 	});
 
-	test('declares the Sundial open spec command without extension dependencies', () => {
+	test('declares Sundial spec commands without extension dependencies', () => {
 		const manifest = readPackageManifest();
 		const commands = manifest.contributes?.commands ?? [];
 		const viewTitle = manifest.contributes?.menus?.['view/title'] ?? [];
@@ -52,6 +52,10 @@ describe('package manifest contributions', () => {
 			true,
 		);
 		assert.equal(
+			commands.some(item => item.command === 'sundial.specs.spawnWorktree'),
+			true,
+		);
+		assert.equal(
 			viewTitle.some(item => item.command === 'sundial.specs.openBoard'),
 			false,
 		);
@@ -62,12 +66,15 @@ describe('package manifest contributions', () => {
 
 		assert.match(source, /if \(message\.kind === 'moveSpec'\) {\s*await moveSpec\(message\.id, message\.status, message\.workspace, specsProvider, specsBoardPanel\);/);
 		assert.match(source, /if \(message\.kind === 'move'\) {\s*await moveSpec\(message\.id, message\.status, message\.workspace, specsProvider, specsBoardPanel\);/);
+		assert.match(source, /if \(message\.kind === 'spawnSpecWorktree'\) {\s*await spawnSpecWorktree\(message\.id, message\.workspace\);/);
+		assert.match(source, /if \(message\.kind === 'spawnWorktree'\) {\s*await spawnSpecWorktree\(message\.id, message\.workspace\);/);
 		assert.match(source, /if \(message\.kind === 'createSpec'\) {\s*await createSpec\(message\.title, message\.status, message\.workspace, specsProvider, specsBoardPanel\);/);
 		assert.match(source, /if \(message\.kind === 'deleteSpec'\) {\s*await deleteSpec\(message\.id, message\.workspace, specsProvider, specsBoardPanel, message\.skipConfirmation === true\);/);
 		assert.match(source, /const output = await runSundial\(root, \['spec', 'create', '--title', title, '--status', status\]\);/);
 		assert.match(source, /await openMarkdownSource\(createdPath\);/);
 		assert.match(source, /stores\.map\(store => listSpecLanes\(store\.root\)\)/);
 		assert.match(source, /await runLifecycle\(record\.id, \['spec', 'status', record\.id, status\], filePath\);/);
+		assert.match(source, /vscode\.commands\.executeCommand\('vscode\.openFolder', vscode\.Uri\.file\(worktreePath\), \{ forceNewWindow: true \}\)/);
 		assert.doesNotMatch(source, /frontmatter[\s\S]{0,120}message\.status/);
 	});
 

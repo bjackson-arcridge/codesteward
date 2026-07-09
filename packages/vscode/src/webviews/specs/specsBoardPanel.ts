@@ -72,7 +72,7 @@ export class SpecsBoardPanel implements vscode.Disposable {
 		this.router.post(await this.buildState());
 	}
 
-	clickSpecForDiagnostics(id: string, target: 'open' | 'archive' | 'delete', workspace?: string): void {
+	clickSpecForDiagnostics(id: string, target: 'open' | 'worktree' | 'archive' | 'delete', workspace?: string): void {
 		this.router?.post({
 			kind: 'diagnosticClickSpec',
 			id,

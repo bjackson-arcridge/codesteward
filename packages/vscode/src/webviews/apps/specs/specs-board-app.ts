@@ -179,6 +179,11 @@ export class SpecsBoardApp extends LitElement {
 				cursor: grabbing;
 			}
 
+			.spec-card[active-worktree='true'] {
+				border-color: var(--vscode-gitDecoration-addedResourceForeground, var(--cs-focus));
+				background: color-mix(in srgb, var(--cs-card-bg) 82%, var(--vscode-gitDecoration-addedResourceForeground, var(--cs-focus)) 18%);
+			}
+
 			.title-button {
 				display: inline;
 				padding: 0;
@@ -199,6 +204,11 @@ export class SpecsBoardApp extends LitElement {
 
 			.id {
 				font-family: var(--vscode-editor-font-family);
+			}
+
+			.active-worktree-label {
+				color: var(--vscode-gitDecoration-addedResourceForeground, var(--cs-focus));
+				font-weight: 600;
 			}
 
 			@media (max-width: 720px) {
@@ -271,6 +281,7 @@ export class SpecsBoardApp extends LitElement {
 				specCount: this.specs.length,
 				cardCount: this.renderRoot.querySelectorAll('cs-card').length,
 				emptyVisible: this.renderRoot.querySelector('.empty-board') !== null,
+				worktreeActionCount: this.renderRoot.querySelectorAll('[data-spec-target="worktree"]').length,
 			},
 		});
 	}
@@ -350,11 +361,13 @@ export class SpecsBoardApp extends LitElement {
 	}
 
 	private renderCard(spec: SpecCard) {
+		const spawnWorktreeDisabled = spec.worktreeSpawnDisabled === true;
 		return html`
 			<cs-card
 				class="spec-card"
 				draggable="true"
 				dragging=${this.draggedSpecId === spec.id ? 'true' : 'false'}
+				active-worktree=${spec.activeWorktree === true ? 'true' : 'false'}
 				data-spec-id=${spec.id}
 				@dragstart=${(event: DragEvent) => this.handleCardDragStart(event, spec)}
 				@dragend=${this.handleCardDragEnd}
@@ -369,7 +382,7 @@ export class SpecsBoardApp extends LitElement {
 					@click=${() => this.send({ kind: 'open', id: spec.id, ...(spec.workspace === undefined ? {} : { workspace: spec.workspace }) })}
 				>${spec.title}</button>
 				<span slot="meta">
-					<span class="id">${spec.id}</span>
+					<span class=${spec.activeWorktree === true ? 'id active-worktree-label' : 'id'}>${spec.id}${spec.activeWorktree === true ? ' [Active Worktree]' : ''}</span>
 					${spec.workspace === undefined ? nothing : html`<span>${spec.workspace}</span>`}
 				</span>
 				<div slot="actions">
@@ -379,6 +392,14 @@ export class SpecsBoardApp extends LitElement {
 						data-spec-id=${spec.id}
 						data-spec-target="open"
 						@click=${() => this.send({ kind: 'open', id: spec.id, ...(spec.workspace === undefined ? {} : { workspace: spec.workspace }) })}
+					></cs-icon-button>
+					<cs-icon-button
+						icon="repo-forked"
+						label=${spawnWorktreeDisabled ? 'Spawn worktree unavailable from a worktree' : 'Spawn worktree'}
+						?disabled=${spawnWorktreeDisabled}
+						data-spec-id=${spec.id}
+						data-spec-target="worktree"
+						@click=${() => this.send({ kind: 'spawnWorktree', id: spec.id, ...(spec.workspace === undefined ? {} : { workspace: spec.workspace }) })}
 					></cs-icon-button>
 					<cs-icon-button
 						icon="archive"
@@ -415,6 +436,12 @@ export class SpecsBoardApp extends LitElement {
 						kind: 'move',
 						id: message.id,
 						status: 'Archive',
+						...(message.workspace === undefined ? {} : { workspace: message.workspace }),
+					});
+				} else if (message.target === 'worktree') {
+					this.send({
+						kind: 'spawnWorktree',
+						id: message.id,
 						...(message.workspace === undefined ? {} : { workspace: message.workspace }),
 					});
 				} else {

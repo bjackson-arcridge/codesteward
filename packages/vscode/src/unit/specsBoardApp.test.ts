@@ -34,6 +34,15 @@ describe('Specs board add form', () => {
 	test('archives cards through the typed move command and keeps delete separate', () => {
 		const source = readSpecsBoardAppSource();
 
+		assert.match(source, /icon="repo-forked"/);
+		assert.match(source, /Spawn worktree unavailable from a worktree/);
+		assert.match(source, /\?disabled=\$\{spawnWorktreeDisabled\}/);
+		assert.match(source, /data-spec-target="worktree"/);
+		assert.match(source, /kind: 'spawnWorktree'/);
+		assert.match(source, /worktreeActionCount/);
+		assert.match(source, /active-worktree=\$\{spec\.activeWorktree === true \? 'true' : 'false'\}/);
+		assert.match(source, /\[Active Worktree\]/);
+		assert.match(source, /gitDecoration-addedResourceForeground/);
 		assert.match(source, /icon="archive"/);
 		assert.match(source, /label="Archive spec"/);
 		assert.match(source, /data-spec-target="archive"/);

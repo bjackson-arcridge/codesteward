@@ -40,6 +40,15 @@ describe('Records app specs sidebar mode', () => {
 		assert.match(source, /private defaultSpecStatus\(\): string/);
 		assert.match(source, /return statuses\.includes\('Backlog'\) \? 'Backlog' : statuses\[0\] \?\? '';/);
 		assert.match(source, /kind: 'createSpec'/);
+		assert.match(source, /Spawn worktree unavailable from a worktree/);
+		assert.match(source, /\?disabled=\$\{spawnWorktreeDisabled\}/);
+		assert.match(source, /icon="repo-forked"/);
+		assert.match(source, /kind: 'spawnSpecWorktree'/);
+		assert.match(source, /data-record-target="worktree"/);
+		assert.match(source, /specWorktreeActionCount/);
+		assert.match(source, /active-worktree=\$\{record\.activeWorktree === true \? 'true' : 'false'\}/);
+		assert.match(source, /\[Active Worktree\]/);
+		assert.match(source, /gitDecoration-addedResourceForeground/);
 		assert.match(source, /kind: 'deleteSpec'/);
 		assert.match(source, /data-record-target="delete"/);
 		assert.doesNotMatch(source, /if \(this\.actionMode === 'research' \|\| this\.actionMode === 'specs'\)/);

@@ -57,6 +57,7 @@ If VS Code cannot find the CLI on `PATH`, set `sundial.cliPath` to the executabl
 
 Sundial keeps its records in Markdown so they stay easy to review, diff, and edit. These companion extensions make that editing loop more comfortable:
 
+- **Git Worktree Manager** by jackiotyu: highly recommended for spec-driven work across Git worktrees. Sundial can create and open spec worktrees directly, while Git Worktree Manager gives you a dedicated worktree list, quick switching between worktree windows, and familiar cleanup tools. Sundial does not require this extension, so teams can keep using another worktree process if they already have one.
 - **Markdown Inline Editor** by CodeSmith: edit Markdown with a more direct, document-like flow while keeping the source file as the source of truth.
 
 ## Commands

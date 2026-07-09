@@ -226,17 +226,34 @@ describe('records message guards', () => {
 		}), true);
 		assert.equal(isRecordsHost({
 			kind: 'state',
-			records: [{ id: 'SPEC-0001', title: 'Alpha spec', domain: 'all', enabled: true, status: 'Active' }],
+			records: [{
+				id: 'SPEC-0001',
+				title: 'Alpha spec',
+				domain: 'all',
+				enabled: true,
+				status: 'Active',
+				worktreeSpawnDisabled: true,
+				activeWorktree: true,
+			}],
 			specGroups: [{
 				status: 'Active',
 				collapsed: false,
-				records: [{ id: 'SPEC-0001', title: 'Alpha spec', domain: 'all', enabled: true, status: 'Active' }],
+				records: [{
+					id: 'SPEC-0001',
+					title: 'Alpha spec',
+					domain: 'all',
+					enabled: true,
+					status: 'Active',
+					worktreeSpawnDisabled: true,
+					activeWorktree: true,
+				}],
 			}],
 			specStatusOptions: ['Backlog', 'Active'],
 			workspaces: ['repo'],
 			actionMode: 'specs',
 		}), true);
 		assert.equal(isRecordsHost({ kind: 'diagnosticClickRecord', id: 'SPEC-0001', target: 'delete', workspace: 'repo' }), true);
+		assert.equal(isRecordsHost({ kind: 'diagnosticClickRecord', id: 'SPEC-0001', target: 'worktree', workspace: 'repo' }), true);
 		assert.equal(isRecordsHost({ kind: 'diagnosticCreateSpec', title: 'New spec' }), true);
 		assert.equal(isRecordsHost({ kind: 'diagnosticCreateSpec', title: 'New spec', status: 'Backlog', workspace: 'repo' }), true);
 		assert.equal(isRecordsHost({ kind: 'diagnosticMoveSpec', id: 'SPEC-0001', status: 'Archive', workspace: 'repo' }), true);
@@ -263,6 +280,16 @@ describe('records message guards', () => {
 		assert.equal(isRecordsHost({
 			kind: 'state',
 			records: [{ id: 'RES-1', title: 'Research', domain: 'vscode.webview', enabled: true, summary: 42 }],
+		}), false);
+		assert.equal(isRecordsHost({
+			kind: 'state',
+			records: [{ id: 'SPEC-0001', title: 'Spec', domain: 'all', enabled: true, worktreeSpawnDisabled: 'yes' }],
+			actionMode: 'specs',
+		}), false);
+		assert.equal(isRecordsHost({
+			kind: 'state',
+			records: [{ id: 'SPEC-0001', title: 'Spec', domain: 'all', enabled: true, activeWorktree: 'yes' }],
+			actionMode: 'specs',
 		}), false);
 		assert.equal(isRecordsHost({
 			kind: 'state',
@@ -293,6 +320,7 @@ describe('records message guards', () => {
 		assert.equal(isRecordsClient({ kind: 'openBoard' }), true);
 		assert.equal(isRecordsClient({ kind: 'createSpec', title: 'New spec', status: 'Backlog', workspace: 'repo' }), true);
 		assert.equal(isRecordsClient({ kind: 'moveSpec', id: 'SPEC-0001', status: 'Archive', workspace: 'repo' }), true);
+		assert.equal(isRecordsClient({ kind: 'spawnSpecWorktree', id: 'SPEC-0001', workspace: 'repo' }), true);
 		assert.equal(isRecordsClient({ kind: 'deleteSpec', id: 'SPEC-0001', workspace: 'repo', skipConfirmation: true }), true);
 		assert.equal(isRecordsClient({ kind: 'toggleSpecGroup', status: 'Active', collapsed: true }), true);
 		assert.equal(isRecordsClient({ kind: 'clearFilters' }), true);
@@ -308,6 +336,7 @@ describe('records message guards', () => {
 				groupCount: 3,
 				openBoardButtonVisible: true,
 				specAddFormVisible: true,
+				specWorktreeActionCount: 1,
 				specDeleteActionCount: 1,
 			},
 		}), true);
@@ -321,6 +350,7 @@ describe('records message guards', () => {
 		assert.equal(isRecordsClient({ kind: 'toggleSpecGroup', status: 'Active' }), false);
 		assert.equal(isRecordsClient({ kind: 'createSpec', title: 'New spec' }), false);
 		assert.equal(isRecordsClient({ kind: 'moveSpec', id: 'SPEC-0001' }), false);
+		assert.equal(isRecordsClient({ kind: 'spawnSpecWorktree' }), false);
 		assert.equal(isRecordsClient({ kind: 'deleteSpec', id: 'SPEC-0001', skipConfirmation: 'yes' }), false);
 		assert.equal(isRecordsClient({
 			kind: 'rendered',
@@ -339,11 +369,19 @@ describe('specs board message guards', () => {
 		assert.equal(isSpecsHost({
 			kind: 'state',
 			lanes: ['Backlog'],
-			specs: [{ id: 'SPEC-0001', title: 'Board MVP', status: 'Backlog', workspace: 'repo' }],
+			specs: [{
+				id: 'SPEC-0001',
+				title: 'Board MVP',
+				status: 'Backlog',
+				workspace: 'repo',
+				worktreeSpawnDisabled: true,
+				activeWorktree: true,
+			}],
 			workspaces: ['repo'],
 			diagnosticsEnabled: true,
 		}), true);
 		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'open' }), true);
+		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'worktree' }), true);
 		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'archive' }), true);
 		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'delete', workspace: 'repo' }), true);
 		assert.equal(isSpecsHost({ kind: 'diagnosticCreateSpec', title: 'New spec', status: 'Backlog' }), true);
@@ -354,6 +392,8 @@ describe('specs board message guards', () => {
 	test('reject malformed host messages', () => {
 		assert.equal(isSpecsHost({ kind: 'state', lanes: 'Backlog', specs: [] }), false);
 		assert.equal(isSpecsHost({ kind: 'state', lanes: ['Backlog'], specs: [{ id: 'SPEC-1', title: 'Missing status' }] }), false);
+		assert.equal(isSpecsHost({ kind: 'state', lanes: ['Backlog'], specs: [{ id: 'SPEC-1', title: 'Bad disabled flag', status: 'Backlog', worktreeSpawnDisabled: 'yes' }] }), false);
+		assert.equal(isSpecsHost({ kind: 'state', lanes: ['Backlog'], specs: [{ id: 'SPEC-1', title: 'Bad active flag', status: 'Backlog', activeWorktree: 'yes' }] }), false);
 		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'edit' }), false);
 		assert.equal(isSpecsHost({ kind: 'diagnosticCreateSpec', title: 'New spec' }), false);
 		assert.equal(isSpecsHost({ kind: 'diagnosticMoveSpec', id: 'SPEC-0001' }), false);
@@ -361,6 +401,7 @@ describe('specs board message guards', () => {
 
 	test('accept all defined client commands', () => {
 		assert.equal(isSpecsClient({ kind: 'open', id: 'SPEC-0001' }), true);
+		assert.equal(isSpecsClient({ kind: 'spawnWorktree', id: 'SPEC-0001', workspace: 'repo' }), true);
 		assert.equal(isSpecsClient({ kind: 'create', title: 'New spec', status: 'Backlog' }), true);
 		assert.equal(isSpecsClient({ kind: 'move', id: 'SPEC-0001', status: 'Active', workspace: 'repo' }), true);
 		assert.equal(isSpecsClient({ kind: 'delete', id: 'SPEC-0001' }), true);
@@ -372,12 +413,14 @@ describe('specs board message guards', () => {
 				specCount: 1,
 				cardCount: 1,
 				emptyVisible: false,
+				worktreeActionCount: 1,
 			},
 		}), true);
 	});
 
 	test('reject malformed client commands', () => {
 		assert.equal(isSpecsClient({ kind: 'open' }), false);
+		assert.equal(isSpecsClient({ kind: 'spawnWorktree' }), false);
 		assert.equal(isSpecsClient({ kind: 'create', title: 'New spec' }), false);
 		assert.equal(isSpecsClient({ kind: 'move', id: 'SPEC-0001' }), false);
 		assert.equal(isSpecsClient({ kind: 'delete', id: 12 }), false);

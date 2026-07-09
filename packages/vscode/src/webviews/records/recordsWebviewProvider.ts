@@ -74,7 +74,7 @@ export class RecordsWebviewProvider implements vscode.WebviewViewProvider {
 		}
 	}
 
-	clickRecordForDiagnostics(id: string, target: 'title' | 'preview' | 'delete', workspace?: string): void {
+	clickRecordForDiagnostics(id: string, target: 'title' | 'preview' | 'worktree' | 'delete', workspace?: string): void {
 		for (const router of this.routers) {
 			router.post({
 				kind: 'diagnosticClickRecord',

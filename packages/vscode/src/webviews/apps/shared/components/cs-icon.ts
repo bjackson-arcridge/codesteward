@@ -17,6 +17,7 @@ const codiconGlyphs: Readonly<Record<string, string>> = {
 	'list-tree': '\ueb84',
 	'open-preview': '\ueb28',
 	replace: '\ueb3d',
+	'repo-forked': '\uea63',
 	trash: '\uea81',
 };
 
