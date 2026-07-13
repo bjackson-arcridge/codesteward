@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { renderWebviewHtml } from '../shared/csp.js';
 import { attachMessageRouter, type MessageRouter } from '../shared/messageRouter.js';
-import { type HostToWebview, type SpecCard, type WebviewToHost, isWebviewToHost } from './messages.js';
+import { type HostToWebview, type SpecCard, type SpecCardActionTarget, type WebviewToHost, isWebviewToHost } from './messages.js';
 
 export interface SpecsBoardState {
 	readonly lanes: readonly string[];
@@ -72,7 +72,7 @@ export class SpecsBoardPanel implements vscode.Disposable {
 		this.router.post(await this.buildState());
 	}
 
-	clickSpecForDiagnostics(id: string, target: 'open' | 'worktree' | 'archive' | 'delete', workspace?: string): void {
+	clickSpecForDiagnostics(id: string, target: SpecCardActionTarget, workspace?: string): void {
 		this.router?.post({
 			kind: 'diagnosticClickSpec',
 			id,

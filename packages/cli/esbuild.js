@@ -12,6 +12,10 @@ async function copyTemplates() {
 	await fs.cp(source, target, { recursive: true });
 }
 
+async function makeEntrypointExecutable() {
+	await fs.chmod(path.join('dist', 'main.js'), 0o755);
+}
+
 async function main() {
 	const ctx = await esbuild.context({
 		entryPoints: [
@@ -38,6 +42,7 @@ async function main() {
 	}
 
 	await ctx.rebuild();
+	await makeEntrypointExecutable();
 	await copyTemplates();
 	await ctx.dispose();
 }

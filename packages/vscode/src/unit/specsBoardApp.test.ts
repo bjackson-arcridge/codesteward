@@ -51,4 +51,18 @@ describe('Specs board add form', () => {
 		assert.match(source, /icon="trash"/);
 		assert.match(source, /kind: 'delete'/);
 	});
+
+	test('renders row-local spec phase launch actions', () => {
+		const source = readSpecsBoardAppSource();
+
+		assert.match(source, /label="Plan spec"/);
+		assert.match(source, /data-spec-target="planning"/);
+		assert.match(source, /label="Implement spec"/);
+		assert.match(source, /data-spec-target="implementation"/);
+		assert.match(source, /label="Review spec"/);
+		assert.match(source, /data-spec-target="review"/);
+		assert.match(source, /private launchSpec\(spec: SpecCard, phase: SpecSessionPhase\): void/);
+		assert.match(source, /kind: 'launch'/);
+		assert.match(source, /phase,/);
+	});
 });

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { renderWebviewHtml } from '../shared/csp.js';
 import { attachMessageRouter, type MessageRouter } from '../shared/messageRouter.js';
-import { type HostToWebview, type WebviewToHost, isWebviewToHost, type RecordActionMode, type RecordSummary, type SpecRecordGroup } from './messages.js';
+import { type HostToWebview, type WebviewToHost, isWebviewToHost, type RecordActionMode, type RecordClickTarget, type RecordSummary, type SpecRecordGroup } from './messages.js';
 
 export interface RecordFilterOptions {
 	readonly domains: readonly string[];
@@ -74,7 +74,7 @@ export class RecordsWebviewProvider implements vscode.WebviewViewProvider {
 		}
 	}
 
-	clickRecordForDiagnostics(id: string, target: 'title' | 'preview' | 'worktree' | 'delete', workspace?: string): void {
+	clickRecordForDiagnostics(id: string, target: RecordClickTarget, workspace?: string): void {
 		for (const router of this.routers) {
 			router.post({
 				kind: 'diagnosticClickRecord',

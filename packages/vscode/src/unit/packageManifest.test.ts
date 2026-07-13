@@ -56,6 +56,18 @@ describe('package manifest contributions', () => {
 			true,
 		);
 		assert.equal(
+			commands.some(item => item.command === 'sundial.specs.plan'),
+			true,
+		);
+		assert.equal(
+			commands.some(item => item.command === 'sundial.specs.implement'),
+			true,
+		);
+		assert.equal(
+			commands.some(item => item.command === 'sundial.specs.review'),
+			true,
+		);
+		assert.equal(
 			viewTitle.some(item => item.command === 'sundial.specs.openBoard'),
 			false,
 		);
@@ -76,6 +88,24 @@ describe('package manifest contributions', () => {
 		assert.match(source, /await runLifecycle\(record\.id, \['spec', 'status', record\.id, status\], filePath\);/);
 		assert.match(source, /vscode\.commands\.executeCommand\('vscode\.openFolder', vscode\.Uri\.file\(worktreePath\), \{ forceNewWindow: true \}\)/);
 		assert.doesNotMatch(source, /frontmatter[\s\S]{0,120}message\.status/);
+	});
+
+	test('routes spec phase launch commands through official provider extensions', () => {
+		const source = readExtensionSource();
+
+		assert.match(source, /registerCommand\('sundial\.specs\.plan', \(id\?: string\) => launchSpecSession\('planning', id\)\)/);
+		assert.match(source, /registerCommand\('sundial\.specs\.implement', \(id\?: string\) => launchSpecSession\('implementation', id\)\)/);
+		assert.match(source, /registerCommand\('sundial\.specs\.review', \(id\?: string\) => launchSpecSession\('review', id\)\)/);
+		assert.match(source, /if \(message\.kind === 'launchSpec'\) {\s*await launchSpecSession\(message\.phase, message\.id, message\.workspace\);/);
+		assert.match(source, /if \(message\.kind === 'launch'\) {\s*await launchSpecSession\(message\.phase, message\.id, message\.workspace\);/);
+		assert.match(source, /vscode\.extensions\.getExtension\(extensionId\)/);
+		assert.match(source, /'anthropic\.claude-code'/);
+		assert.match(source, /'openai\.chatgpt'/);
+		assert.match(source, /vscode\.env\.openExternal\(vscode\.Uri\.parse\(uri\)\)/);
+		assert.match(source, /phase !== 'implementation'/);
+		assert.match(source, /vscode\.env\.clipboard\.writeText\(prompt\)/);
+		assert.match(source, /vscode\.commands\.executeCommand\('chatgpt\.newCodexPanel'\)/);
+		assert.match(source, /vscode\.commands\.executeCommand\('chatgpt\.implementTodo', args\)/);
 	});
 
 	test('refreshes specs views when spec markdown or workflow files change', () => {

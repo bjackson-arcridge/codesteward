@@ -254,6 +254,9 @@ describe('records message guards', () => {
 		}), true);
 		assert.equal(isRecordsHost({ kind: 'diagnosticClickRecord', id: 'SPEC-0001', target: 'delete', workspace: 'repo' }), true);
 		assert.equal(isRecordsHost({ kind: 'diagnosticClickRecord', id: 'SPEC-0001', target: 'worktree', workspace: 'repo' }), true);
+		assert.equal(isRecordsHost({ kind: 'diagnosticClickRecord', id: 'SPEC-0001', target: 'planning', workspace: 'repo' }), true);
+		assert.equal(isRecordsHost({ kind: 'diagnosticClickRecord', id: 'SPEC-0001', target: 'implementation', workspace: 'repo' }), true);
+		assert.equal(isRecordsHost({ kind: 'diagnosticClickRecord', id: 'SPEC-0001', target: 'review', workspace: 'repo' }), true);
 		assert.equal(isRecordsHost({ kind: 'diagnosticCreateSpec', title: 'New spec' }), true);
 		assert.equal(isRecordsHost({ kind: 'diagnosticCreateSpec', title: 'New spec', status: 'Backlog', workspace: 'repo' }), true);
 		assert.equal(isRecordsHost({ kind: 'diagnosticMoveSpec', id: 'SPEC-0001', status: 'Archive', workspace: 'repo' }), true);
@@ -322,6 +325,7 @@ describe('records message guards', () => {
 		assert.equal(isRecordsClient({ kind: 'moveSpec', id: 'SPEC-0001', status: 'Archive', workspace: 'repo' }), true);
 		assert.equal(isRecordsClient({ kind: 'spawnSpecWorktree', id: 'SPEC-0001', workspace: 'repo' }), true);
 		assert.equal(isRecordsClient({ kind: 'deleteSpec', id: 'SPEC-0001', workspace: 'repo', skipConfirmation: true }), true);
+		assert.equal(isRecordsClient({ kind: 'launchSpec', id: 'SPEC-0001', phase: 'implementation', workspace: 'repo' }), true);
 		assert.equal(isRecordsClient({ kind: 'toggleSpecGroup', status: 'Active', collapsed: true }), true);
 		assert.equal(isRecordsClient({ kind: 'clearFilters' }), true);
 		assert.equal(isRecordsClient({ kind: 'requestRefresh' }), true);
@@ -352,6 +356,7 @@ describe('records message guards', () => {
 		assert.equal(isRecordsClient({ kind: 'moveSpec', id: 'SPEC-0001' }), false);
 		assert.equal(isRecordsClient({ kind: 'spawnSpecWorktree' }), false);
 		assert.equal(isRecordsClient({ kind: 'deleteSpec', id: 'SPEC-0001', skipConfirmation: 'yes' }), false);
+		assert.equal(isRecordsClient({ kind: 'launchSpec', id: 'SPEC-0001', phase: 'audit' }), false);
 		assert.equal(isRecordsClient({
 			kind: 'rendered',
 			diagnostic: { recordCount: 1, cardCount: '1', emptyVisible: false },
@@ -383,6 +388,7 @@ describe('specs board message guards', () => {
 		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'open' }), true);
 		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'worktree' }), true);
 		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'archive' }), true);
+		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'review' }), true);
 		assert.equal(isSpecsHost({ kind: 'diagnosticClickSpec', id: 'SPEC-0001', target: 'delete', workspace: 'repo' }), true);
 		assert.equal(isSpecsHost({ kind: 'diagnosticCreateSpec', title: 'New spec', status: 'Backlog' }), true);
 		assert.equal(isSpecsHost({ kind: 'diagnosticMoveSpec', id: 'SPEC-0001', status: 'Active' }), true);
@@ -405,6 +411,7 @@ describe('specs board message guards', () => {
 		assert.equal(isSpecsClient({ kind: 'create', title: 'New spec', status: 'Backlog' }), true);
 		assert.equal(isSpecsClient({ kind: 'move', id: 'SPEC-0001', status: 'Active', workspace: 'repo' }), true);
 		assert.equal(isSpecsClient({ kind: 'delete', id: 'SPEC-0001' }), true);
+		assert.equal(isSpecsClient({ kind: 'launch', id: 'SPEC-0001', phase: 'planning', workspace: 'repo' }), true);
 		assert.equal(isSpecsClient({ kind: 'requestRefresh' }), true);
 		assert.equal(isSpecsClient({
 			kind: 'rendered',
@@ -424,6 +431,7 @@ describe('specs board message guards', () => {
 		assert.equal(isSpecsClient({ kind: 'create', title: 'New spec' }), false);
 		assert.equal(isSpecsClient({ kind: 'move', id: 'SPEC-0001' }), false);
 		assert.equal(isSpecsClient({ kind: 'delete', id: 12 }), false);
+		assert.equal(isSpecsClient({ kind: 'launch', id: 'SPEC-0001', phase: 'retrospective' }), false);
 		assert.equal(isSpecsClient({
 			kind: 'rendered',
 			diagnostic: {

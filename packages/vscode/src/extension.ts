@@ -22,7 +22,7 @@ import { WelcomeWebviewProvider } from './webviews/welcome/welcomeWebviewProvide
 import { RecordsWebviewProvider } from './webviews/records/recordsWebviewProvider';
 import { CandidatesWebviewProvider } from './webviews/candidates/candidatesWebviewProvider';
 import { SpecsBoardPanel, type SpecsBoardState } from './webviews/specs/specsBoardPanel';
-import type { RecordRenderDiagnostic, RecordSummary, SpecRecordGroup } from './webviews/records/messages';
+import type { RecordClickTarget, RecordRenderDiagnostic, RecordSummary, SpecRecordGroup } from './webviews/records/messages';
 import type { BootstrapProvider, CandidateRenderDiagnostic, CandidateSummary } from './webviews/candidates/messages';
 import type { SpecCard, SpecsRenderDiagnostic } from './webviews/specs/messages';
 import type { WebviewToHost as WelcomeWebviewToHost, WelcomeRenderDiagnostic } from './webviews/welcome/messages';
@@ -30,6 +30,15 @@ import { renderMarkdownPreviewSource } from './markdownPreview';
 import { sundialCliCommand, sundialCliInstallArgs } from './sundialCli';
 import { MarkdownCommentBubbleDecorations } from './commentBubbles';
 import { gitWorktreeContext, spawnSpecWorktree as runSpecWorktreeLaunch, type SpawnSpecWorktreeResult } from './specWorktrees';
+import {
+	buildClaudeSpecSessionUri,
+	buildCodexSpecSessionArguments,
+	buildProviderSpecSessionPrompt,
+	type SpecSessionLaunchResult,
+	type SpecSessionPhase,
+	type SpecSessionProvider,
+	type SpecSessionSpec,
+} from './specSessions';
 
 const execFileAsync = promisify(execFile);
 const markdownPreviewScheme = 'sundial-preview';
@@ -339,6 +348,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
 			if (message.kind === 'deleteSpec') {
 				await deleteSpec(message.id, message.workspace, specsProvider, specsBoardPanel, message.skipConfirmation === true);
+				return;
+			}
+
+			if (message.kind === 'launchSpec') {
+				await launchSpecSession(message.phase, message.id, message.workspace);
 			}
 		},
 	});
@@ -388,6 +402,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
 			if (message.kind === 'delete') {
 				await deleteSpec(message.id, message.workspace, specsProvider, specsBoardPanel);
+				return;
+			}
+
+			if (message.kind === 'launch') {
+				await launchSpecSession(message.phase, message.id, message.workspace);
 			}
 		},
 	});
@@ -510,6 +529,9 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.openBoard', () => specsBoardPanel.reveal()));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.openSpec', (id?: string) => openSpec(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.spawnWorktree', (id?: string, workspace?: string) => spawnSpecWorktree(id, workspace)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.plan', (id?: string) => launchSpecSession('planning', id)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.implement', (id?: string) => launchSpecSession('implementation', id)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.review', (id?: string) => launchSpecSession('review', id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.open', (id?: string) => previewCandidate(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.editSource', (id?: string) => editCandidateSource(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.accept', (id?: string) => {
@@ -619,7 +641,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'sundial.internal.specs.click',
-			(id: string, target: 'title' | 'preview' | 'worktree' | 'delete', workspace?: string) => specsProvider.clickRecordForDiagnostics(id, target, workspace),
+			(id: string, target: RecordClickTarget, workspace?: string) => specsProvider.clickRecordForDiagnostics(id, target, workspace),
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'sundial.internal.specs.create',
@@ -1277,6 +1299,138 @@ function showSpawnSpecWorktreeResult(result: SpawnSpecWorktreeResult): void {
 	}
 }
 
+async function launchSpecSession(phase: SpecSessionPhase, id: string | undefined, workspace?: string): Promise<void> {
+	const record = await specForCommand(id, workspace);
+	const filePath = await resolveSpecPath(record);
+	if (record === undefined || filePath === undefined) {
+		return;
+	}
+
+	const provider = await pickSpecSessionProvider();
+	if (provider === undefined) {
+		return;
+	}
+
+	const spec: SpecSessionSpec = {
+		id: record.id,
+		title: record.title,
+		filePath,
+	};
+	let result: SpecSessionLaunchResult;
+	try {
+		result = await launchProviderSpecSession(provider, phase, spec, await fs.readFile(filePath, 'utf8'));
+	} catch (error) {
+		void vscode.window.showErrorMessage(`Unable to launch ${providerDisplayName(provider)} for ${record.id}: ${errorMessage(error)}`);
+		return;
+	}
+
+	showSpecSessionLaunchResult(result, phase, spec);
+}
+
+async function pickSpecSessionProvider(): Promise<SpecSessionProvider | undefined> {
+	const installed = installedSpecSessionProviders();
+	if (installed.length === 1) {
+		return installed[0];
+	}
+
+	if (installed.length === 2) {
+		const pick = await vscode.window.showQuickPick<SpecSessionProviderPick>(installed.map(provider => ({
+			label: providerDisplayName(provider),
+			description: provider === 'claude'
+				? 'Open a Claude Code tab with the prompt prefilled'
+				: 'Hand off through Codex Implement Todo',
+			provider,
+		})), {
+			placeHolder: 'Select a provider for this spec session',
+		});
+		return pick?.provider;
+	}
+
+	const action = await vscode.window.showWarningMessage(
+		'Install Claude Code or Codex to launch a Sundial spec session.',
+		'Open Claude Code',
+		'Open Codex',
+	);
+	if (action === 'Open Claude Code') {
+		await openExtensionSearch('anthropic.claude-code');
+	}
+
+	if (action === 'Open Codex') {
+		await openExtensionSearch('openai.chatgpt');
+	}
+
+	return undefined;
+}
+
+async function launchProviderSpecSession(
+	provider: SpecSessionProvider,
+	phase: SpecSessionPhase,
+	spec: SpecSessionSpec,
+	markdown: string,
+): Promise<SpecSessionLaunchResult> {
+	if (!isSpecSessionProviderInstalled(provider)) {
+		return { kind: 'unavailable', provider, reason: 'missing-extension' };
+	}
+
+	if (provider === 'claude') {
+		const prompt = buildProviderSpecSessionPrompt(provider, phase, spec);
+		const uri = buildClaudeSpecSessionUri(phase, spec);
+		const opened = await vscode.env.openExternal(vscode.Uri.parse(uri));
+		return opened
+			? { kind: 'prefilled', provider, uri, prompt }
+			: { kind: 'unavailable', provider, reason: 'launch-failed' };
+	}
+
+	if (phase !== 'implementation') {
+		const prompt = buildProviderSpecSessionPrompt(provider, phase, spec);
+		await vscode.env.clipboard.writeText(prompt);
+		await vscode.commands.executeCommand('chatgpt.newCodexPanel');
+		return { kind: 'codex-clipboard-handoff', provider, prompt };
+	}
+
+	const args = buildCodexSpecSessionArguments(phase, spec, markdown);
+	await vscode.commands.executeCommand('chatgpt.implementTodo', args);
+	return { kind: 'codex-todo-handoff', provider, args };
+}
+
+function showSpecSessionLaunchResult(result: SpecSessionLaunchResult, phase: SpecSessionPhase, spec: SpecSessionSpec): void {
+	if (result.kind === 'prefilled') {
+		void vscode.window.showInformationMessage(`${providerDisplayName(result.provider)} opened with the ${phase} prompt for ${spec.id} prefilled.`);
+		return;
+	}
+
+	if (result.kind === 'codex-todo-handoff') {
+		void vscode.window.showInformationMessage(`${providerDisplayName(result.provider)} opened with the ${phase} handoff for ${spec.id}.`);
+		return;
+	}
+
+	if (result.kind === 'codex-clipboard-handoff') {
+		void vscode.window.showInformationMessage(`${providerDisplayName(result.provider)} opened with the ${phase} prompt for ${spec.id} copied to the clipboard.`);
+		return;
+	}
+
+	const provider = result.provider === undefined ? 'A supported provider' : providerDisplayName(result.provider);
+	const reason = result.reason === 'missing-extension' ? 'is not installed' : 'could not be opened';
+	void vscode.window.showWarningMessage(`${provider} ${reason}.`);
+}
+
+function installedSpecSessionProviders(): readonly SpecSessionProvider[] {
+	return (['claude', 'codex'] as const).filter(provider => isSpecSessionProviderInstalled(provider));
+}
+
+function isSpecSessionProviderInstalled(provider: SpecSessionProvider): boolean {
+	const extensionId = provider === 'claude' ? 'anthropic.claude-code' : 'openai.chatgpt';
+	return vscode.extensions.getExtension(extensionId) !== undefined;
+}
+
+async function openExtensionSearch(extensionId: string): Promise<void> {
+	await vscode.commands.executeCommand('workbench.extensions.search', `@id:${extensionId}`);
+}
+
+function providerDisplayName(provider: SpecSessionProvider): string {
+	return provider === 'claude' ? 'Claude Code' : 'Codex';
+}
+
 async function createSpec(
 	title: string,
 	status: string,
@@ -1784,6 +1938,10 @@ interface ProviderPick extends vscode.QuickPickItem {
 	readonly provider: BootstrapProvider;
 }
 
+interface SpecSessionProviderPick extends vscode.QuickPickItem {
+	readonly provider: SpecSessionProvider;
+}
+
 interface WorkspaceRootPick extends vscode.QuickPickItem {
 	readonly root: string;
 }
@@ -2120,9 +2278,12 @@ function isNodeError(error: unknown): error is NodeJS.ErrnoException {
 	return error instanceof Error && 'code' in error;
 }
 
+function errorMessage(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
+
 function showCommandError(error: unknown): void {
-	const message = error instanceof Error ? error.message : String(error);
-	void vscode.window.showErrorMessage(`Sundial command failed: ${message}`);
+	void vscode.window.showErrorMessage(`Sundial command failed: ${errorMessage(error)}`);
 }
 
 async function chooseWorkspaceRoot(state: WorkspaceRootState): Promise<string | undefined> {

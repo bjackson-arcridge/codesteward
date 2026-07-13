@@ -9,6 +9,7 @@ import {
 	type WebviewToHost,
 	isHostToWebview,
 } from '../../specs/messages.js';
+import { isSpecSessionPhase, type SpecSessionPhase } from '../../../specSessions.js';
 import '../shared/components/cs-card.js';
 import '../shared/components/cs-icon.js';
 import '../shared/components/cs-icon-button.js';
@@ -387,6 +388,27 @@ export class SpecsBoardApp extends LitElement {
 				</span>
 				<div slot="actions">
 					<cs-icon-button
+						icon="list-tree"
+						label="Plan spec"
+						data-spec-id=${spec.id}
+						data-spec-target="planning"
+						@click=${() => this.launchSpec(spec, 'planning')}
+					></cs-icon-button>
+					<cs-icon-button
+						icon="replace"
+						label="Implement spec"
+						data-spec-id=${spec.id}
+						data-spec-target="implementation"
+						@click=${() => this.launchSpec(spec, 'implementation')}
+					></cs-icon-button>
+					<cs-icon-button
+						icon="eye"
+						label="Review spec"
+						data-spec-id=${spec.id}
+						data-spec-target="review"
+						@click=${() => this.launchSpec(spec, 'review')}
+					></cs-icon-button>
+					<cs-icon-button
 						icon="open-preview"
 						label="Open spec"
 						data-spec-id=${spec.id}
@@ -420,6 +442,15 @@ export class SpecsBoardApp extends LitElement {
 		`;
 	}
 
+	private launchSpec(spec: SpecCard, phase: SpecSessionPhase): void {
+		this.send({
+			kind: 'launch',
+			id: spec.id,
+			phase,
+			...(spec.workspace === undefined ? {} : { workspace: spec.workspace }),
+		});
+	}
+
 	private readonly handleMessage = (event: MessageEvent<unknown>): void => {
 		if (!isHostToWebview(event.data)) {
 			return;
@@ -431,7 +462,14 @@ export class SpecsBoardApp extends LitElement {
 				this.applyState(message);
 				return;
 			case 'diagnosticClickSpec':
-				if (message.target === 'archive') {
+				if (isSpecSessionPhase(message.target)) {
+					this.send({
+						kind: 'launch',
+						id: message.id,
+						phase: message.target,
+						...(message.workspace === undefined ? {} : { workspace: message.workspace }),
+					});
+				} else if (message.target === 'archive') {
 					this.send({
 						kind: 'move',
 						id: message.id,

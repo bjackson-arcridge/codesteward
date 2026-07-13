@@ -23,6 +23,7 @@ description: Use in Claude Code during implementation, when writing non-trivial 
 - If operating against a spec, cite the spec id/title in updates and keep the spec current as implementation decisions, open questions, work logs, and test results change.
 - Update spec status only through the CLI: `sundial spec status <id> <status>` or `sundial spec update-status <id> <status>`.
 - Edit the spec markdown body directly when filling or refining the template. Keep specs living and forward-looking; reserve backward-looking details for Rejected Alternatives, Implementation Log, and Test Log.
+- When invoked by a one-line Sundial implementation launch prompt, implement the referenced spec end to end where feasible, keep Implementation Log and Test Log current, and report any skipped tests with concrete blockers.
 ---
 <Do the implementation>
 ---

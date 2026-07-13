@@ -1,3 +1,5 @@
+import { isSpecSessionPhase, type SpecSessionPhase } from '../../specSessions';
+
 export interface RecordSummary {
 	readonly id: string;
 	readonly title: string;
@@ -17,6 +19,7 @@ export interface SpecRecordGroup {
 }
 
 export type RecordActionMode = 'accepted' | 'rejected' | 'retired' | 'research' | 'specs';
+export type RecordClickTarget = 'title' | 'preview' | 'worktree' | 'delete' | SpecSessionPhase;
 
 export interface RecordRenderDiagnostic {
 	readonly recordCount: number;
@@ -45,7 +48,7 @@ export type HostToWebview =
 		diagnosticsEnabled?: boolean;
 	}
 	| { kind: 'diagnosticSelectFilter'; filter: 'domain'; value?: string }
-	| { kind: 'diagnosticClickRecord'; id: string; target: 'title' | 'preview' | 'worktree' | 'delete'; workspace?: string }
+	| { kind: 'diagnosticClickRecord'; id: string; target: RecordClickTarget; workspace?: string }
 	| { kind: 'diagnosticCreateSpec'; title: string; status?: string; workspace?: string }
 	| { kind: 'diagnosticMoveSpec'; id: string; status: string; workspace?: string }
 	| { kind: 'diagnosticDeleteSpec'; id: string; workspace?: string; skipConfirmation?: boolean };
@@ -58,6 +61,7 @@ export type WebviewToHost =
 	| { kind: 'moveSpec'; id: string; status: string; workspace?: string }
 	| { kind: 'spawnSpecWorktree'; id: string; workspace?: string }
 	| { kind: 'deleteSpec'; id: string; workspace?: string; skipConfirmation?: boolean }
+	| { kind: 'launchSpec'; id: string; phase: SpecSessionPhase; workspace?: string }
 	| { kind: 'setDomainFilter'; domainFilter?: string }
 	| { kind: 'toggleSpecGroup'; status: string; collapsed: boolean }
 	| { kind: 'toggleEnabled'; id: string; enabled: boolean }
@@ -92,6 +96,7 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 		status?: unknown;
 		workspace?: unknown;
 		skipConfirmation?: unknown;
+		phase?: unknown;
 	};
 
 	if (message.kind === 'diagnosticCreateSpec') {
@@ -114,7 +119,7 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 
 	if (message.kind === 'diagnosticClickRecord') {
 		return typeof message.id === 'string'
-			&& (message.target === 'title' || message.target === 'preview' || message.target === 'worktree' || message.target === 'delete')
+			&& isRecordClickTarget(message.target)
 			&& (message.workspace === undefined || typeof message.workspace === 'string');
 	}
 
@@ -228,6 +233,7 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 		title?: unknown;
 		workspace?: unknown;
 		skipConfirmation?: unknown;
+		phase?: unknown;
 	};
 	if (message.kind === 'preview'
 		|| message.kind === 'edit'
@@ -276,6 +282,12 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 			&& (message.skipConfirmation === undefined || typeof message.skipConfirmation === 'boolean');
 	}
 
+	if (message.kind === 'launchSpec') {
+		return typeof message.id === 'string'
+			&& isSpecSessionPhase(message.phase)
+			&& (message.workspace === undefined || typeof message.workspace === 'string');
+	}
+
 	if (message.kind === 'rendered') {
 		return isRecordRenderDiagnostic(message.diagnostic);
 	}
@@ -316,6 +328,14 @@ function isRecordRenderDiagnostic(value: unknown): value is RecordRenderDiagnost
 
 function isStringArray(value: unknown): value is readonly string[] {
 	return Array.isArray(value) && value.every(item => typeof item === 'string');
+}
+
+function isRecordClickTarget(value: unknown): value is RecordClickTarget {
+	return value === 'title'
+		|| value === 'preview'
+		|| value === 'worktree'
+		|| value === 'delete'
+		|| isSpecSessionPhase(value);
 }
 
 function isRecordActionMode(value: unknown): value is RecordActionMode {
