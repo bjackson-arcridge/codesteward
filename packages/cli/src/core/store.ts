@@ -42,6 +42,7 @@ const storeSeedFiles = [
 const skillTemplateFiles = [
 	'decision-aware-design/SKILL.md',
 	'decision-aware-implement/SKILL.md',
+	'decision-aware-review/SKILL.md',
 	'remember-research/SKILL.md',
 ] as const;
 

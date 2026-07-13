@@ -23,6 +23,7 @@ description: Use in Claude Code before consequential design work, architecture d
 - If operating against a spec, cite the spec id/title in updates and keep the spec current as design assumptions, rejected alternatives, open questions, and test expectations change.
 - Update spec status only through the CLI: `sundial spec status <id> <status>` or `sundial spec update-status <id> <status>`.
 - Edit the spec markdown body directly when filling or refining the template. Keep specs living and forward-looking; reserve backward-looking details for Rejected Alternatives, Implementation Log, and Test Log.
+- When invoked by a one-line Sundial planning launch prompt, treat the request as the planning phase: avoid implementing feature code, but write or run small probes when needed to validate assumptions; keep Planned Approach, Rejected Alternatives, Test Plan, and Open Questions current.
 
 ## Research Note Discipline
 - When design work required concrete research that future agents are likely to misremember, such as API signatures, CLI flags, protocol details, provider extension command ids, URI schemes, version-specific behavior, or official-doc findings, use the `remember-research` skill after the design pass.

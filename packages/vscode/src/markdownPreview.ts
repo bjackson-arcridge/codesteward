@@ -45,8 +45,8 @@ function renderFrontmatterTable(entries: readonly FrontmatterEntry[]): string {
 		'<tbody>',
 		...rows.map(row => [
 			'<tr>',
-			`<td align="right" style="border: none; padding-right: 0.25em; vertical-align: top;"><strong>${escapeHtml(row.field)}</strong></td>`,
-			`<td align="left" style="border: none; border-left: 1px solid currentColor; padding-left: 0.25em; vertical-align: top;">${escapeHtml(row.value)}</td>`,
+			`<td align="right" style="border: none; padding-right: 0.75em; vertical-align: top;"><strong>${escapeHtml(row.field)}</strong></td>`,
+			`<td align="left" style="border: none; border-left: 1px solid currentColor; padding-left: 0.75em; vertical-align: top;">${escapeHtml(row.value)}</td>`,
 			'</tr>',
 		].join('')),
 		'</tbody>',

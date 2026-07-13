@@ -37,6 +37,12 @@ describe('bootstrapCommand', () => {
 		}
 	});
 
+	test('build script marks the bundled CLI entrypoint executable', async () => {
+		const esbuildScript = await fs.readFile(path.resolve(__dirname, '../../esbuild.js'), 'utf8');
+
+		assert.match(esbuildScript, /fs\.chmod\(path\.join\('dist', 'main\.js'\), 0o755\)/);
+	});
+
 	test('runs Codex bootstrap in bounded full-auto mode', () => {
 		const command = bootstrapCommand('codex', '/project', 'bootstrap prompt');
 

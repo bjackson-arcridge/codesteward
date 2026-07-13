@@ -90,6 +90,7 @@ describe('store bootstrap', () => {
 
 		assert.ok(first.created.includes('.claude/skills/decision-aware-design/SKILL.md'));
 		assert.ok(first.created.includes('.claude/skills/decision-aware-implement/SKILL.md'));
+		assert.ok(first.created.includes('.claude/skills/decision-aware-review/SKILL.md'));
 		assert.ok(first.created.includes('.claude/skills/remember-research/SKILL.md'));
 		assert.ok(first.created.includes('.claude/CLAUDE.md'));
 		assert.equal(first.created.includes('.claude/agents/decision-aware-design-review.md'), false);
@@ -99,11 +100,13 @@ describe('store bootstrap', () => {
 		const instructions = await fs.readFile(path.join(root, '.claude', 'CLAUDE.md'), 'utf8');
 		const designSkill = await fs.readFile(path.join(root, '.claude', 'skills', 'decision-aware-design', 'SKILL.md'), 'utf8');
 		const implementSkill = await fs.readFile(path.join(root, '.claude', 'skills', 'decision-aware-implement', 'SKILL.md'), 'utf8');
+		const reviewSkill = await fs.readFile(path.join(root, '.claude', 'skills', 'decision-aware-review', 'SKILL.md'), 'utf8');
 		const researchSkill = await fs.readFile(path.join(root, '.claude', 'skills', 'remember-research', 'SKILL.md'), 'utf8');
 		assert.match(instructions, /sundial:agent-instructions/);
 		assert.match(instructions, /sundial candidate create/);
 		assert.equal(designSkill, await readTemplate('skills/claude/decision-aware-design/SKILL.md'));
 		assert.equal(implementSkill, await readTemplate('skills/claude/decision-aware-implement/SKILL.md'));
+		assert.equal(reviewSkill, await readTemplate('skills/claude/decision-aware-review/SKILL.md'));
 		assert.equal(researchSkill, await readTemplate('skills/claude/remember-research/SKILL.md'));
 		assert.doesNotMatch(instructions, /\{\{crHowTo\}\}/);
 	});
@@ -115,6 +118,7 @@ describe('store bootstrap', () => {
 
 		assert.ok(first.created.includes('.agents/skills/decision-aware-design/SKILL.md'));
 		assert.ok(first.created.includes('.agents/skills/decision-aware-implement/SKILL.md'));
+		assert.ok(first.created.includes('.agents/skills/decision-aware-review/SKILL.md'));
 		assert.ok(first.created.includes('.agents/skills/remember-research/SKILL.md'));
 		assert.ok(first.created.includes('AGENTS.md'));
 		assert.equal(first.created.includes('.agents/agents/decision-aware-design-review.md'), false);
@@ -124,11 +128,13 @@ describe('store bootstrap', () => {
 		const instructions = await fs.readFile(path.join(root, 'AGENTS.md'), 'utf8');
 		const designSkill = await fs.readFile(path.join(root, '.agents', 'skills', 'decision-aware-design', 'SKILL.md'), 'utf8');
 		const implementSkill = await fs.readFile(path.join(root, '.agents', 'skills', 'decision-aware-implement', 'SKILL.md'), 'utf8');
+		const reviewSkill = await fs.readFile(path.join(root, '.agents', 'skills', 'decision-aware-review', 'SKILL.md'), 'utf8');
 		const researchSkill = await fs.readFile(path.join(root, '.agents', 'skills', 'remember-research', 'SKILL.md'), 'utf8');
 		assert.match(instructions, /sundial:agent-instructions/);
 		assert.match(instructions, /sundial candidate create/);
 		assert.equal(designSkill, await readTemplate('skills/codex/decision-aware-design/SKILL.md'));
 		assert.equal(implementSkill, await readTemplate('skills/codex/decision-aware-implement/SKILL.md'));
+		assert.equal(reviewSkill, await readTemplate('skills/codex/decision-aware-review/SKILL.md'));
 		assert.equal(researchSkill, await readTemplate('skills/codex/remember-research/SKILL.md'));
 		assert.doesNotMatch(designSkill, /\{\{crHowTo\}\}/);
 		assert.doesNotMatch(implementSkill, /\{\{crHowTo\}\}/);
@@ -140,6 +146,7 @@ describe('store bootstrap', () => {
 
 		assert.ok(result.created.includes('.claude/skills/decision-aware-design/SKILL.md'));
 		assert.ok(result.created.includes('.agents/skills/decision-aware-design/SKILL.md'));
+		assert.ok(result.created.includes('.agents/skills/decision-aware-review/SKILL.md'));
 		assert.ok(result.created.includes('.agents/skills/remember-research/SKILL.md'));
 		assert.ok(result.created.includes('.claude/CLAUDE.md'));
 		assert.ok(result.created.includes('AGENTS.md'));
@@ -150,23 +157,28 @@ describe('store bootstrap', () => {
 		await initStore(root, { codex: true });
 		const designSkillPath = path.join(root, '.agents', 'skills', 'decision-aware-design', 'SKILL.md');
 		const implementSkillPath = path.join(root, '.agents', 'skills', 'decision-aware-implement', 'SKILL.md');
+		const reviewSkillPath = path.join(root, '.agents', 'skills', 'decision-aware-review', 'SKILL.md');
 		const researchSkillPath = path.join(root, '.agents', 'skills', 'remember-research', 'SKILL.md');
 		await fs.writeFile(designSkillPath, 'custom design skill\n', 'utf8');
 		await fs.writeFile(implementSkillPath, 'custom implement skill\n', 'utf8');
+		await fs.writeFile(reviewSkillPath, 'custom review skill\n', 'utf8');
 		await fs.writeFile(researchSkillPath, 'custom research skill\n', 'utf8');
 
 		const result = await updateRuntimeAssets(root, { codex: true });
 		const designSkillContents = await fs.readFile(designSkillPath, 'utf8');
 		const implementSkillContents = await fs.readFile(implementSkillPath, 'utf8');
+		const reviewSkillContents = await fs.readFile(reviewSkillPath, 'utf8');
 		const researchSkillContents = await fs.readFile(researchSkillPath, 'utf8');
 		const instructions = await fs.readFile(path.join(root, 'AGENTS.md'), 'utf8');
 
 		assert.ok(result.updated.includes('.agents/skills/decision-aware-design/SKILL.md'));
 		assert.ok(result.updated.includes('.agents/skills/decision-aware-implement/SKILL.md'));
+		assert.ok(result.updated.includes('.agents/skills/decision-aware-review/SKILL.md'));
 		assert.ok(result.updated.includes('.agents/skills/remember-research/SKILL.md'));
 		assert.equal(result.updated.includes('.agents/agents/decision-aware-code-review.md'), false);
 		assert.equal(designSkillContents, await readTemplate('skills/codex/decision-aware-design/SKILL.md'));
 		assert.equal(implementSkillContents, await readTemplate('skills/codex/decision-aware-implement/SKILL.md'));
+		assert.equal(reviewSkillContents, await readTemplate('skills/codex/decision-aware-review/SKILL.md'));
 		assert.equal(researchSkillContents, await readTemplate('skills/codex/remember-research/SKILL.md'));
 		assert.match(instructions, /sundial:agent-instructions/);
 	});
@@ -244,12 +256,35 @@ describe('store bootstrap', () => {
 			'Edit the spec markdown body directly',
 			'Keep specs living and forward-looking',
 			'Rejected Alternatives, Implementation Log, and Test Log',
+			'When invoked by a one-line Sundial',
 		] as const;
 
 		for (const template of templates) {
 			const contents = await readTemplate(template);
 			for (const fragment of sharedFragments) {
 				assert.ok(contents.includes(fragment), `${template} is missing shared spec guidance: ${fragment}`);
+			}
+		}
+	});
+
+	test('keeps shared review guidance across duplicated review skill templates', async () => {
+		const templates = [
+			'skills/claude/decision-aware-review/SKILL.md',
+			'skills/codex/decision-aware-review/SKILL.md',
+			'skills/generic/decision-aware-review/SKILL.md',
+		] as const;
+		const sharedFragments = [
+			'Read the spec\'s Discovery, Applicable Decision Records, Planned Approach, Rejected Alternatives, Test Plan, Open Questions, Implementation Log, and Test Log',
+			'Review should audit implementation completeness, testing performed or missing, security/privacy risks, and adherence to applicable DRs.',
+			'Lead with findings ordered by severity',
+			'Do not implement fixes during review unless the user explicitly asks.',
+			'Keep the spec current by appending concise review outcomes',
+		] as const;
+
+		for (const template of templates) {
+			const contents = await readTemplate(template);
+			for (const fragment of sharedFragments) {
+				assert.ok(contents.includes(fragment), `${template} is missing shared review guidance: ${fragment}`);
 			}
 		}
 	});

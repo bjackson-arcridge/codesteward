@@ -5,12 +5,14 @@ import { connectRefreshTriggers, getHost, readInitialState } from '../shared/hos
 import { assertNever } from '../shared/guards.js';
 import {
 	type HostToWebview,
+	type RecordClickTarget,
 	type RecordActionMode,
 	type RecordSummary,
 	type SpecRecordGroup,
 	type WebviewToHost,
 	isHostToWebview,
 } from '../../records/messages.js';
+import { type SpecSessionPhase } from '../../../specSessions.js';
 import '../shared/components/cs-card.js';
 import '../shared/components/cs-icon-button.js';
 import '../shared/components/cs-badge.js';
@@ -529,6 +531,30 @@ export class RecordsApp extends LitElement {
 		if (this.actionMode === 'specs') {
 			return html`
 				<cs-icon-button
+					icon="list-tree"
+					label="Plan spec"
+					data-record-id=${record.id}
+					data-record-target="planning"
+					data-record-workspace=${record.workspace ?? nothing}
+					@click=${() => this.launchSpec(record, 'planning')}
+				></cs-icon-button>
+				<cs-icon-button
+					icon="replace"
+					label="Implement spec"
+					data-record-id=${record.id}
+					data-record-target="implementation"
+					data-record-workspace=${record.workspace ?? nothing}
+					@click=${() => this.launchSpec(record, 'implementation')}
+				></cs-icon-button>
+				<cs-icon-button
+					icon="eye"
+					label="Review spec"
+					data-record-id=${record.id}
+					data-record-target="review"
+					data-record-workspace=${record.workspace ?? nothing}
+					@click=${() => this.launchSpec(record, 'review')}
+				></cs-icon-button>
+				<cs-icon-button
 					icon="trash"
 					label="Delete spec"
 					data-record-id=${record.id}
@@ -609,6 +635,15 @@ export class RecordsApp extends LitElement {
 				@click=${(event: Event) => this.openRetirePrompt(record, event)}
 			></cs-icon-button>
 		`;
+	}
+
+	private launchSpec(record: RecordSummary, phase: SpecSessionPhase): void {
+		this.send({
+			kind: 'launchSpec',
+			id: record.id,
+			phase,
+			...(record.workspace === undefined ? {} : { workspace: record.workspace }),
+		});
 	}
 
 	private renderRetirePrompt(record: RecordSummary) {
@@ -945,7 +980,7 @@ export class RecordsApp extends LitElement {
 		select.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 	}
 
-	private clickRecordForDiagnostics(id: string, target: 'title' | 'preview' | 'delete', workspace: string | undefined): void {
+	private clickRecordForDiagnostics(id: string, target: RecordClickTarget, workspace: string | undefined): void {
 		const workspaceSelector = workspace === undefined ? '' : `[data-record-workspace="${CSS.escape(workspace)}"]`;
 		const selector = `[data-record-id="${CSS.escape(id)}"][data-record-target="${target}"]${workspaceSelector}`;
 		const element = this.renderRoot.querySelector<HTMLElement>(selector);

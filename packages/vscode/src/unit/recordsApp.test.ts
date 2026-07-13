@@ -47,4 +47,17 @@ describe('Records app specs sidebar mode', () => {
 		assert.match(source, /@drop=\$\{\(event: DragEvent\) => this\.handleSpecGroupDrop\(event, group\.status\)\}/);
 		assert.match(source, /kind: 'moveSpec'/);
 	});
+
+	test('renders specs sidebar phase launch actions', () => {
+		const source = readRecordsAppSource();
+
+		assert.match(source, /label="Plan spec"/);
+		assert.match(source, /data-record-target="planning"/);
+		assert.match(source, /label="Implement spec"/);
+		assert.match(source, /data-record-target="implementation"/);
+		assert.match(source, /label="Review spec"/);
+		assert.match(source, /data-record-target="review"/);
+		assert.match(source, /private launchSpec\(record: RecordSummary, phase: SpecSessionPhase\): void/);
+		assert.match(source, /kind: 'launchSpec'/);
+	});
 });

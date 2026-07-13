@@ -1,12 +1,11 @@
 ---
 id: SPEC-0004
 title: Helper functions to launch claude or codex sessions
-status: Backlog
+status: Done
 created: 2026-07-07
-updated: 2026-07-07
+updated: 2026-07-12
 created_by: bjackson
 ---
-
 # Helper functions to launch claude or codex sessions 
 
 ## Discovery
@@ -66,7 +65,7 @@ The launch prompt should be intentionally small: one line that names the phase, 
   - Represent session phases as `planning`, `implementation`, and `review`.
   - Generate a one-line phase command from the selected spec id, title, file path, and phase.
   - The one-line command should tell the provider to use the relevant Sundial planning, implementation, or review skill/instructions for that spec, not inline the full workflow.
-  - Return a launch result that distinguishes `prefilled`, `codex-todo-handoff`, and `unavailable` outcomes so the webview can show accurate feedback.
+  - Return a launch result that distinguishes `prefilled`, `codex-todo-handoff`, `codex-clipboard-handoff`, and `unavailable` outcomes so the webview can show accurate feedback.
   - Keep the provider-neutral command text short, then apply a provider-specific transport wrapper for Claude URI encoding or Codex todo handoff.
 - Put the detailed phase behavior in Sundial skills and managed instructions:
   - Ensure the installed Codex, Claude, and generic skill/instruction templates include enough planning, implementation, and review guidance for the one-line launch command to work.
@@ -77,13 +76,14 @@ The launch prompt should be intentionally small: one line that names the phase, 
   - Include the phase, spec id/title, spec path, and instruction to use the relevant Sundial skill/instructions in the prefilled prompt.
   - Do not auto-submit; let the user review and send the prompt in Claude's native UI.
 - Launch Codex sessions through the most stable official VS Code extension entry point available:
-  - Use `vscode.commands.executeCommand("chatgpt.implementTodo", { fileName, line, comment })` for Codex launches.
-  - Use the selected spec markdown file as the `fileName` anchor, pass the best available line number for the relevant spec section, and pass the generated phase prompt as `comment`.
+  - Use `vscode.commands.executeCommand("chatgpt.implementTodo", { fileName, line, comment })` only for Codex implementation launches.
+  - Use the selected spec markdown file as the `fileName` anchor, pass the best available line number for the implementation log section, and pass the generated implementation prompt as `comment`.
   - Encode `fileName` the same way Codex's installed CodeLens provider does: `encodeURIComponent(specUri.fsPath)`.
-  - Prefix Codex planning comments with `/plan` and Codex review comments with `/review`; implementation comments should remain ordinary implementation task prompts.
+  - For Codex planning and review launches, copy the generated prompt to the clipboard and open `chatgpt.newCodexPanel` instead of using the implementation-framed todo transport.
+  - Prefix Codex planning prompts with `/plan Planning only.` and Codex review prompts with `/review Review only.`; implementation comments should remain ordinary implementation task prompts.
   - Do not write launch-only instructions into the spec markdown solely to trigger Codex unless direct command arguments prove unreliable in a manual smoke test.
   - Do not attempt to pass prompt text into `chatgpt.newCodexPanel`, `chatgpt.newChat`, or a Codex URI unless a future public contract documents prompt-prefill support.
-  - Treat the `implementTodo` argument shape as a verified installed-extension behavior, not a formally documented public API; if it fails in practice, pivot the design after the smoke test rather than implementing fallback behavior upfront.
+  - Treat the `implementTodo` argument shape as a verified installed-extension behavior for implementation, not a formally documented public API; if it fails in practice, pivot the design after the smoke test rather than implementing fallback behavior upfront.
 - Keep the CLI out of the primary user flow for this feature:
   - Do not add `sundial spec plan|implement|review` CLI subcommands unless a later automation use case needs terminal-first launches.
   - If a CLI fallback is added later, it should share prompt construction but remain secondary to the official VS Code extension flow.
@@ -110,8 +110,8 @@ The launch prompt should be intentionally small: one line that names the phase, 
 - Building a terminal-first subprocess launcher as the primary experience. Rejected because the requested experience is the official VS Code extension UI.
 - Assuming Codex has the same URI prompt-prefill contract as Claude. Rejected until official docs or a stable contributed command contract verifies it.
 - Passing prompt text into Codex's contributed `chatgpt.newCodexPanel` or `chatgpt.newChat` commands. Rejected because RES-0001 found no documented prompt argument and static inspection of the installed handlers did not find prompt handling.
-- Making Codex panel plus clipboard the only Codex launch path. Rejected because RES-0001 found a verified installed `chatgpt.implementTodo` command path that can carry `{ fileName, line, comment }` into the Codex webview.
-- Implementing a Codex panel/clipboard fallback upfront. Rejected for the initial implementation because `implementTodo` is the focused workaround to smoke test; if it fails, the design can pivot with fresh evidence.
+- Making Codex panel plus clipboard the only Codex launch path. Rejected because RES-0001 found a verified installed `chatgpt.implementTodo` command path that can carry implementation prompts into the Codex webview.
+- Implementing layered Codex fallback behavior upfront. Rejected because phase-specific launch behavior should stay explicit instead of trying multiple undocumented transports after a launch action.
 - Persisting temporary launch instructions in spec markdown as the primary Codex handoff. Rejected because direct `implementTodo` command arguments can provide the instruction without adding launch-only churn to the spec body.
 - Building large phase-specific prompts in the VS Code extension. Rejected because the extension should hand off a one-line command and keep detailed behavior in Sundial skills and managed instructions.
 - Auto-submitting prompts into provider extensions. Rejected because Claude's documented URI only pre-fills, and keeping the user in the loop is safer for plan/implement/review actions.
@@ -125,8 +125,9 @@ The launch prompt should be intentionally small: one line that names the phase, 
 - Add Specs webview unit coverage for row-local `Plan`, `Implement`, and `Review` actions.
 - Add typed message guard coverage for launch requests from the Specs webview to the extension host.
 - Add extension-host coverage that launch requests dispatch to the selected provider launcher.
-- Add Codex launcher coverage that the launcher calls `chatgpt.implementTodo` with encoded `fileName`, section `line`, and generated one-line `comment`.
-- Manually smoke test Codex `implementTodo` handoff for all three phases, especially planning and review, because the command is named and surfaced as implementation-oriented even though its verified argument payload can carry phase-specific instructions.
+- Add Codex launcher coverage that implementation launches call `chatgpt.implementTodo` with encoded `fileName`, section `line`, and generated one-line `comment`.
+- Add Codex launcher coverage that planning and review launches copy an explicit phase prompt to the clipboard and open `chatgpt.newCodexPanel`.
+- Manually smoke test Codex launch behavior for all three phases: planning and review should arrive as explicit non-implementation prompts, while implementation should use the `implementTodo` handoff.
 - Add template/store coverage for any skill or managed-instruction updates that make phase behavior available to Codex, Claude, and generic harness installs.
 - Add package manifest coverage for any new Sundial commands or menu contributions while preserving Command Palette access.
 - Add VS Code integration coverage around Sundial's own command/message flow where practical, but do not assert undocumented Codex URI or `newChat` prompt-prefill behavior in automated tests.
@@ -136,7 +137,6 @@ The launch prompt should be intentionally small: one line that names the phase, 
 - Should implementation launches move a spec to `Active`, or should status remain an explicit separate workflow action?
 - Should provider launch actions live only on spec rows, or should the opened spec preview/board card also expose them?
 - Should Sundial remember a preferred provider per workspace after the first successful launch, or keep provider choice stateless?
-- Which concrete skill names should the one-line launch commands reference for planning, implementation, and review once the skill set is finalized?
 
 ## Implementation Log
 
@@ -147,5 +147,16 @@ The launch prompt should be intentionally small: one line that names the phase, 
 - 2026-07-07: Added Codex `chatgpt.implementTodo` as the preferred Codex handoff after local inspection found it accepts `{ fileName, line, comment }`, while retaining panel/clipboard fallback because the argument shape is not publicly documented.
 - 2026-07-07: Simplified launch design so Claude receives a one-line prompt, Codex uses `implementTodo` with a one-line comment, and detailed phase behavior lives in Sundial skills/managed instructions instead of VS Code-generated prompt bodies.
 - 2026-07-07: Added explicit skill/managed-instruction work to support the one-line launch commands across Codex, Claude, and generic harness installs.
+- 2026-07-12: Implemented provider-neutral spec session helpers, VS Code command-palette phase commands, and row-local `Plan`, `Implement`, and `Review` actions in the Specs sidebar and board.
+- 2026-07-12: Wired Claude launches through `vscode://anthropic.claude-code/open?prompt=...` and Codex launches through `chatgpt.implementTodo` with encoded `fileName`, section line, and phase-specific one-line comment.
+- 2026-07-12: Added `decision-aware-review` skill templates plus managed-instruction phase guidance; planning uses `decision-aware-design`, implementation uses `decision-aware-implement`, and review uses `decision-aware-review`.
+- 2026-07-12: Fixed the local CLI build to preserve executable permissions on `packages/cli/dist/main.js`, which VS Code integration scenarios spawn directly.
+- 2026-07-12: Adjusted Codex planning and review launches to avoid the implementation-framed `implementTodo` transport; non-implementation Codex phases now open the Codex panel and copy an explicit `/plan` or `/review` prompt, while implementation still uses `implementTodo`.
 
 ## Test Log
+
+- 2026-07-12: `npm run check-types` passed.
+- 2026-07-12: `npm run lint` passed.
+- 2026-07-12: `npm run test:unit` passed after restoring markdown preview metadata table padding to the existing test contract.
+- 2026-07-12: `npm test` passed. The first sandboxed run could not resolve `update.code.visualstudio.com`; reran with approved network access so `vscode-test` could download/use VS Code Insiders.
+- 2026-07-12: Follow-up Codex planning prompt fix verified with `npm run check-types`, `npm run lint`, `npm --workspace packages/vscode run test:unit`, `npm run test:unit`, and `npm test`.

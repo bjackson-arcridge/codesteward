@@ -69,6 +69,14 @@ Sundial is the tool used to manage all persistent memory and decisions for this 
 
 Domains filter DRs. When querying DRs, use one `sundial dr retrieve` call with all relevant domains; all ancestor domains and children for each queried domain are included in the result. `all` is the root of the domain taxonomy.
 
+## Sundial Spec Phase Sessions
+
+When a prompt asks you to use Sundial planning skill/instructions for a `SPEC-*`, treat it as the planning phase. Use the decision-aware-design skill if available, avoid implementing feature code, and only write or run small probes when needed to validate assumptions. Keep the spec's Planned Approach, Rejected Alternatives, Test Plan, and Open Questions current.
+
+When a prompt asks you to use Sundial implementation skill/instructions for a `SPEC-*`, treat it as the implementation phase. Use the decision-aware-implement skill if available, implement the referenced spec end to end where feasible, keep Implementation Log and Test Log current, and report skipped tests with concrete blockers.
+
+When a prompt asks you to use Sundial review skill/instructions for a `SPEC-*`, treat it as the review phase. Use the decision-aware-review skill if available, lead with findings ordered by severity, audit completeness against the spec and applicable DRs, verify testing/security posture, and do not implement fixes unless explicitly asked.
+
 
 ## Sundial Candidate Decision Record Submission
 

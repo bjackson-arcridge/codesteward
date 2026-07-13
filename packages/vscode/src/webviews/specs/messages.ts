@@ -1,9 +1,13 @@
+import { isSpecSessionPhase, type SpecSessionPhase } from '../../specSessions';
+
 export interface SpecCard {
 	readonly id: string;
 	readonly title: string;
 	readonly status: string;
 	readonly workspace?: string;
 }
+
+export type SpecCardActionTarget = 'open' | 'archive' | 'delete' | SpecSessionPhase;
 
 export interface SpecsRenderDiagnostic {
 	readonly laneCount: number;
@@ -20,7 +24,7 @@ export type HostToWebview =
 		workspaces?: readonly string[];
 		diagnosticsEnabled?: boolean;
 	}
-	| { kind: 'diagnosticClickSpec'; id: string; workspace?: string; target: 'open' | 'archive' | 'delete' }
+	| { kind: 'diagnosticClickSpec'; id: string; workspace?: string; target: SpecCardActionTarget }
 	| { kind: 'diagnosticCreateSpec'; title: string; status: string; workspace?: string }
 	| { kind: 'diagnosticMoveSpec'; id: string; status: string; workspace?: string }
 	| { kind: 'diagnosticDeleteSpec'; id: string; workspace?: string };
@@ -30,6 +34,7 @@ export type WebviewToHost =
 	| { kind: 'create'; title: string; status: string; workspace?: string }
 	| { kind: 'move'; id: string; status: string; workspace?: string }
 	| { kind: 'delete'; id: string; workspace?: string }
+	| { kind: 'launch'; id: string; phase: SpecSessionPhase; workspace?: string }
 	| { kind: 'requestRefresh' }
 	| { kind: 'rendered'; diagnostic: SpecsRenderDiagnostic };
 
@@ -49,6 +54,7 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 		status?: unknown;
 		workspace?: unknown;
 		target?: unknown;
+		phase?: unknown;
 	};
 
 	if (message.kind === 'state') {
@@ -62,7 +68,7 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 	if (message.kind === 'diagnosticClickSpec') {
 		return typeof message.id === 'string'
 			&& (message.workspace === undefined || typeof message.workspace === 'string')
-			&& (message.target === 'open' || message.target === 'archive' || message.target === 'delete');
+			&& isSpecCardActionTarget(message.target);
 	}
 
 	if (message.kind === 'diagnosticCreateSpec') {
@@ -97,10 +103,17 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 		status?: unknown;
 		workspace?: unknown;
 		diagnostic?: unknown;
+		phase?: unknown;
 	};
 
 	if (message.kind === 'open' || message.kind === 'delete') {
 		return typeof message.id === 'string'
+			&& (message.workspace === undefined || typeof message.workspace === 'string');
+	}
+
+	if (message.kind === 'launch') {
+		return typeof message.id === 'string'
+			&& isSpecSessionPhase(message.phase)
 			&& (message.workspace === undefined || typeof message.workspace === 'string');
 	}
 
@@ -155,6 +168,13 @@ function isSpecsRenderDiagnostic(value: unknown): value is SpecsRenderDiagnostic
 		&& typeof diagnostic.specCount === 'number'
 		&& typeof diagnostic.cardCount === 'number'
 		&& typeof diagnostic.emptyVisible === 'boolean';
+}
+
+function isSpecCardActionTarget(value: unknown): value is SpecCardActionTarget {
+	return value === 'open'
+		|| value === 'archive'
+		|| value === 'delete'
+		|| isSpecSessionPhase(value);
 }
 
 function isStringArray(value: unknown): value is readonly string[] {
