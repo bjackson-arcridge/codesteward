@@ -13,6 +13,8 @@ describe('store bootstrap', () => {
 
 		assert.ok(first.created.includes('sundial/config.json'));
 		assert.ok(first.created.includes('sundial/domains.md'));
+		assert.ok(first.created.includes('sundial/docs'));
+		assert.ok(first.created.includes('sundial/docs/SUNDIAL.md'));
 		assert.ok(first.created.includes('sundial/research'));
 		assert.ok(first.created.includes('sundial/research/.gitkeep'));
 		assert.ok(first.created.includes('sundial/specs'));
@@ -25,6 +27,7 @@ describe('store bootstrap', () => {
 		assert.ok(first.created.includes('sundial/decisions/retired/.gitkeep'));
 		assert.equal(first.created.includes('AGENTS.md'), false);
 		assert.ok(second.existing.includes('sundial/config.json'));
+		assert.ok(second.existing.includes('sundial/docs/SUNDIAL.md'));
 		assert.ok(second.existing.includes('sundial/research/.gitkeep'));
 		assert.ok(second.existing.includes('sundial/specs/.gitkeep'));
 		assert.ok(second.existing.includes('sundial/specs/workflow.yml'));
@@ -33,7 +36,17 @@ describe('store bootstrap', () => {
 		await fs.mkdir(path.join(root, 'src', 'nested'), { recursive: true });
 		const discovered = await discoverStore(path.join(root, 'src', 'nested'));
 		assert.equal(discovered?.root, root);
+		assert.equal(discovered?.folder, '.');
+		assert.equal(discovered?.targetRoot, root);
 		assert.equal(await countDecisionRecords(first.paths, 'accepted'), 0);
+		assert.deepEqual(JSON.parse(await fs.readFile(path.join(root, 'sundial', 'config.json'), 'utf8')), {
+			version: 1,
+			store: 'sundial',
+			folder: '.',
+		});
+		const sundialDocs = await fs.readFile(path.join(root, 'sundial', 'docs', 'SUNDIAL.md'), 'utf8');
+		assert.match(sundialDocs, /npm install -g @arcridge\/sundial/);
+		assert.match(sundialDocs, /code --install-extension arcridge\.sundial/);
 		assert.equal(await fs.readFile(path.join(root, 'sundial', 'research', '.gitkeep'), 'utf8'), 'Keep this Sundial store directory present in fresh git worktrees.\n');
 		assert.equal(await fs.readFile(path.join(root, 'sundial', 'specs', '.gitkeep'), 'utf8'), 'Keep this Sundial store directory present in fresh git worktrees.\n');
 		assert.equal(await fs.readFile(path.join(root, 'sundial', 'specs', 'workflow.yml'), 'utf8'), [
@@ -134,6 +147,31 @@ describe('store bootstrap', () => {
 		assert.doesNotMatch(implementSkill, /\{\{crHowTo\}\}/);
 	});
 
+	test('bootstraps runtime assets in the configured folder', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-folder-'));
+		const result = await initStore(root, { codex: true, folder: 'docs' });
+		await fs.mkdir(path.join(root, 'docs', 'nested'), { recursive: true });
+		const discovered = await discoverStore(path.join(root, 'docs', 'nested'));
+
+		assert.equal(result.paths.root, root);
+		assert.equal(result.paths.folder, 'docs');
+		assert.equal(result.paths.targetRoot, path.join(root, 'docs'));
+		assert.ok(result.created.includes('docs'));
+		assert.ok(result.created.includes('docs/AGENTS.md'));
+		assert.ok(result.created.includes('docs/.agents/skills/decision-aware-design/SKILL.md'));
+		assert.equal(result.created.includes('AGENTS.md'), false);
+		assert.equal(discovered?.root, root);
+		assert.equal(discovered?.folder, 'docs');
+		assert.equal(discovered?.targetRoot, path.join(root, 'docs'));
+		assert.deepEqual(JSON.parse(await fs.readFile(path.join(root, 'sundial', 'config.json'), 'utf8')), {
+			version: 1,
+			store: 'sundial',
+			folder: 'docs',
+		});
+		assert.match(await fs.readFile(path.join(root, 'docs', 'AGENTS.md'), 'utf8'), /sundial:agent-instructions/);
+		await assert.rejects(fs.access(path.join(root, 'AGENTS.md')));
+	});
+
 	test('can bootstrap Claude Code and Codex assets together', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-both-'));
 		const result = await initStore(root, { claude: true, codex: true });
@@ -169,6 +207,25 @@ describe('store bootstrap', () => {
 		assert.equal(implementSkillContents, await readTemplate('skills/codex/decision-aware-implement/SKILL.md'));
 		assert.equal(researchSkillContents, await readTemplate('skills/codex/remember-research/SKILL.md'));
 		assert.match(instructions, /sundial:agent-instructions/);
+	});
+
+	test('updates the configured folder and installs runtime assets there', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-update-folder-'));
+		await initStore(root, { codex: true });
+
+		const result = await updateRuntimeAssets(root, { codex: true, folder: 'docs' });
+
+		assert.equal(result.paths.folder, 'docs');
+		assert.ok(result.created.includes('docs'));
+		assert.ok(result.created.includes('docs/AGENTS.md'));
+		assert.ok(result.created.includes('docs/.agents/skills/decision-aware-implement/SKILL.md'));
+		assert.ok(result.updated.includes('sundial/config.json'));
+		assert.deepEqual(JSON.parse(await fs.readFile(path.join(root, 'sundial', 'config.json'), 'utf8')), {
+			version: 1,
+			store: 'sundial',
+			folder: 'docs',
+		});
+		assert.match(await fs.readFile(path.join(root, 'docs', 'AGENTS.md'), 'utf8'), /sundial candidate create/);
 	});
 
 	test('repairs legacy managed instruction blocks on update', async () => {

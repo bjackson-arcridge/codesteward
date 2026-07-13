@@ -36,6 +36,7 @@ import {
 	discoverStore,
 	getStorePaths,
 	initStore,
+	loadStorePaths,
 	pathExists,
 	readAgentInstructionsBody,
 	StorePaths,
@@ -71,7 +72,7 @@ Usage:
 
 Commands:
   init        Create or update the project-local sundial store at an explicit root
-  update      Update installed skill files for the discovered or explicit project root
+  update      Update installed files for the discovered or explicit project root
   status      Report store health, counts, and validation state
   bootstrap   Run an LLM-backed bootstrap that creates candidates via the CLI
   domains     List known domains from sundial/domains.md
@@ -187,20 +188,23 @@ async function runBootstrap(
 		return;
 	}
 
-	const paths = await requireStore(options.cwd, io);
-	if (paths === undefined) {
+	const discoveredPaths = await requireStore(options.cwd, io);
+	if (discoveredPaths === undefined) {
 		return;
 	}
 
-	const prompt = bootstrapPrompt(paths);
-	const command = bootstrapCommand(parsed.provider, paths.root, prompt);
-
 	try {
+		const paths = parsed.folder === undefined
+			? discoveredPaths
+			: (await updateRuntimeAssets(discoveredPaths.root, { folder: parsed.folder })).paths;
+		const prompt = bootstrapPrompt(paths);
+		const command = bootstrapCommand(parsed.provider, paths.targetRoot, prompt);
+
 		if (!options.quiet) {
 			write(io.stdout, `Starting bootstrap with ${parsed.provider}: ${formatBootstrapCommand(command)}\n`);
 		}
 
-		await runBootstrapCommand(command, paths.root, options.quiet ? undefined : io);
+		await runBootstrapCommand(command, paths.targetRoot, options.quiet ? undefined : io);
 
 		if (!options.quiet) {
 			write(io.stdout, `Bootstrap completed with ${parsed.provider}.\n`);
@@ -1451,34 +1455,47 @@ function parseHistoricalDrArgs(
 function parseBootstrapArgs(
 	args: readonly string[],
 	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
-): { readonly provider: BootstrapProvider } | undefined {
+): { readonly provider: BootstrapProvider; readonly folder?: string } | undefined {
 	let provider: BootstrapProvider | undefined;
+	let folder: string | undefined;
 
 	for (let index = 0; index < args.length; index += 1) {
 		const arg = args[index];
 
-		if (arg !== '--provider') {
-			return usageError(bootstrapUsage(), io);
+		if (arg === '--provider') {
+			const value = args[index + 1];
+			if (value !== 'claude' && value !== 'codex') {
+				return usageError(bootstrapUsage(), io);
+			}
+
+			provider = value;
+			index += 1;
+			continue;
 		}
 
-		const value = args[index + 1];
-		if (value !== 'claude' && value !== 'codex') {
-			return usageError(bootstrapUsage(), io);
+		if (arg === '--folder') {
+			const value = args[index + 1];
+			if (value === undefined) {
+				return usageError(bootstrapUsage(), io);
+			}
+
+			folder = value;
+			index += 1;
+			continue;
 		}
 
-		provider = value;
-		index += 1;
+		return usageError(bootstrapUsage(), io);
 	}
 
 	if (provider === undefined) {
 		return usageError(bootstrapUsage(), io);
 	}
 
-	return { provider };
+	return { provider, folder };
 }
 
 function bootstrapUsage(): string {
-	return 'Usage: sundial bootstrap --provider claude|codex\n';
+	return 'Usage: sundial bootstrap --provider claude|codex [--folder <relative-path>]\n';
 }
 
 export function bootstrapCommand(
@@ -1580,12 +1597,18 @@ function formatBootstrapCommand(command: BootstrapCommand): string {
 }
 
 function bootstrapPrompt(paths: StorePaths): string {
-	const root = paths.root;
+	const root = paths.targetRoot;
 
 	return [
 		'You are running a Sundial bootstrap.',
 		'',
 		`Project root: ${root}`,
+		...(paths.folder === '.'
+			? []
+			: [
+				`Sundial store root: ${paths.root}`,
+				`Configured folder: ${paths.folder}`,
+			]),
 		'',
 		'Goal:',
 		'- Inspect existing project instructions, markdown documentation, and representative source code.',
@@ -1914,7 +1937,10 @@ async function runUpdate(
 			return;
 		}
 
-		write(io.stdout, `Updated Sundial skill files at ${result.paths.root}\n`);
+		write(io.stdout, `Updated Sundial files at ${result.paths.root}\n`);
+		if (result.paths.folder !== '.') {
+			write(io.stdout, `Configured folder: ${result.paths.folder}\n`);
+		}
 		renderPathGroup('Created', result.created, io);
 		renderPathGroup('Already current', result.existing, io);
 		renderPathGroup('Updated', result.updated, io);
@@ -1925,6 +1951,7 @@ async function runUpdate(
 
 interface ParsedUpdateArgs {
 	readonly root?: string;
+	readonly folder?: string;
 	readonly claude: boolean;
 	readonly codex: boolean;
 }
@@ -1934,6 +1961,7 @@ function parseUpdateArgs(
 	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
 ): ParsedUpdateArgs | undefined {
 	let root: string | undefined;
+	let folder: string | undefined;
 	let claude = false;
 	let codex = false;
 	for (let index = 0; index < args.length; index += 1) {
@@ -1946,6 +1974,17 @@ function parseUpdateArgs(
 			}
 
 			root = value;
+			index += 1;
+			continue;
+		}
+
+		if (arg === '--folder') {
+			const value = args[index + 1];
+			if (value === undefined) {
+				return updateUsageError(io);
+			}
+
+			folder = value;
 			index += 1;
 			continue;
 		}
@@ -1963,15 +2002,15 @@ function parseUpdateArgs(
 		return updateUsageError(io);
 	}
 
-	if (!claude && !codex) {
+	if (!claude && !codex && folder === undefined) {
 		return updateUsageError(io);
 	}
 
-	return { root, claude, codex };
+	return { root, folder, claude, codex };
 }
 
 function updateUsageError(io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>): undefined {
-	write(io.stderr, 'Usage: sundial update [--root <path>] --claude|--codex\n');
+	write(io.stderr, 'Usage: sundial update [--root <path>] [--folder <relative-path>] [--claude] [--codex]\n');
 	io.exitCode = 64;
 	return undefined;
 }
@@ -2036,6 +2075,7 @@ async function runInit(
 	const result = await initStore(parsed.root, {
 		claude: parsed.claude,
 		codex: parsed.codex,
+		folder: parsed.folder,
 	});
 
 	if (options.quiet) {
@@ -2043,6 +2083,9 @@ async function runInit(
 	}
 
 	write(io.stdout, `Initialized Sundial store at ${result.paths.store}\n`);
+	if (result.paths.folder !== '.') {
+		write(io.stdout, `Configured folder: ${result.paths.folder}\n`);
+	}
 
 	if (!parsed.claude && !parsed.codex) {
 		write(io.stdout, 'Agent runtime bootstrap skipped. Pass --claude, --codex, or both to install runtime assets.\n');
@@ -2078,6 +2121,7 @@ function renderPathGroup(
 
 interface ParsedInitArgs {
 	readonly root: string;
+	readonly folder?: string;
 	readonly claude: boolean;
 	readonly codex: boolean;
 }
@@ -2087,6 +2131,7 @@ function parseInitArgs(
 	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
 ): ParsedInitArgs | undefined {
 	let root: string | undefined;
+	let folder: string | undefined;
 	let claude = false;
 	let codex = false;
 
@@ -2100,6 +2145,17 @@ function parseInitArgs(
 			}
 
 			root = value;
+			index += 1;
+			continue;
+		}
+
+		if (arg === '--folder') {
+			const value = args[index + 1];
+			if (value === undefined) {
+				return initUsageError(io);
+			}
+
+			folder = value;
 			index += 1;
 			continue;
 		}
@@ -2121,11 +2177,11 @@ function parseInitArgs(
 		return initUsageError(io);
 	}
 
-	return { root, claude, codex };
+	return { root, folder, claude, codex };
 }
 
 function initUsageError(io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>): undefined {
-	write(io.stderr, 'Usage: sundial init --root <path> [--claude] [--codex]\n');
+	write(io.stderr, 'Usage: sundial init --root <path> [--folder <relative-path>] [--claude] [--codex]\n');
 	io.exitCode = 64;
 	return undefined;
 }
@@ -2231,7 +2287,7 @@ async function requireStoreAtRoot(
 		return undefined;
 	}
 
-	return paths;
+	return await loadStorePaths(root);
 }
 
 class CliUsageError extends Error {}

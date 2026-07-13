@@ -12,7 +12,7 @@ When an agent encounters a consequential choice without precedent, it writes a *
 ## Install
 
 ```bash
-npm install -g sundial
+npm install -g @arcridge/sundial
 ```
 
 Requires Node.js >= 20.
@@ -30,6 +30,7 @@ sundial init --root /path/to/project --claude --codex
 - `--claude` writes missing Claude Code project assets to `.claude/skills/` and `.claude/CLAUDE.md` from CLI templates.
 - `--codex` writes missing Codex project assets to `.agents/skills/` and `AGENTS.md` from CLI templates.
 - Pass both flags to bootstrap both runtimes.
+- Pass `--folder docs` to keep the store at `/path/to/project/sundial` while installing runtime assets under `/path/to/project/docs` and running bootstrap from that folder.
 
 Refresh installed skill files later without rerunning store init:
 
@@ -37,7 +38,7 @@ Refresh installed skill files later without rerunning store init:
 sundial update --claude --codex
 ```
 
-The update command discovers the nearest ancestor `sundial` store by default; pass `--root /path/to/project` to target a specific project. Sundial-owned instruction blocks in files such as `AGENTS.md` and `.claude/CLAUDE.md` are repaired or refreshed without overwriting user-authored content outside those blocks.
+The update command discovers the nearest ancestor `sundial` store by default; pass `--root /path/to/project` to target a specific project. Pass `--folder docs` to change the configured target folder, with or without runtime flags. Sundial-owned instruction blocks in files such as `AGENTS.md` and `.claude/CLAUDE.md` are repaired or refreshed without overwriting user-authored content outside those blocks.
 
 ## How it works
 
@@ -63,11 +64,11 @@ project/
 ## Commands
 
 ```text
-sundial init --root <path> [--claude] [--codex]
-sundial update --claude --codex
+sundial init --root <path> [--folder <relative-path>] [--claude] [--codex]
+sundial update [--root <path>] [--folder <relative-path>] [--claude] [--codex]
 sundial status
-sundial bootstrap --provider claude
-sundial bootstrap --provider codex
+sundial bootstrap --provider claude [--folder <relative-path>]
+sundial bootstrap --provider codex [--folder <relative-path>]
 sundial domains
 
 sundial dr list [--status accepted]

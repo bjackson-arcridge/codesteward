@@ -392,7 +392,7 @@ describe('bootstrapCommand', () => {
 		const implementSkillContents = await fs.readFile(implementSkillPath, 'utf8');
 		const researchSkillContents = await fs.readFile(researchSkillPath, 'utf8');
 
-		assert.match(result.stdout, /Updated Sundial skill files/);
+		assert.match(result.stdout, /Updated Sundial files/);
 		assert.match(result.stdout, /\.agents\/skills\/decision-aware-design\/SKILL\.md/);
 		assert.match(result.stdout, /\.agents\/skills\/decision-aware-implement\/SKILL\.md/);
 		assert.match(result.stdout, /\.agents\/skills\/remember-research\/SKILL\.md/);
@@ -414,10 +414,43 @@ describe('bootstrapCommand', () => {
 		const result = await runCli(nested, ['update', '--codex']);
 		const designSkillContents = await fs.readFile(designSkillPath, 'utf8');
 
-		assert.match(result.stdout, /Updated Sundial skill files/);
+		assert.match(result.stdout, /Updated Sundial files/);
 		assert.match(result.stdout, /\.agents\/skills\/decision-aware-design\/SKILL\.md/);
 		assert.match(designSkillContents, /name: decision-aware-design/);
 		assert.equal(result.stderr, '');
+	});
+
+	test('changes the configured folder with update --folder', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-update-folder-cli-'));
+		await initStore(root);
+
+		const result = await runCli(root, ['update', '--folder', 'docs']);
+
+		assert.match(result.stdout, /Updated Sundial files/);
+		assert.match(result.stdout, /Configured folder: docs/);
+		assert.match(result.stdout, /sundial\/config\.json/);
+		assert.match(result.stdout, /sundial\/docs\/SUNDIAL\.md/);
+		assert.equal(result.stderr, '');
+		assert.equal(result.exitCode, undefined);
+		assert.deepEqual(JSON.parse(await fs.readFile(path.join(root, 'sundial', 'config.json'), 'utf8')), {
+			version: 1,
+			store: 'sundial',
+			folder: 'docs',
+		});
+	});
+
+	test('initializes runtime assets in a configured folder from the CLI', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-init-folder-cli-'));
+
+		const result = await runCli(root, ['init', '--root', root, '--folder', 'docs', '--codex']);
+
+		assert.match(result.stdout, /Initialized Sundial store/);
+		assert.match(result.stdout, /Configured folder: docs/);
+		assert.match(result.stdout, /docs\/AGENTS\.md/);
+		assert.equal(result.stderr, '');
+		assert.equal(result.exitCode, undefined);
+		assert.match(await fs.readFile(path.join(root, 'docs', 'AGENTS.md'), 'utf8'), /sundial:agent-instructions/);
+		await assert.rejects(fs.access(path.join(root, 'AGENTS.md')));
 	});
 
 	test('disables accepted DRs from retrieval and can enable them again', async () => {

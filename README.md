@@ -68,11 +68,11 @@ To publish a new version of the VS Code extension, build the VSIX as above and u
 Implemented commands:
 
 ```bash
-sundial init --root /path/to/project [--claude] [--codex]
-sundial update --claude --codex
+sundial init --root /path/to/project [--folder docs] [--claude] [--codex]
+sundial update [--root /path/to/project] [--folder docs] [--claude] [--codex]
 sundial status
-sundial bootstrap --provider claude
-sundial bootstrap --provider codex
+sundial bootstrap --provider claude [--folder docs]
+sundial bootstrap --provider codex [--folder docs]
 sundial domains
 sundial dr retrieve --domain cli --domain vscode.webview
 sundial dr get DR-0001
@@ -97,8 +97,9 @@ sundial candidate dismiss CAND-0001
 - `--claude` writes missing Claude Code project assets to `.claude/skills/` and `.claude/CLAUDE.md` from CLI templates.
 - `--codex` writes missing Codex project assets to `.agents/skills/` and `AGENTS.md` from CLI templates.
 - Pass both flags to bootstrap both runtimes.
+- Pass `--folder docs` to keep the store at `/path/to/project/sundial` while installing runtime assets under `/path/to/project/docs` and running bootstrap from that folder.
 
-Use `sundial update --claude --codex` to refresh installed generated skill files later without rerunning store initialization. The update command discovers the nearest ancestor `sundial` store by default; pass `--root /path/to/project` to target a specific project. Sundial-owned instruction blocks in files such as `AGENTS.md` and `.claude/CLAUDE.md` are repaired or refreshed without overwriting user-authored content outside those blocks.
+Use `sundial update --claude --codex` to refresh installed generated files later without rerunning store initialization. The update command discovers the nearest ancestor `sundial` store by default; pass `--root /path/to/project` to target a specific project, or `--folder docs` to change the configured target folder. Sundial-owned instruction blocks in files such as `AGENTS.md` and `.claude/CLAUDE.md` are repaired or refreshed without overwriting user-authored content outside those blocks.
 
 ## VS Code
 
