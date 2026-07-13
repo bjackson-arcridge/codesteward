@@ -47,3 +47,7 @@ VS Code webview host/client boundaries, CSP, message protocols, asset loading, a
 ### vscode.webview.ui
 
 Webview client UI components, styling, theming, accessibility, and interaction behavior.
+
+### editor
+
+Interactive editor UX, annotations, agent coordination, and iterative Git workflows.
