@@ -1,21 +1,21 @@
 export const vscodeVimExtensionId = 'vscodevim.vim';
 export const vscodeVimEscapeCommandId = 'extension.vim_escape';
 
-export interface VscodeVimExtension {
+export interface VSCodeVimExtension {
 	readonly isActive: boolean;
 	activate(): PromiseLike<unknown>;
 }
 
-export interface VimNormalModeServices {
-	readonly getExtension: (extensionId: string) => VscodeVimExtension | undefined;
+export interface VSCodeVimNormalModeServices {
+	readonly getExtension: (extensionId: string) => VSCodeVimExtension | undefined;
 	readonly executeCommand: (commandId: string) => PromiseLike<unknown>;
 	readonly reportFailure?: (error: unknown) => void;
 }
 
-export async function returnToVscodeVimNormalMode(services: VimNormalModeServices): Promise<boolean> {
+export async function returnToVSCodeVimNormalMode(services: VSCodeVimNormalModeServices): Promise<void> {
 	const extension = services.getExtension(vscodeVimExtensionId);
 	if (extension === undefined) {
-		return false;
+		return;
 	}
 
 	try {
@@ -23,9 +23,7 @@ export async function returnToVscodeVimNormalMode(services: VimNormalModeService
 			await extension.activate();
 		}
 		await services.executeCommand(vscodeVimEscapeCommandId);
-		return true;
 	} catch (error) {
 		services.reportFailure?.(error);
-		return false;
 	}
 }

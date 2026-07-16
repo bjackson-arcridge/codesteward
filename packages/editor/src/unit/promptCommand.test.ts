@@ -9,7 +9,7 @@ describe('prompt command parser', () => {
 			assert.deepEqual(parsePromptCommand(`${preset} @G`), { preset, scope: 'project' });
 		}
 
-		assert.deepEqual(parsePromptCommand('%1:F @G\t '), { preset: '%1:F', scope: 'project' });
+		assert.deepEqual(parsePromptCommand('%F @G\t '), { preset: '%F', scope: 'project' });
 	});
 
 	test('rejects source text, unrecognised presets, and malformed modifiers', () => {
@@ -19,13 +19,13 @@ describe('prompt command parser', () => {
 			'const answer = "%Q";',
 			':Q',
 			'>1:F',
-			'%3:F',
-			'%1:F@G',
-			'%1:F @g',
-			'%1:F @G trailing',
+			'%X',
+			'%F@G',
+			'%F @g',
+			'%F @G trailing',
 			'%Q @G @G',
-			'% 1:F',
-			' \t%1:F',
+			'% F',
+			' \t%F',
 		]) {
 			assert.equal(parsePromptCommand(sourceLine), undefined, sourceLine);
 		}
@@ -59,17 +59,17 @@ describe('command line deletion ranges', () => {
 });
 
 test('creates prompt context without changing the original source text', () => {
-	const parsed = parsePromptCommand('%2:C @G');
+	const parsed = parsePromptCommand('%C @G');
 	if (parsed === undefined) {
 		throw new Error('Expected the preset to parse.');
 	}
 
-	const context = createPromptContext(parsed, 'file:///workspace/src/example.ts', 8, '%2:C @G');
+	const context = createPromptContext(parsed, 'file:///workspace/src/example.ts', 8, '%C @G');
 	assert.deepEqual(context, {
-		preset: '%2:C',
+		preset: '%C',
 		scope: 'project',
 		sourceUri: 'file:///workspace/src/example.ts',
 		sourceLine: 8,
-		sourceText: '%2:C @G',
+		sourceText: '%C @G',
 	});
 });

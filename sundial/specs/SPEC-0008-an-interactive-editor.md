@@ -45,7 +45,7 @@ The right-hand Secondary Sidebar, normally used for LLM chat panes, contains the
 
 Commands are typed on a standalone source line. Submitting a prompt command removes that line, opens a message box, and sends the entered message without writing it into the source file. The resulting user-command annotation remains anchored to the source line where the command was issued.
 
-Prompt commands enter an explicit editor mode with `%` in column zero. Presets include question/no-code (`%Q`), fix (`%1:F`), write (`%1:W`), refactor (`%1:R`), cleanup (`%2:C`), and tests (`%0:T`); an `@G` modifier associates the prompt with the project globally. These presets are advisory prompt guidance, not enforceable safety boundaries.
+Prompt commands enter an explicit editor mode with `%` in column zero. Presets include question/no-code (`%Q`), fix (`%F`), write (`%W`), refactor (`%R`), cleanup (`%C`), and tests (`%T`); an `@G` modifier associates the prompt with the project globally. These presets are advisory prompt guidance, not enforceable safety boundaries. They do not select or route to an agent; dynamic agent selection and routing are deferred to Function 2.
 
 Diff and commit commands are:
 

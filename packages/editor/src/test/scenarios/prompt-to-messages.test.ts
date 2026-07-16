@@ -40,8 +40,8 @@ suite('Scenario: prompt-to-messages', () => {
 			new vscode.Position(0, 1),
 			'%',
 		);
-		const fixCompletion = completionList.items.find(item => item.label === '%1:F');
-		assert.ok(fixCompletion, 'Expected the %1:F command completion');
+		const fixCompletion = completionList.items.find(item => item.label === '%F');
+		assert.ok(fixCompletion, 'Expected the %F command completion');
 		assert.equal(fixCompletion.command?.command, 'sundialEditor.submitPrompt');
 
 		editor.selection = new vscode.Selection(0, document.lineAt(0).text.length, 0, document.lineAt(0).text.length);
@@ -54,13 +54,13 @@ suite('Scenario: prompt-to-messages', () => {
 		assert.deepEqual(diagnostics.state, {
 			kind: 'state',
 			prompt: {
-				preset: '%1:F',
+				preset: '%F',
 				scope: 'line',
 				sourceUri: uri.toString(),
 				sourceLine: 0,
-				sourceText: '%1:F',
+				sourceText: '%F',
 			},
-			draft: '[Integration stub] Sundial received %1:F for source line 1.',
+			draft: '[Integration stub] Sundial received %F for source line 1.',
 		});
 
 		await vscode.commands.executeCommand('sundialEditor.internal.submitPendingMessage');

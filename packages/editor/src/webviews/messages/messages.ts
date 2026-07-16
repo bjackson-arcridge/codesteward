@@ -11,8 +11,8 @@ export type WebviewToHost =
 	| { kind: 'submit'; message: string }
 	| { kind: 'cancel' };
 
-export function isHostToWebview(value: unknown): value is HostToWebview {
-	if (!isObject(value)) {
+export function isValidHostToWebviewMessage(value: unknown): value is HostToWebview {
+	if (!isRecord(value)) {
 		return false;
 	}
 
@@ -31,8 +31,8 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 	return isPromptContext(value.prompt) && typeof value.draft === 'string';
 }
 
-export function isWebviewToHost(value: unknown): value is WebviewToHost {
-	if (!isObject(value)) {
+export function isValidWebviewToHostMessage(value: unknown): value is WebviewToHost {
+	if (!isRecord(value)) {
 		return false;
 	}
 
@@ -41,7 +41,7 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 }
 
 function isPromptContext(value: unknown): value is PromptContext {
-	if (!isObject(value)) {
+	if (!isRecord(value)) {
 		return false;
 	}
 
@@ -62,6 +62,6 @@ function isPromptScope(value: unknown): value is PromptScope {
 	return value === 'line' || value === 'project';
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null;
 }

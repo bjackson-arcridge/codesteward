@@ -15,11 +15,11 @@ export interface PromptCommandCompletion {
 
 const presetDescriptions: Readonly<Record<PromptPreset, string>> = {
 	'%Q': 'Question / no-code guidance',
-	'%1:F': 'Fix guidance',
-	'%1:W': 'Write guidance',
-	'%1:R': 'Refactor guidance',
-	'%2:C': 'Cleanup guidance',
-	'%0:T': 'Test guidance',
+	'%F': 'Fix guidance',
+	'%W': 'Write guidance',
+	'%R': 'Refactor guidance',
+	'%C': 'Cleanup guidance',
+	'%T': 'Test guidance',
 };
 
 export const promptCommandCompletions: readonly PromptCommandCompletion[] = promptPresets.flatMap(

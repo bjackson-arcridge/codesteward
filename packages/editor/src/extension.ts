@@ -3,7 +3,7 @@ import { revealAgentsViewOnFirstActivation } from './firstRun';
 import { registerPromptCommandMode, submitPromptCommandId } from './promptCompletionProvider';
 import type { PromptContext } from './promptCommand';
 import { submitPrompt } from './promptSubmission';
-import { returnToVscodeVimNormalMode } from './vimNormalMode';
+import { returnToVSCodeVimNormalMode } from './vimNormalMode';
 import { MessagesWebviewProvider } from './webviews/messages/messagesWebviewProvider';
 
 const messagesViewId = 'sundialEditor.messages';
@@ -49,7 +49,7 @@ async function returnToSource(prompt: PromptContext): Promise<void> {
 		const position = new vscode.Position(line, 0);
 		editor.selection = new vscode.Selection(position, position);
 		editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
-		await returnToVscodeVimNormalMode({
+		await returnToVSCodeVimNormalMode({
 			getExtension: extensionId => vscode.extensions.getExtension(extensionId),
 			executeCommand: commandId => vscode.commands.executeCommand(commandId),
 			reportFailure: error => console.error('sundial-editor: failed to return VSCodeVim to Normal mode', error),

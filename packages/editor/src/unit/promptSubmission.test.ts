@@ -29,7 +29,7 @@ function createEditor(lines: readonly string[], activeLine: number, didDelete = 
 
 describe('submitPrompt', () => {
 	test('deletes a valid complete command in one edit and opens the composer with preserved context', async () => {
-		const harness = createEditor(['first', '%1:F @G', 'last'], 1);
+		const harness = createEditor(['first', '%F @G', 'last'], 1);
 		const opened: PromptContext[] = [];
 
 		const submitted = await submitPrompt({
@@ -45,16 +45,16 @@ describe('submitPrompt', () => {
 			end: { line: 2, character: 0 },
 		}]);
 		assert.deepEqual(opened, [{
-			preset: '%1:F',
+			preset: '%F',
 			scope: 'project',
 			sourceUri: 'file:///workspace/src/example.ts',
 			sourceLine: 1,
-			sourceText: '%1:F @G',
+			sourceText: '%F @G',
 		}]);
 	});
 
 	test('reports an invalid source line without changing the document or opening the composer', async () => {
-		const harness = createEditor(['const prompt = "%1:F";'], 0);
+		const harness = createEditor(['const prompt = "%F";'], 0);
 		const failures: string[] = [];
 		let opened = false;
 
@@ -72,7 +72,7 @@ describe('submitPrompt', () => {
 	});
 
 	test('does not open the composer when VS Code rejects or throws from the edit', async () => {
-		const harness = createEditor(['%0:T'], 0, false);
+		const harness = createEditor(['%T'], 0, false);
 		const failures: string[] = [];
 		let opened = false;
 
@@ -87,7 +87,7 @@ describe('submitPrompt', () => {
 		assert.equal(opened, false);
 		assert.match(failures[0], /could not be removed safely/);
 
-		const throwingHarness = createEditor(['%0:T'], 0);
+		const throwingHarness = createEditor(['%T'], 0);
 		const throwingEditor: PromptEditor = {
 			...throwingHarness.editor,
 			edit: async () => { throw new Error('read-only document'); },

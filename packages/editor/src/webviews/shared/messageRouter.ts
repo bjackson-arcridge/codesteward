@@ -7,22 +7,22 @@ export interface MessageRouter<Inbound, Outbound> {
 
 export function attachMessageRouter<Inbound, Outbound>(
 	webview: vscode.Webview,
-	guard: (value: unknown) => value is Inbound,
-	handle: (message: Inbound) => void | Promise<void>,
+	isValidInboundMessage: (value: unknown) => value is Inbound,
+	handleInboundMessage: (message: Inbound) => void | Promise<void>,
 ): MessageRouter<Inbound, Outbound> {
-	const subscription = webview.onDidReceiveMessage((raw: unknown) => {
-		if (!guard(raw)) {
-			console.warn('sundial-editor: dropped malformed webview message', raw);
+	const messageSubscription = webview.onDidReceiveMessage((rawInboundMessage: unknown) => {
+		if (!isValidInboundMessage(rawInboundMessage)) {
+			console.warn('sundial-editor: dropped malformed webview message', rawInboundMessage);
 			return;
 		}
 
-		void handle(raw);
+		void handleInboundMessage(rawInboundMessage);
 	});
 
 	return {
 		post: (message: Outbound) => {
 			void webview.postMessage(message);
 		},
-		dispose: () => subscription.dispose(),
+		dispose: () => messageSubscription.dispose(),
 	};
 }

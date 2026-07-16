@@ -13,32 +13,32 @@ describe('prompt command completions', () => {
 			promptCommandCompletions.map(completion => completion.insertText),
 			[
 				'%Q', '%Q @G',
-				'%1:F', '%1:F @G',
-				'%1:W', '%1:W @G',
-				'%1:R', '%1:R @G',
-				'%2:C', '%2:C @G',
-				'%0:T', '%0:T @G',
+				'%F', '%F @G',
+				'%W', '%W @G',
+				'%R', '%R @G',
+				'%C', '%C @G',
+				'%T', '%T @G',
 			],
 		);
 	});
 
 	test('enters command mode only when a viable percent command starts in column zero', () => {
 		assert.equal(isPromptCommandMode('%'), true);
-		assert.equal(isPromptCommandMode('%1'), true);
-		assert.equal(isPromptCommandMode('%1:F @'), true);
-		assert.equal(isPromptCommandMode(' %1'), false);
+		assert.equal(isPromptCommandMode('%F'), true);
+		assert.equal(isPromptCommandMode('%F @'), true);
+		assert.equal(isPromptCommandMode(' %F'), false);
 		assert.equal(isPromptCommandMode('const value = %'), false);
 		assert.equal(isPromptCommandMode('%unknown'), false);
 	});
 
 	test('narrows completions while preserving a project-scope choice', () => {
 		assert.deepEqual(
-			completionsForPromptCommandPrefix('%1:F').map(completion => completion.insertText),
-			['%1:F', '%1:F @G'],
+			completionsForPromptCommandPrefix('%F').map(completion => completion.insertText),
+			['%F', '%F @G'],
 		);
 		assert.deepEqual(
-			completionsForPromptCommandPrefix('%1:F @').map(completion => completion.insertText),
-			['%1:F @G'],
+			completionsForPromptCommandPrefix('%F @').map(completion => completion.insertText),
+			['%F @G'],
 		);
 	});
 });

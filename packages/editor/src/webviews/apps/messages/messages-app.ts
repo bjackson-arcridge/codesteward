@@ -2,8 +2,11 @@ import { LitElement, css, html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { messageComposerKeyAction } from '../../../messageComposerKeyboard.js';
 import type { PromptContext } from '../../../promptCommand.js';
-import { type HostToWebview, type WebviewToHost, isHostToWebview } from '../../messages/messages.js';
-import { assertNever } from '../../shared/assertNever.js';
+import {
+	type HostToWebview,
+	type WebviewToHost,
+	isValidHostToWebviewMessage,
+} from '../../messages/messages.js';
 import { getHost, readInitialState } from '../shared/host.js';
 import { tokenStyles } from '../shared/styles.js';
 
@@ -135,28 +138,28 @@ export class MessagesApp extends LitElement {
 		`,
 	];
 
-	private readonly host = getHost<WebviewToHost, HostToWebview>();
+	private readonly webviewHost = getHost<WebviewToHost, HostToWebview>();
 	@state() private prompt: PromptContext | undefined;
-	@state() private message = '';
-	@state() private submitting = false;
-	@state() private status = '';
+	@state() private messageText = '';
+	@state() private isSubmitting = false;
+	@state() private statusMessage = '';
 
 	connectedCallback(): void {
 		super.connectedCallback();
-		const persisted = this.host.getState();
-		const initial = persisted !== undefined && isHostToWebview(persisted)
-			? persisted
+		const persistedState = this.webviewHost.getState();
+		const initialHostMessage = persistedState !== undefined && isValidHostToWebviewMessage(persistedState)
+			? persistedState
 			: readInitialState<HostToWebview>();
-		if (initial !== undefined && isHostToWebview(initial)) {
-			this.applyHostMessage(initial);
+		if (initialHostMessage !== undefined && isValidHostToWebviewMessage(initialHostMessage)) {
+			this.applyHostMessage(initialHostMessage);
 		}
 
-		window.addEventListener('message', this.handleMessage);
+		window.addEventListener('message', this.handleHostMessageEvent);
 	}
 
 	disconnectedCallback(): void {
 		super.disconnectedCallback();
-		window.removeEventListener('message', this.handleMessage);
+		window.removeEventListener('message', this.handleHostMessageEvent);
 	}
 
 	firstUpdated(): void {
@@ -170,7 +173,7 @@ export class MessagesApp extends LitElement {
 			return html`
 				<h1>Messages</h1>
 				<p class="empty">Run Sundial Editor: Submit Prompt from a supported command line to begin a message.</p>
-				${this.status === '' ? nothing : html`<p class="status" role="status">${this.status}</p>`}
+				${this.statusMessage === '' ? nothing : html`<p class="status" role="status">${this.statusMessage}</p>`}
 			`;
 		}
 
@@ -187,41 +190,41 @@ export class MessagesApp extends LitElement {
 					<dd>Line ${this.prompt.sourceLine + 1}</dd>
 				</dl>
 			</section>
-			<form @submit=${this.submit} @keydown=${this.handleKeydown}>
+			<form @submit=${this.submitComposer} @keydown=${this.handleComposerKeydown}>
 				<label for="message">Message</label>
 				<textarea
 					id="message"
-					.value=${this.message}
-					@input=${this.updateMessage}
+					.value=${this.messageText}
+					@input=${this.updateMessageText}
 					aria-describedby="message-help"
 				></textarea>
 				<div id="message-help" class="status">Press Enter to send, Shift+Enter for a new line, or Escape to cancel.</div>
 				<div class="actions">
-					<button type="submit" ?disabled=${this.submitting}>Send</button>
-					<button class="secondary" type="button" ?disabled=${this.submitting} @click=${this.cancel}>Cancel</button>
+					<button type="submit" ?disabled=${this.isSubmitting}>Send</button>
+					<button class="secondary" type="button" ?disabled=${this.isSubmitting} @click=${this.cancelComposer}>Cancel</button>
 				</div>
 			</form>
 		`;
 	}
 
-	private handleMessage = (event: MessageEvent<unknown>): void => {
-		if (isHostToWebview(event.data)) {
-			this.applyHostMessage(event.data);
+	private handleHostMessageEvent = (messageEvent: MessageEvent<unknown>): void => {
+		if (isValidHostToWebviewMessage(messageEvent.data)) {
+			this.applyHostMessage(messageEvent.data);
 		}
 	};
 
-	private applyHostMessage(message: HostToWebview): void {
-		switch (message.kind) {
+	private applyHostMessage(hostMessage: HostToWebview): void {
+		switch (hostMessage.kind) {
 			case 'state':
-				this.host.setState(message);
-				const openingPrompt = this.prompt === undefined && message.prompt !== undefined;
-				this.prompt = message.prompt;
-				if (message.prompt === undefined) {
-					this.message = '';
+				this.webviewHost.setState(hostMessage);
+				const isOpeningPrompt = this.prompt === undefined && hostMessage.prompt !== undefined;
+				this.prompt = hostMessage.prompt;
+				if (hostMessage.prompt === undefined) {
+					this.messageText = '';
 				} else {
-					this.status = '';
-					if (openingPrompt) {
-						this.message = message.draft;
+					this.statusMessage = '';
+					if (isOpeningPrompt) {
+						this.messageText = hostMessage.draft;
 					}
 				}
 				return;
@@ -230,56 +233,58 @@ export class MessagesApp extends LitElement {
 				return;
 			case 'clearPrompt':
 				this.prompt = undefined;
-				this.message = '';
-				this.submitting = false;
-				this.status = '';
+				this.messageText = '';
+				this.isSubmitting = false;
+				this.statusMessage = '';
 				return;
 			case 'submissionAcknowledged':
 				this.prompt = undefined;
-				this.message = '';
-				this.submitting = false;
-				this.status = 'Message acknowledged. Agent delivery is not part of this release.';
+				this.messageText = '';
+				this.isSubmitting = false;
+				this.statusMessage = 'Message acknowledged. Agent delivery is not part of this release.';
 				return;
-			default:
-				return assertNever(message);
+			default: {
+				const unhandledMessage: never = hostMessage;
+				throw new Error(`Unexpected host message: ${JSON.stringify(unhandledMessage)}`);
+			}
 		}
 	}
 
-	private updateMessage = (event: Event): void => {
-		this.message = (event.target as HTMLTextAreaElement).value;
+	private updateMessageText = (inputEvent: Event): void => {
+		this.messageText = (inputEvent.target as HTMLTextAreaElement).value;
 	};
 
-	private submit = (event: SubmitEvent): void => {
-		event.preventDefault();
-		this.submitMessage();
+	private submitComposer = (submitEvent: SubmitEvent): void => {
+		submitEvent.preventDefault();
+		this.submitComposerMessage();
 	};
 
-	private submitMessage(): void {
-		if (this.submitting || this.prompt === undefined) {
+	private submitComposerMessage(): void {
+		if (this.isSubmitting || this.prompt === undefined) {
 			return;
 		}
 
-		this.submitting = true;
-		this.host.postMessage({ kind: 'submit', message: this.message });
+		this.isSubmitting = true;
+		this.webviewHost.postMessage({ kind: 'submit', message: this.messageText });
 	}
 
-	private cancel = (): void => {
-		if (!this.submitting && this.prompt !== undefined) {
-			this.host.postMessage({ kind: 'cancel' });
+	private cancelComposer = (): void => {
+		if (!this.isSubmitting && this.prompt !== undefined) {
+			this.webviewHost.postMessage({ kind: 'cancel' });
 		}
 	};
 
-	private handleKeydown = (event: KeyboardEvent): void => {
-		const action = messageComposerKeyAction(event);
+	private handleComposerKeydown = (keyboardEvent: KeyboardEvent): void => {
+		const action = messageComposerKeyAction(keyboardEvent);
 		if (action === 'cancel') {
-			event.preventDefault();
-			this.cancel();
+			keyboardEvent.preventDefault();
+			this.cancelComposer();
 			return;
 		}
 
-		if (event.target instanceof HTMLTextAreaElement && action === 'submit') {
-			event.preventDefault();
-			this.submitMessage();
+		if (keyboardEvent.target instanceof HTMLTextAreaElement && action === 'submit') {
+			keyboardEvent.preventDefault();
+			this.submitComposerMessage();
 		}
 	};
 }

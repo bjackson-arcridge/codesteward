@@ -13,8 +13,8 @@ test('messages HTML uses a strict nonce CSP and local webview resources', () => 
 	});
 
 	assert.match(html, /default-src 'none'/);
-	assert.match(html, /style-src vscode-webview:\/\/test-authority 'nonce-[A-Za-z0-9]{32}'/);
-	assert.match(html, /script-src vscode-webview:\/\/test-authority 'nonce-[A-Za-z0-9]{32}'/);
+	assert.match(html, /style-src vscode-webview:\/\/test-authority 'nonce-[A-Za-z0-9_-]{43}'/);
+	assert.match(html, /script-src vscode-webview:\/\/test-authority 'nonce-[A-Za-z0-9_-]{43}'/);
 	assert.match(html, /src="vscode-webview:\/\/test-authority\/dist\/webviews\/messages\.js"/);
 	assert.match(html, /href="vscode-webview:\/\/test-authority\/media\/codicon\.css"/);
 	assert.doesNotMatch(html, /unsafe-inline|unsafe-eval|https?:\/\//);

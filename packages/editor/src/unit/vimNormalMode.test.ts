@@ -1,16 +1,16 @@
 import * as assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import {
-	returnToVscodeVimNormalMode,
+	returnToVSCodeVimNormalMode,
 	vscodeVimEscapeCommandId,
 	vscodeVimExtensionId,
 } from '../vimNormalMode';
 
-describe('returnToVscodeVimNormalMode', () => {
+describe('returnToVSCodeVimNormalMode', () => {
 	test('does nothing when VSCodeVim is not installed', async () => {
 		const commands: string[] = [];
 
-		const changedMode = await returnToVscodeVimNormalMode({
+		await returnToVSCodeVimNormalMode({
 			getExtension: extensionId => {
 				assert.equal(extensionId, vscodeVimExtensionId);
 				return undefined;
@@ -18,14 +18,13 @@ describe('returnToVscodeVimNormalMode', () => {
 			executeCommand: async commandId => { commands.push(commandId); },
 		});
 
-		assert.equal(changedMode, false);
 		assert.deepEqual(commands, []);
 	});
 
 	test('activates VSCodeVim when needed before returning it to Normal mode', async () => {
 		const events: string[] = [];
 
-		const changedMode = await returnToVscodeVimNormalMode({
+		await returnToVSCodeVimNormalMode({
 			getExtension: () => ({
 				isActive: false,
 				activate: async () => { events.push('activate'); },
@@ -33,7 +32,6 @@ describe('returnToVscodeVimNormalMode', () => {
 			executeCommand: async commandId => { events.push(commandId); },
 		});
 
-		assert.equal(changedMode, true);
 		assert.deepEqual(events, ['activate', vscodeVimEscapeCommandId]);
 	});
 
@@ -41,7 +39,7 @@ describe('returnToVscodeVimNormalMode', () => {
 		let activationCount = 0;
 		const commands: string[] = [];
 
-		const changedMode = await returnToVscodeVimNormalMode({
+		await returnToVSCodeVimNormalMode({
 			getExtension: () => ({
 				isActive: true,
 				activate: async () => { activationCount += 1; },
@@ -49,7 +47,6 @@ describe('returnToVscodeVimNormalMode', () => {
 			executeCommand: async commandId => { commands.push(commandId); },
 		});
 
-		assert.equal(changedMode, true);
 		assert.equal(activationCount, 0);
 		assert.deepEqual(commands, [vscodeVimEscapeCommandId]);
 	});
@@ -58,7 +55,7 @@ describe('returnToVscodeVimNormalMode', () => {
 		const failures: unknown[] = [];
 		const expectedError = new Error('escape command unavailable');
 
-		const changedMode = await returnToVscodeVimNormalMode({
+		await returnToVSCodeVimNormalMode({
 			getExtension: () => ({
 				isActive: true,
 				activate: async () => undefined,
@@ -67,7 +64,6 @@ describe('returnToVscodeVimNormalMode', () => {
 			reportFailure: error => { failures.push(error); },
 		});
 
-		assert.equal(changedMode, false);
 		assert.deepEqual(failures, [expectedError]);
 	});
 });

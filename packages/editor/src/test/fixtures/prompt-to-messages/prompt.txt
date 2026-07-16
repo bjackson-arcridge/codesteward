@@ -1,2 +1,2 @@
-%1:F
+%F
 keep this line

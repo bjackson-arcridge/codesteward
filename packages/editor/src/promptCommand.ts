@@ -1,5 +1,5 @@
 export const promptCommandPrefix = '%';
-export const promptPresets = ['%Q', '%1:F', '%1:W', '%1:R', '%2:C', '%0:T'] as const;
+export const promptPresets = ['%Q', '%F', '%W', '%R', '%C', '%T'] as const;
 
 export type PromptPreset = typeof promptPresets[number];
 export type PromptScope = 'line' | 'project';
@@ -25,7 +25,7 @@ export interface CommandLineDeletionRange {
 	readonly end: CommandLinePosition;
 }
 
-const commandPattern = /^(%Q|%1:F|%1:W|%1:R|%2:C|%0:T)(?:[ \t]+(@G))?[ \t]*$/;
+const commandPattern = /^(%Q|%F|%W|%R|%C|%T)(?:[ \t]+(@G))?[ \t]*$/;
 
 export function parsePromptCommand(sourceLine: string): ParsedPromptCommand | undefined {
 	const match = commandPattern.exec(sourceLine);

@@ -1,16 +1,16 @@
-interface VsCodeApi<Outbound, State = unknown> {
+interface VSCodeApi<Outbound, State = unknown> {
 	postMessage(message: Outbound): void;
 	getState(): State | undefined;
 	setState(state: State): void;
 }
 
-declare function acquireVsCodeApi<Outbound, State>(): VsCodeApi<Outbound, State>;
+declare function acquireVsCodeApi<Outbound, State>(): VSCodeApi<Outbound, State>;
 
-let cachedApi: VsCodeApi<unknown, unknown> | undefined;
+let cachedApi: VSCodeApi<unknown, unknown> | undefined;
 
-export function getHost<Outbound, State = unknown>(): VsCodeApi<Outbound, State> {
+export function getHost<Outbound, State = unknown>(): VSCodeApi<Outbound, State> {
 	cachedApi ??= acquireVsCodeApi();
-	return cachedApi as VsCodeApi<Outbound, State>;
+	return cachedApi as VSCodeApi<Outbound, State>;
 }
 
 export function readInitialState<T>(): T | undefined {

@@ -4,12 +4,12 @@ import { createIntegrationStub } from '../integrationStub';
 
 test('creates clearly labelled deterministic editor-integration stub text', () => {
 	assert.equal(createIntegrationStub({
-		preset: '%1:F',
+		preset: '%F',
 		scope: 'line',
 		sourceUri: 'file:///workspace/src/example.ts',
 		sourceLine: 4,
-		sourceText: '%1:F',
-	}), '[Integration stub] Sundial received %1:F for source line 5.');
+		sourceText: '%F',
+	}), '[Integration stub] Sundial received %F for source line 5.');
 
 	assert.equal(createIntegrationStub({
 		preset: '%Q',

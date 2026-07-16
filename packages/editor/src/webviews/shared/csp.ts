@@ -1,16 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import * as vscode from 'vscode';
 
-const nonceAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-
 export function generateNonce(): string {
-	const bytes = randomBytes(32);
-	let nonce = '';
-	for (let index = 0; index < 32; index += 1) {
-		nonce += nonceAlphabet[bytes[index] % nonceAlphabet.length];
-	}
-
-	return nonce;
+	return randomBytes(32).toString('base64url');
 }
 
 export interface WebviewHtmlOptions {

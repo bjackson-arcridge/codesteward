@@ -34,11 +34,11 @@ function readManifest(): PackageManifest {
 }
 
 describe('Sundial Editor manifest', () => {
-	test('is an independent 0.2.3 extension package', () => {
+	test('is an independent 0.3.0 extension package', () => {
 		const manifest = readManifest();
 		assert.equal(manifest.name, 'sundial-editor');
 		assert.equal(manifest.publisher, 'arcridge');
-		assert.equal(manifest.version, '0.2.3');
+		assert.equal(manifest.version, '0.3.0');
 		assert.equal(Object.hasOwn(manifest, 'extensionDependencies'), false);
 		assert.equal(Object.hasOwn(manifest.dependencies ?? {}, '@arcridge/sundial'), false);
 		assert.equal(Object.hasOwn(manifest.dependencies ?? {}, 'sundial'), false);
@@ -76,7 +76,7 @@ describe('Sundial Editor manifest', () => {
 		assert.doesNotMatch(readme, /View: Move View/);
 		assert.match(readme, /Secondary Side Bar/);
 		assert.match(readme, /Sundial Agents/);
-		assert.match(readme, /`%1:F`/);
+		assert.match(readme, /`%F`/);
 		assert.match(readme, /\[Integration stub\]/);
 		assert.equal(rootManifest.workspaces?.includes('packages/editor'), true);
 		assert.equal(rootManifest.scripts?.test, 'npm run test --workspaces --if-present');
@@ -108,7 +108,7 @@ describe('Sundial Editor manifest', () => {
 		assert.match(providerSource, /case 'submit':\s*void this\.acknowledgePendingSubmission\(\)/);
 		assert.match(providerSource, /await this\.services\.returnToSource\(prompt\)/);
 		assert.match(extensionSource, /showTextDocument\(vscode\.Uri\.parse\(prompt\.sourceUri\), \{ preserveFocus: false \}\)/);
-		assert.match(extensionSource, /returnToVscodeVimNormalMode/);
+		assert.match(extensionSource, /returnToVSCodeVimNormalMode/);
 	});
 
 	test('uses the shared project-managed VS Code test runtime', () => {

@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
 import { createIntegrationStub } from '../../integrationStub.js';
 import type { PromptContext } from '../../promptCommand.js';
-import { assertNever } from '../shared/assertNever.js';
 import { renderWebviewHtml } from '../shared/csp.js';
 import { attachMessageRouter, type MessageRouter } from '../shared/messageRouter.js';
-import { type HostToWebview, type WebviewToHost, isWebviewToHost } from './messages.js';
+import {
+	type HostToWebview,
+	type WebviewToHost,
+	isValidWebviewToHostMessage,
+} from './messages.js';
 
 export interface MessagesServices {
 	readonly returnToSource: (prompt: PromptContext) => void | Promise<void>;
@@ -22,8 +25,8 @@ interface PendingPrompt {
 }
 
 export class MessagesWebviewProvider implements vscode.WebviewViewProvider {
-	private readonly routers = new Set<MessageRouter<WebviewToHost, HostToWebview>>();
-	private view: vscode.WebviewView | undefined;
+	private readonly messageRouters = new Set<MessageRouter<WebviewToHost, HostToWebview>>();
+	private activeMessagesView: vscode.WebviewView | undefined;
 	private pendingPrompt: PendingPrompt | undefined;
 
 	constructor(
@@ -31,44 +34,44 @@ export class MessagesWebviewProvider implements vscode.WebviewViewProvider {
 		private readonly services: MessagesServices,
 	) {}
 
-	async resolveWebviewView(view: vscode.WebviewView): Promise<void> {
-		this.view = view;
-		view.webview.options = {
+	async resolveWebviewView(messagesView: vscode.WebviewView): Promise<void> {
+		this.activeMessagesView = messagesView;
+		messagesView.webview.options = {
 			enableScripts: true,
 			localResourceRoots: [this.extensionUri],
 		};
-		view.webview.html = renderWebviewHtml({
+		messagesView.webview.html = renderWebviewHtml({
 			title: 'Sundial Editor Messages',
 			bodyTagId: 'se-messages-app',
-			scriptUri: view.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'dist', 'webviews', 'messages.js')),
-			codiconUri: view.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media', 'codicon.css')),
-			cspSource: view.webview.cspSource,
+			scriptUri: messagesView.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'dist', 'webviews', 'messages.js')),
+			codiconUri: messagesView.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media', 'codicon.css')),
+			cspSource: messagesView.webview.cspSource,
 			initialState: this.stateMessage(),
 			fallbackText: 'Loading Messages...',
 		});
 
-		const router = attachMessageRouter<WebviewToHost, HostToWebview>(
-			view.webview,
-			isWebviewToHost,
-			message => this.handleMessage(message),
+		const messagesRouter = attachMessageRouter<WebviewToHost, HostToWebview>(
+			messagesView.webview,
+			isValidWebviewToHostMessage,
+			inboundMessage => this.handleWebviewMessage(inboundMessage),
 		);
-		this.routers.add(router);
-		view.onDidChangeVisibility(() => this.focusPendingComposer());
-		view.onDidDispose(() => {
-			router.dispose();
-			this.routers.delete(router);
-			if (this.view === view) {
-				this.view = undefined;
+		this.messageRouters.add(messagesRouter);
+		messagesView.onDidChangeVisibility(() => this.focusPendingComposer());
+		messagesView.onDidDispose(() => {
+			messagesRouter.dispose();
+			this.messageRouters.delete(messagesRouter);
+			if (this.activeMessagesView === messagesView) {
+				this.activeMessagesView = undefined;
 			}
 		});
 
-		if (view.visible) {
+		if (messagesView.visible) {
 			queueMicrotask(() => this.focusPendingComposer());
 		}
 	}
 
 	async openPrompt(prompt: PromptContext): Promise<void> {
-		this.post({ kind: 'clearPrompt' });
+		this.postToMessagesWebviews({ kind: 'clearPrompt' });
 		this.pendingPrompt = {
 			prompt,
 			draft: createIntegrationStub(prompt),
@@ -80,8 +83,8 @@ export class MessagesWebviewProvider implements vscode.WebviewViewProvider {
 
 	diagnostics(): MessagesDiagnostics {
 		return {
-			viewResolved: this.view !== undefined,
-			viewVisible: this.view?.visible === true,
+			viewResolved: this.activeMessagesView !== undefined,
+			viewVisible: this.activeMessagesView?.visible === true,
 			state: this.stateMessage(),
 		};
 	}
@@ -89,38 +92,40 @@ export class MessagesWebviewProvider implements vscode.WebviewViewProvider {
 	async acknowledgePendingSubmission(): Promise<void> {
 		const prompt = this.pendingPrompt?.prompt;
 		this.pendingPrompt = undefined;
-		this.post({ kind: 'submissionAcknowledged' });
+		this.postToMessagesWebviews({ kind: 'submissionAcknowledged' });
 		if (prompt !== undefined) {
 			await this.services.returnToSource(prompt);
 		}
 	}
 
-	private handleMessage(message: WebviewToHost): void {
-		switch (message.kind) {
+	private handleWebviewMessage(inboundMessage: WebviewToHost): void {
+		switch (inboundMessage.kind) {
 			case 'submit':
 				void this.acknowledgePendingSubmission();
 				return;
 			case 'cancel': {
 				const prompt = this.pendingPrompt?.prompt;
 				this.pendingPrompt = undefined;
-				this.post({ kind: 'clearPrompt' });
+				this.postToMessagesWebviews({ kind: 'clearPrompt' });
 				if (prompt !== undefined) {
 					void this.services.returnToSource(prompt);
 				}
 				return;
 			}
-			default:
-				return assertNever(message);
+			default: {
+				const unhandledMessage: never = inboundMessage;
+				throw new Error(`Unexpected webview message: ${JSON.stringify(unhandledMessage)}`);
+			}
 		}
 	}
 
 	private focusPendingComposer(): void {
-		if (this.view?.visible !== true || this.pendingPrompt === undefined) {
+		if (this.activeMessagesView?.visible !== true || this.pendingPrompt === undefined) {
 			return;
 		}
 
-		this.post(this.stateMessage());
-		this.post({ kind: 'focusComposer' });
+		this.postToMessagesWebviews(this.stateMessage());
+		this.postToMessagesWebviews({ kind: 'focusComposer' });
 	}
 
 	private stateMessage(): HostToWebview {
@@ -133,9 +138,9 @@ export class MessagesWebviewProvider implements vscode.WebviewViewProvider {
 			};
 	}
 
-	private post(message: HostToWebview): void {
-		for (const router of this.routers) {
-			router.post(message);
+	private postToMessagesWebviews(hostMessage: HostToWebview): void {
+		for (const messagesRouter of this.messageRouters) {
+			messagesRouter.post(hostMessage);
 		}
 	}
 }
