@@ -5,15 +5,17 @@
   "description": "Agentic workflows that focus on human in the loop.",
   "workspaces": [
     "packages/cli",
-    "packages/vscode"
+    "packages/vscode",
+    "packages/editor"
   ],
   "scripts": {
     "check-types": "npm run check-types --workspaces",
     "compile": "npm run compile --workspaces",
     "lint": "eslint packages",
     "package:vscode": "npm --workspace packages/vscode run package:vsix",
+    "package:editor": "npm --workspace packages/editor run package:vsix",
     "test:unit": "npm run test:unit --workspaces --if-present",
-    "test": "npm --workspace packages/vscode run test",
+    "test": "npm run test --workspaces --if-present",
     "cli": "npm --workspace @arcridge/sundial run cli --",
     "pack:cli": "npm --workspace @arcridge/sundial pack --pack-destination .",
     "install:cli:local": "npm run pack:cli && npm install -g \"./$(ls -t arcridge-sundial-*.tgz | head -n1)\"",

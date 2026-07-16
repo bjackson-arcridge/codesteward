@@ -15,6 +15,12 @@ Currently the versions are managed independently
 
 After implementing any major feature, run the broad local regression set before finalizing: `npm run check-types`, `npm run lint`, `npm run test:unit`, and `npm test`. If a suite cannot run in the current environment, report the skipped command and the concrete blocker.
 
+## VS Code Integration Tests
+
+`npm test` launches the VS Code integration suites against one pinned, project-managed runtime in the root `.vscode-test/` cache. The pretest helper downloads that runtime from the official VS Code update service when absent, so tests must not depend on a machine-wide VS Code installation. The test configs use the supported `useInstallation.fromPath` field only to launch this prepared project-cache executable; never replace it with `useInstallation.fromMachine` or a system application path. On macOS the helper verifies the disposable app bundle and, after a checksum-validated fresh download, applies a local ad-hoc signature when Gatekeeper rejects the archive signature. Do not manually clear Gatekeeper attributes or reuse an unverifiable cache.
+
+In a sandboxed Codex session, run `npm test` with `sandbox_permissions: "require_escalated"` on the first attempt and a concise approval reason because a fresh cache needs network access. Do not first retry it inside the network-restricted sandbox.
+
 <!-- sundial:agent-instructions -->
 ## Sundial
 Sundial is the tool used to manage all persistent memory and decisions for this project.

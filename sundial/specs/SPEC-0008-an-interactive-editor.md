@@ -37,15 +37,15 @@ Sundial Editor is a separate VS Code extension package for collaborative editing
 
 ### Overall Interaction Model and UX
 
-The default mode is concurrent work in a dirty, moving working tree. Agents make small targeted patches for their assigned tasks and are not responsible for making the whole tree error-free unless asked. The standard editor saves on every keystroke and supports both latest-code and diff views. The experience is keyboard-first, including navigation of the sidebar and switching between edit and diff views.
+The default mode is concurrent work in a dirty, moving working tree. Agents make small targeted patches for their assigned tasks and are not responsible for making the whole tree error-free unless asked. The standard editor contributes VS Code's built-in delayed autosave with the standard one-second default; user, workspace, folder, and language-specific settings can override that default. It supports both latest-code and diff views. The experience is keyboard-first, including navigation of the sidebar and switching between edit and diff views.
 
-The sidebar shows the user and agents with their status and current task. It also shows annotations for the current code location or the selected agent's provider output. Sidebar sections use `WebviewView`, meet the established keyboard-accessibility requirements, and communicate through typed messages.
+The right-hand Secondary Sidebar, normally used for LLM chat panes, contains the **Sundial Agents** collaboration panel. It shows the user and agents with their status and current task, and annotations for the current code location or the selected agent's provider output. Sidebar sections use `WebviewView`, meet the established keyboard-accessibility requirements, and communicate through typed messages. Sundial contributes its own container directly to the Secondary Sidebar rather than hosting itself inside a provider-owned chat pane; it reveals the panel once after installation, then respects the user's normal ability to close or move it.
 
 ### Command Surface
 
 Commands are typed on a standalone source line. Submitting a prompt command removes that line, opens a message box, and sends the entered message without writing it into the source file. The resulting user-command annotation remains anchored to the source line where the command was issued.
 
-Prompt presets include question/no-code (`:Q`), fix (`>1:F`), write (`>1:W`), refactor (`>1:R`), cleanup (`>2:C`), and tests (`>0:T`); an `@G` modifier associates the prompt with the project globally. These presets are advisory prompt guidance, not enforceable safety boundaries.
+Prompt commands enter an explicit editor mode with `%` in column zero. Presets include question/no-code (`%Q`), fix (`%1:F`), write (`%1:W`), refactor (`%1:R`), cleanup (`%2:C`), and tests (`%0:T`); an `@G` modifier associates the prompt with the project globally. These presets are advisory prompt guidance, not enforceable safety boundaries.
 
 Diff and commit commands are:
 
@@ -95,7 +95,7 @@ Agents may explicitly update anchors through the CLI. A dedicated re-anchor oper
 
 ### Risks and Limitations
 
-Prompt presets and agent move instructions are advisory and may not be followed. Repair follows Git's classification, so a heavily modified move reported by Git as a deletion and addition is treated that way rather than inferred as a rename. Provider capabilities differ and Codex app-server remains experimental. Anchoring is best-effort, and per-keystroke saves may trigger file watchers and development tooling.
+Prompt presets and agent move instructions are advisory and may not be followed. Repair follows Git's classification, so a heavily modified move reported by Git as a deletion and addition is treated that way rather than inferred as a rename. Provider capabilities differ and Codex app-server remains experimental. Anchoring is best-effort, and rate-limited automatic saves may trigger file watchers and development tooling.
 
 
 ## Incremental Functional Delivery
@@ -105,7 +105,7 @@ Each slice should leave a usable end-to-end workflow and preserve the behavior d
 Prove out the primary user interactions first, then expand to multiple subagents as the final step.
 
 ### Function 1: Editor Plugin 
-Create the separate Sundial Editor extension package. Implement per-keystroke saving and the source-line-to-message-box prompt UX through the UI boundary; submitting a prompt does not yet contact an agent.
+Create the separate Sundial Editor extension package. Configure VS Code's built-in delayed autosave to default to one second and implement the source-line-to-message-box prompt UX through the UI boundary; submitting a prompt does not yet contact an agent.
 
 ### Function 2: Agent Integration
 Add the provider-agnostic CLI agent-control surface and its first Codex app-server adapter. The user can start and stop one managed agent, see its status and output in the sidebar, submit a prompt through the existing message-box interaction, and have the agent make targeted patches in the dirty shared tree.

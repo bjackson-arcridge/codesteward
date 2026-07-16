@@ -295,7 +295,8 @@
     "test:unit": "npm run compile-tests && node --test out/unit/*.test.js",
     "watch-tests": "tsc -p . -w --outDir out",
     "prepare-test-workspaces": "node src/test/prepare-workspaces.mjs",
-    "pretest": "npm run compile-cli && npm run compile-tests && npm run compile && npm run prepare-test-workspaces",
+    "prepare-test-runtime": "node ../../scripts/prepare-vscode-test-runtime.mjs",
+    "pretest": "npm run compile-cli && npm run compile-tests && npm run compile && npm run prepare-test-workspaces && npm run prepare-test-runtime",
     "test": "vscode-test"
   },
   "dependencies": {

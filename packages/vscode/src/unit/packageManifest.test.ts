@@ -8,6 +8,7 @@ interface MenuContribution {
 }
 
 interface PackageManifest {
+	readonly scripts?: Record<string, string>;
 	readonly contributes?: {
 		readonly commands?: readonly MenuContribution[];
 		readonly configuration?: {
@@ -126,5 +127,19 @@ describe('package manifest contributions', () => {
 			scope: 'resource',
 			description: 'Render HTML comments in Markdown files as inline chat bubbles.',
 		});
+	});
+
+	test('prepares a pinned project-managed VS Code test runtime', () => {
+		const manifest = readPackageManifest();
+		const config = fs.readFileSync(path.resolve(__dirname, '../../../../.vscode-test.mjs'), 'utf8');
+		const helper = fs.readFileSync(path.resolve(__dirname, '../../../../scripts/prepare-vscode-test-runtime.mjs'), 'utf8');
+
+		assert.equal(manifest.scripts?.['prepare-test-runtime'], 'node ../../scripts/prepare-vscode-test-runtime.mjs');
+		assert.match(manifest.scripts?.pretest ?? '', /npm run prepare-test-runtime/);
+		assert.match(config, /useInstallation: \{ fromPath: vscodeTestExecutablePath \}/);
+		assert.match(config, /vscodeTestVersion/);
+		assert.doesNotMatch(config, /fromMachine/);
+		assert.match(helper, /downloadAndUnzipVSCode/);
+		assert.match(helper, /'codesign', \['--force', '--deep', '--sign', '-'/);
 	});
 });
