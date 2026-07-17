@@ -81,7 +81,7 @@ sundial dr disable DR-0001
 sundial dr enable DR-0001
 sundial dr retire DR-0001 --by DR-0002
 sundial dr retire DR-0001
-sundial dr promote CAND-0003 --from rejected
+sundial dr promote <candidate-id> --from rejected
 sundial candidate create --title "Decision title" --domain cli --decision "Do the thing"
 sundial candidate list
 sundial candidate show CAND-0001
