@@ -12,6 +12,7 @@
     "compile": "npm run compile --workspaces",
     "lint": "eslint packages",
     "package:vscode": "npm --workspace packages/vscode run package:vsix",
+    "install:vscode:local": "npm --workspace packages/vscode run package:vsix -- --out /private/tmp/sundial-local.vsix && code --install-extension /private/tmp/sundial-local.vsix --force",
     "test:unit": "npm run test:unit --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "cli": "npm --workspace @arcridge/sundial run cli --",

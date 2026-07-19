@@ -17,7 +17,7 @@ import '../shared/components/cs-badge.js';
 import '../shared/components/cs-button.js';
 import '../shared/components/cs-icon.js';
 
-type CandidatePromptKind = 'reject' | 'retire';
+type CandidatePromptKind = 'reject';
 
 interface CandidatePrompt {
 	readonly candidateId: string;
@@ -333,13 +333,6 @@ export class CandidatesApp extends LitElement {
 				</span>
 				<div slot="actions">
 					<cs-icon-button
-						icon="open-preview"
-						label="View rendered markdown"
-						data-candidate-id=${candidate.id}
-						data-candidate-target="preview"
-						@click=${() => this.sendCandidateCommand('preview', candidate)}
-					></cs-icon-button>
-					<cs-icon-button
 						icon="edit"
 						label="Edit markdown source"
 						@click=${() => this.sendCandidateCommand('edit', candidate)}
@@ -354,12 +347,6 @@ export class CandidatesApp extends LitElement {
 						label="Reject candidate"
 						.expanded=${activePrompt?.kind === 'reject'}
 						@click=${(event: Event) => this.openPrompt('reject', candidate, event)}
-					></cs-icon-button>
-					<cs-icon-button
-						icon="archive"
-						label="Retire candidate"
-						.expanded=${activePrompt?.kind === 'retire'}
-						@click=${(event: Event) => this.openPrompt('retire', candidate, event)}
 					></cs-icon-button>
 					<cs-icon-button
 						icon="trash"
@@ -432,21 +419,12 @@ export class CandidatesApp extends LitElement {
 		event.preventDefault();
 		const value = this.promptValue(event.currentTarget);
 
-		if (prompt.kind === 'reject') {
-			this.send({
-				kind: 'reject',
-				id: candidate.id,
-				...(candidate.filePath === undefined ? {} : { filePath: candidate.filePath }),
-				reason: value,
-			});
-		} else {
-			this.send({
-				kind: 'retire',
-				id: candidate.id,
-				...(candidate.filePath === undefined ? {} : { filePath: candidate.filePath }),
-				retiredBy: value,
-			});
-		}
+		this.send({
+			kind: 'reject',
+			id: candidate.id,
+			...(candidate.filePath === undefined ? {} : { filePath: candidate.filePath }),
+			reason: value,
+		});
 
 		this.closePrompt(false);
 	}
@@ -522,7 +500,7 @@ export class CandidatesApp extends LitElement {
 		}
 	}
 
-	private clickCandidate(id: string, target: 'title' | 'preview'): void {
+	private clickCandidate(id: string, target: 'title'): void {
 		for (const element of this.renderRoot.querySelectorAll<HTMLElement>('[data-candidate-id]')) {
 			if (element.dataset.candidateId === id && element.dataset.candidateTarget === target) {
 				this.clickElement(element);

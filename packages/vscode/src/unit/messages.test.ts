@@ -100,7 +100,7 @@ describe('candidates message guards', () => {
 
 	test('accept diagnostics-only host click request', () => {
 		assert.equal(isCandidatesHost({ kind: 'diagnosticClickCandidate', id: 'CAND-1', target: 'title' }), true);
-		assert.equal(isCandidatesHost({ kind: 'diagnosticClickCandidate', id: 'CAND-1', target: 'preview' }), true);
+		assert.equal(isCandidatesHost({ kind: 'diagnosticClickCandidate', id: 'CAND-1', target: 'preview' }), false);
 		assert.equal(isCandidatesHost({ kind: 'diagnosticClickCandidate', id: 'CAND-1', target: 'edit' }), false);
 	});
 

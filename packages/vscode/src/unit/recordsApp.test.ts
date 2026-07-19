@@ -60,6 +60,9 @@ describe('Records app specs sidebar mode', () => {
 	test('renders specs sidebar phase launch actions', () => {
 		const source = readRecordsAppSource();
 
+		assert.match(source, /slot="body" class="spec-phase-actions"/);
+		assert.match(source, /private isSelectedWorkspace\(record: RecordSummary\): boolean/);
+		assert.match(source, /return record\.workspace === undefined \|\| record\.workspace === this\.selectedWorkspace;/);
 		assert.match(source, /label="Plan spec"/);
 		assert.match(source, /data-record-target="planning"/);
 		assert.match(source, /label="Implement spec"/);
@@ -68,5 +71,13 @@ describe('Records app specs sidebar mode', () => {
 		assert.match(source, /data-record-target="review"/);
 		assert.match(source, /private launchSpec\(record: RecordSummary, phase: SpecSessionPhase\): void/);
 		assert.match(source, /kind: 'launchSpec'/);
+	});
+
+	test('opens rendered Decision Record markdown from the title instead of a duplicate icon', () => {
+		const source = readRecordsAppSource();
+
+		assert.doesNotMatch(source, /label="View rendered markdown"/);
+		assert.match(source, /data-record-target="title"/);
+		assert.match(source, /kind: 'preview'/);
 	});
 });

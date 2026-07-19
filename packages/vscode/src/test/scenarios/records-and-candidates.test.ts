@@ -106,18 +106,6 @@ suite('Scenario: records-and-candidates', () => {
 		await waitForActiveMarkdownPreview(candidatePath);
 	});
 
-	test('clicking a candidate preview button opens rendered markdown preview', async () => {
-		await activateExtension();
-		await waitForWebviewDiagnostics();
-
-		const candidatePath = getCandidateFixturePath('CAND-0001-fixture-candidate-renders.md');
-
-		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-		await vscode.commands.executeCommand('sundial.internal.candidates.click', 'CAND-0001', 'preview');
-
-		await waitForActiveMarkdownPreview(candidatePath);
-	});
-
 	test('clicking a spec opens its markdown source', async () => {
 		await activateExtension();
 		await waitForWebviewDiagnostics();

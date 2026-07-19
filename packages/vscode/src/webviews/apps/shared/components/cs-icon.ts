@@ -28,14 +28,14 @@ export class CsIcon extends LitElement {
 			display: inline-flex;
 			align-items: center;
 			justify-content: center;
-			width: 16px;
-			height: 16px;
+			width: 12px;
+			height: 12px;
 			color: var(--cs-icon-fg, currentColor);
 			line-height: 1;
 		}
 
 		.codicon {
-			font: normal normal normal 16px/1 codicon;
+			font: normal normal normal 12px/1 codicon;
 			display: inline-block;
 			text-decoration: none;
 			text-rendering: auto;

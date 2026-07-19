@@ -24,7 +24,7 @@ export type HostToWebview =
 		hasAcceptedRecords: boolean;
 		diagnosticsEnabled?: boolean;
 	}
-	| { kind: 'diagnosticClickCandidate'; id: string; target: 'title' | 'preview' }
+	| { kind: 'diagnosticClickCandidate'; id: string; target: 'title' }
 	| { kind: 'diagnosticSelectProvider'; provider: BootstrapProvider };
 
 export type CandidateCommandKind = 'preview' | 'edit' | 'open' | 'accept' | 'reject' | 'retire' | 'dismiss';
@@ -55,7 +55,7 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 	};
 	if (message.kind === 'diagnosticClickCandidate') {
 		return typeof message.id === 'string'
-			&& (message.target === 'title' || message.target === 'preview');
+			&& message.target === 'title';
 	}
 
 	if (message.kind === 'diagnosticSelectProvider') {

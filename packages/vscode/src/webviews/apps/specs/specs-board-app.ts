@@ -203,6 +203,11 @@ export class SpecsBoardApp extends LitElement {
 				text-decoration: underline;
 			}
 
+			.spec-phase-actions {
+				display: flex;
+				gap: 2px;
+			}
+
 			.id {
 				font-family: var(--vscode-editor-font-family);
 			}
@@ -388,34 +393,6 @@ export class SpecsBoardApp extends LitElement {
 				</span>
 				<div slot="actions">
 					<cs-icon-button
-						icon="list-tree"
-						label="Plan spec"
-						data-spec-id=${spec.id}
-						data-spec-target="planning"
-						@click=${() => this.launchSpec(spec, 'planning')}
-					></cs-icon-button>
-					<cs-icon-button
-						icon="replace"
-						label="Implement spec"
-						data-spec-id=${spec.id}
-						data-spec-target="implementation"
-						@click=${() => this.launchSpec(spec, 'implementation')}
-					></cs-icon-button>
-					<cs-icon-button
-						icon="eye"
-						label="Review spec"
-						data-spec-id=${spec.id}
-						data-spec-target="review"
-						@click=${() => this.launchSpec(spec, 'review')}
-					></cs-icon-button>
-					<cs-icon-button
-						icon="open-preview"
-						label="Open spec"
-						data-spec-id=${spec.id}
-						data-spec-target="open"
-						@click=${() => this.send({ kind: 'open', id: spec.id, ...(spec.workspace === undefined ? {} : { workspace: spec.workspace }) })}
-					></cs-icon-button>
-					<cs-icon-button
 						icon="repo-forked"
 						label=${spawnWorktreeDisabled ? 'Spawn worktree unavailable from a worktree' : 'Spawn worktree'}
 						?disabled=${spawnWorktreeDisabled}
@@ -438,8 +415,41 @@ export class SpecsBoardApp extends LitElement {
 						@click=${() => this.send({ kind: 'delete', id: spec.id, ...(spec.workspace === undefined ? {} : { workspace: spec.workspace }) })}
 					></cs-icon-button>
 				</div>
+				${this.isSelectedWorkspace(spec)
+					? html`<div slot="body" class="spec-phase-actions">${this.renderSpecPhaseActions(spec)}</div>`
+					: nothing}
 			</cs-card>
 		`;
+	}
+
+	private renderSpecPhaseActions(spec: SpecCard) {
+		return html`
+			<cs-icon-button
+				icon="list-tree"
+				label="Plan spec"
+				data-spec-id=${spec.id}
+				data-spec-target="planning"
+				@click=${() => this.launchSpec(spec, 'planning')}
+			></cs-icon-button>
+			<cs-icon-button
+				icon="replace"
+				label="Implement spec"
+				data-spec-id=${spec.id}
+				data-spec-target="implementation"
+				@click=${() => this.launchSpec(spec, 'implementation')}
+			></cs-icon-button>
+			<cs-icon-button
+				icon="eye"
+				label="Review spec"
+				data-spec-id=${spec.id}
+				data-spec-target="review"
+				@click=${() => this.launchSpec(spec, 'review')}
+			></cs-icon-button>
+		`;
+	}
+
+	private isSelectedWorkspace(spec: SpecCard): boolean {
+		return spec.workspace === undefined || spec.workspace === this.selectedWorkspace;
 	}
 
 	private launchSpec(spec: SpecCard, phase: SpecSessionPhase): void {

@@ -55,6 +55,9 @@ describe('Specs board add form', () => {
 	test('renders row-local spec phase launch actions', () => {
 		const source = readSpecsBoardAppSource();
 
+		assert.match(source, /slot="body" class="spec-phase-actions"/);
+		assert.match(source, /private isSelectedWorkspace\(spec: SpecCard\): boolean/);
+		assert.match(source, /return spec\.workspace === undefined \|\| spec\.workspace === this\.selectedWorkspace;/);
 		assert.match(source, /label="Plan spec"/);
 		assert.match(source, /data-spec-target="planning"/);
 		assert.match(source, /label="Implement spec"/);
@@ -64,5 +67,6 @@ describe('Specs board add form', () => {
 		assert.match(source, /private launchSpec\(spec: SpecCard, phase: SpecSessionPhase\): void/);
 		assert.match(source, /kind: 'launch'/);
 		assert.match(source, /phase,/);
+		assert.doesNotMatch(source, /label="Open spec"/);
 	});
 });

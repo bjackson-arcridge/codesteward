@@ -53,7 +53,7 @@ export class CandidatesWebviewProvider implements vscode.WebviewViewProvider {
 		}
 	}
 
-	clickCandidateForDiagnostics(id: string, target: 'title' | 'preview'): void {
+	clickCandidateForDiagnostics(id: string, target: 'title'): void {
 		for (const router of this.routers) {
 			router.post({ kind: 'diagnosticClickCandidate', id, target });
 		}

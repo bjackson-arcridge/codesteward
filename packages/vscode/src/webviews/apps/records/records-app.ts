@@ -258,6 +258,11 @@ export class RecordsApp extends LitElement {
 				text-decoration: underline;
 			}
 
+			.spec-phase-actions {
+				display: flex;
+				gap: 2px;
+			}
+
 			.inline-prompt {
 				display: grid;
 				grid-template-columns: minmax(0, 1fr) 24px 24px;
@@ -531,6 +536,9 @@ export class RecordsApp extends LitElement {
 					${record.workspace === undefined ? nothing : html`<span>${record.workspace}</span>`}
 				</span>
 				<div slot="actions">${this.renderActions(record)}</div>
+				${isSpec && this.isSelectedWorkspace(record)
+					? html`<div slot="body" class="spec-phase-actions">${this.renderSpecPhaseActions(record)}</div>`
+					: nothing}
 				${this.actionMode === 'research' && record.summary !== undefined && record.summary.length > 0
 					? html`<p slot="body" class="summary">${record.summary}</p>`
 					: nothing}
@@ -543,30 +551,6 @@ export class RecordsApp extends LitElement {
 		if (this.actionMode === 'specs') {
 			const spawnWorktreeDisabled = record.worktreeSpawnDisabled === true;
 			return html`
-				<cs-icon-button
-					icon="list-tree"
-					label="Plan spec"
-					data-record-id=${record.id}
-					data-record-target="planning"
-					data-record-workspace=${record.workspace ?? nothing}
-					@click=${() => this.launchSpec(record, 'planning')}
-				></cs-icon-button>
-				<cs-icon-button
-					icon="replace"
-					label="Implement spec"
-					data-record-id=${record.id}
-					data-record-target="implementation"
-					data-record-workspace=${record.workspace ?? nothing}
-					@click=${() => this.launchSpec(record, 'implementation')}
-				></cs-icon-button>
-				<cs-icon-button
-					icon="eye"
-					label="Review spec"
-					data-record-id=${record.id}
-					data-record-target="review"
-					data-record-workspace=${record.workspace ?? nothing}
-					@click=${() => this.launchSpec(record, 'review')}
-				></cs-icon-button>
 				<cs-icon-button
 					icon="repo-forked"
 					label=${spawnWorktreeDisabled ? 'Spawn worktree unavailable from a worktree' : 'Spawn worktree'}
@@ -596,14 +580,6 @@ export class RecordsApp extends LitElement {
 		}
 
 		const baseActions = html`
-				<cs-icon-button
-					icon="open-preview"
-					label="View rendered markdown"
-				data-record-id=${record.id}
-				data-record-target="preview"
-				data-record-workspace=${record.workspace ?? nothing}
-				@click=${() => this.send({ kind: 'preview', id: record.id })}
-			></cs-icon-button>
 			<cs-icon-button
 				icon="edit"
 				label="Edit markdown source"
@@ -661,6 +637,39 @@ export class RecordsApp extends LitElement {
 				@click=${(event: Event) => this.openRetirePrompt(record, event)}
 			></cs-icon-button>
 		`;
+	}
+
+	private renderSpecPhaseActions(record: RecordSummary) {
+		return html`
+			<cs-icon-button
+				icon="list-tree"
+				label="Plan spec"
+				data-record-id=${record.id}
+				data-record-target="planning"
+				data-record-workspace=${record.workspace ?? nothing}
+				@click=${() => this.launchSpec(record, 'planning')}
+			></cs-icon-button>
+			<cs-icon-button
+				icon="replace"
+				label="Implement spec"
+				data-record-id=${record.id}
+				data-record-target="implementation"
+				data-record-workspace=${record.workspace ?? nothing}
+				@click=${() => this.launchSpec(record, 'implementation')}
+			></cs-icon-button>
+			<cs-icon-button
+				icon="eye"
+				label="Review spec"
+				data-record-id=${record.id}
+				data-record-target="review"
+				data-record-workspace=${record.workspace ?? nothing}
+				@click=${() => this.launchSpec(record, 'review')}
+			></cs-icon-button>
+		`;
+	}
+
+	private isSelectedWorkspace(record: RecordSummary): boolean {
+		return record.workspace === undefined || record.workspace === this.selectedWorkspace;
 	}
 
 	private launchSpec(record: RecordSummary, phase: SpecSessionPhase): void {

@@ -593,7 +593,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'sundial.internal.candidates.click',
-			(id: string, target: 'title' | 'preview') => candidatesProvider.clickCandidateForDiagnostics(id, target),
+			(id: string, target: 'title') => candidatesProvider.clickCandidateForDiagnostics(id, target),
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'sundial.internal.candidates.selectProvider',
