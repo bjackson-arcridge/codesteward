@@ -38,7 +38,7 @@ import {
 	initStore,
 	loadStorePaths,
 	pathExists,
-	readAgentInstructionsBody,
+	readSundialInstructions,
 	StorePaths,
 	updateRuntimeAssets,
 } from './core/store';
@@ -1631,7 +1631,7 @@ function bootstrapPrompt(paths: StorePaths): string {
 		'- Every DR candidate must go through `sundial candidate create`; do not create markdown files manually.',
 		'',
 		'What to inspect:',
-		'- AGENTS.md, AGENT.md, CLAUDE.md, .agents/**, .claude/**.',
+		'- AGENTS.md, AGENT.md, CLAUDE.md, sundial/SUNDIAL-INSTRUCTIONS.md, .agents/**, .claude/**.',
 		'- README files, architecture/design/ADR docs, implementation plans, and other meaningful markdown.',
 		'- Source tree structure and representative implementation files that reveal project conventions.',
 		'- Existing accepted and candidate DRs, so you do not duplicate them.',
@@ -1662,7 +1662,7 @@ function retrieveUsage(): string {
 }
 
 async function renderDecisionRecordGuidance(): Promise<string> {
-	const body = await readAgentInstructionsBody();
+	const body = await readSundialInstructions();
 	return `Decision Record Workflow\n========================\n\n${body}\n`;
 }
 

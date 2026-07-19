@@ -35,10 +35,11 @@ The extension watches `sundial/decisions`, `sundial/research`, and `sundial/spec
 
 During initialization, Sundial can install managed agent assets for Claude Code, Codex, or both:
 
-- Claude Code skills under `.claude/`, plus `.claude/CLAUDE.md`.
-- Codex skills under `.agents/`, plus `AGENTS.md`.
+- Shared workflow guidance at `sundial/SUNDIAL-INSTRUCTIONS.md`.
+- Claude Code skills under `.claude/skills/`.
+- Codex skills under `.agents/skills/`.
 
-Those instructions tell agents to retrieve accepted Decision Records before consequential design or implementation work, propose new candidate DRs when they discover reusable guidance, and store long-form research notes when details are likely to be forgotten or misremembered.
+The decision-aware skills reference the shared instructions, which tell agents to retrieve accepted Decision Records before consequential design or implementation work, propose new candidate DRs when they discover reusable guidance, and store long-form research notes when details are likely to be forgotten or misremembered.
 
 Bootstrap runs can use Claude Code or Codex to inspect the project and create candidate DRs through the Sundial CLI. Candidates then flow through the same human review path as hand-authored proposals.
 

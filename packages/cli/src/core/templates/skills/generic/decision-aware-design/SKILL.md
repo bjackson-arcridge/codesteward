@@ -5,6 +5,8 @@ description: Consult accepted Sundial Decision Records before consequential desi
 
 # decision-aware-design
 
+Before using Sundial, locate and read `sundial/SUNDIAL-INSTRUCTIONS.md` from the project root and follow its shared workflow guidance.
+
 1. Run `sundial domains` to get the list of known domains.
 2. Select all relevant domains for the task.
 3. Retrieve accepted DRs with one call: `sundial dr retrieve [--domain <domain>]...`.

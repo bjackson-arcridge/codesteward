@@ -5,6 +5,8 @@ description: Apply accepted Sundial Decision Records during Codex implementation
 
 # decision-aware-implement
 
+Before using Sundial, locate and read `sundial/SUNDIAL-INSTRUCTIONS.md` from the project root and follow its shared workflow guidance.
+
 Use Sundial through the CLI from the project root. Keep updates short and cite governing DR ids.
 
 1. Run `sundial domains`.
@@ -24,4 +26,4 @@ Optional spec-driven development:
 ---
 <Do the Implementation>
 ---
-4. Only propose a DR candidate when the implementation establishes guidance that would change how a future agent acts on a similar task. Skip candidates for one-off fixes, backward-facing rationale, obvious codebase facts, or details that would not constrain future design or implementation. If the guidance passes that test, follow the project candidate instructions already in `AGENTS.md`.
+4. Only propose a DR candidate when the implementation establishes guidance that would change how a future agent acts on a similar task. Skip candidates for one-off fixes, backward-facing rationale, obvious codebase facts, or details that would not constrain future design or implementation. If the guidance passes that test, follow the candidate submission process in `sundial/SUNDIAL-INSTRUCTIONS.md`.

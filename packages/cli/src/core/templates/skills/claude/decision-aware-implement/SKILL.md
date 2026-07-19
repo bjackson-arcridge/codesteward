@@ -5,6 +5,8 @@ description: Use in Claude Code during implementation, when writing non-trivial 
 
 # decision-aware-implement
 
+Before using Sundial, locate and read `sundial/SUNDIAL-INSTRUCTIONS.md` from the project root and follow its shared workflow guidance.
+
 ## Available domains
 !`sundial domains`
 
@@ -27,4 +29,4 @@ description: Use in Claude Code during implementation, when writing non-trivial 
 ---
 <Do the implementation>
 ---
-4. Evaluate for new DR candidates per the candidate submission process in CLAUDE.md. Beyond the correction case noted there, also propose when a binding pattern was established or an alternative was deliberately rejected.
+4. Evaluate for new DR candidates per the candidate submission process in `sundial/SUNDIAL-INSTRUCTIONS.md`. Beyond the correction case noted there, also propose when a binding pattern was established or an alternative was deliberately rejected.

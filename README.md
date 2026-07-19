@@ -92,14 +92,14 @@ sundial candidate retire CAND-0001
 sundial candidate dismiss CAND-0001
 ```
 
-`init` always creates `sundial/` and starter domains. Runtime assets are opt-in:
+`init` always creates `sundial/`, starter domains, and `sundial/SUNDIAL-INSTRUCTIONS.md`. Agent-specific skills are opt-in:
 
-- `--claude` writes missing Claude Code project assets to `.claude/skills/` and `.claude/CLAUDE.md` from CLI templates.
-- `--codex` writes missing Codex project assets to `.agents/skills/` and `AGENTS.md` from CLI templates.
+- `--claude` writes missing Claude Code skills to `.claude/skills/` from CLI templates.
+- `--codex` writes missing Codex skills to `.agents/skills/` from CLI templates.
 - Pass both flags to bootstrap both runtimes.
 - Pass `--folder docs` to keep the store at `/path/to/project/sundial` while installing runtime assets under `/path/to/project/docs` and running bootstrap from that folder.
 
-Use `sundial update --claude --codex` to refresh installed generated files later without rerunning store initialization. The update command discovers the nearest ancestor `sundial` store by default; pass `--root /path/to/project` to target a specific project, or `--folder docs` to change the configured target folder. Sundial-owned instruction blocks in files such as `AGENTS.md` and `.claude/CLAUDE.md` are repaired or refreshed without overwriting user-authored content outside those blocks.
+Use `sundial update --claude --codex` to refresh installed generated files later without rerunning store initialization. The update command discovers the nearest ancestor `sundial` store by default; pass `--root /path/to/project` to target a specific project, or `--folder docs` to change the configured target folder. It refreshes `sundial/SUNDIAL-INSTRUCTIONS.md`; selected harness updates also remove legacy Sundial-managed blocks from `AGENTS.md` or `.claude/CLAUDE.md` while preserving user-authored content.
 
 ## VS Code
 

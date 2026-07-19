@@ -60,7 +60,8 @@ describe('Records app specs sidebar mode', () => {
 	test('renders specs sidebar phase launch actions', () => {
 		const source = readRecordsAppSource();
 
-		assert.match(source, /slot="body" class="spec-phase-actions"/);
+		assert.match(source, /<span class="spec-phase-actions">\$\{this\.renderSpecPhaseActions\(record\)\}<\/span>/);
+		assert.doesNotMatch(source, /slot="body" class="spec-phase-actions"/);
 		assert.match(source, /private isSelectedWorkspace\(record: RecordSummary\): boolean/);
 		assert.match(source, /return record\.workspace === undefined \|\| record\.workspace === this\.selectedWorkspace;/);
 		assert.match(source, /label="Plan spec"/);

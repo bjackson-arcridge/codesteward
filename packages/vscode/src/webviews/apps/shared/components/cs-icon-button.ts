@@ -20,7 +20,7 @@ export class CsIconButton extends LitElement {
 				display: inline-flex;
 				align-items: center;
 				justify-content: center;
-				width: 24px;
+				width: 18px;
 				height: 24px;
 				padding: 0;
 				border: 0;

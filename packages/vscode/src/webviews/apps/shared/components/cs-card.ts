@@ -31,7 +31,7 @@ export class CsCard extends LitElement {
 
 			.actions {
 				display: inline-flex;
-				gap: 2px;
+				gap: 1px;
 				flex-shrink: 0;
 			}
 

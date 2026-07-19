@@ -1,7 +1,7 @@
 ---
 id: DR-0022
 title: Managed agent instructions remain baseline alongside plugins
-status: accepted
+status: retired
 domain: cli
 created: 2026-05-08
 references:
@@ -10,6 +10,7 @@ references:
   - CLI_SPEC.md
 updated: 2026-05-08
 author: bjackson
+retired_by: DR-0033
 ---
 ## Decision
 

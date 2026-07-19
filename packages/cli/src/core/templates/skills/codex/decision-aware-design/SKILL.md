@@ -5,6 +5,8 @@ description: Consult accepted Sundial Decision Records before consequential Code
 
 # decision-aware-design
 
+Before using Sundial, locate and read `sundial/SUNDIAL-INSTRUCTIONS.md` from the project root and follow its shared workflow guidance.
+
 Use Sundial through the CLI from the project root. Keep updates short and cite governing DR ids.
 
 1. Run `sundial domains`.
@@ -30,4 +32,4 @@ Research note discipline:
 ---
 <Do the Design Work>
 ---
-4. Only propose a DR candidate when the design establishes guidance that would change how a future agent acts on a similar task. Skip candidates for one-off rationale, backward-facing summaries, obvious codebase facts, or details that would not constrain future design or implementation. If the guidance passes that test, follow the project candidate instructions already in `AGENTS.md`.
+4. Only propose a DR candidate when the design establishes guidance that would change how a future agent acts on a similar task. Skip candidates for one-off rationale, backward-facing summaries, obvious codebase facts, or details that would not constrain future design or implementation. If the guidance passes that test, follow the candidate submission process in `sundial/SUNDIAL-INSTRUCTIONS.md`.

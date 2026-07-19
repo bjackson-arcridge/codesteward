@@ -2193,7 +2193,7 @@ async function collectInstalledProviders(): Promise<readonly BootstrapProvider[]
 	for (const store of stores) {
 		const [hasClaude, hasCodex] = await Promise.all([
 			directoryExists(path.join(store.root, '.claude')),
-			fileExists(path.join(store.root, 'AGENTS.md')),
+			directoryExists(path.join(store.root, '.agents')),
 		]);
 		if (hasClaude) {
 			seen.add('claude');

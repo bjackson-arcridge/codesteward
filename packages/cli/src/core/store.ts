@@ -45,6 +45,10 @@ const storeTemplateFiles = [
 	['docs/SUNDIAL.md', 'docs/SUNDIAL.md'] as const,
 ] as const;
 
+const managedStoreTemplateFiles = [
+	['SUNDIAL-INSTRUCTIONS.md', 'instructions/SUNDIAL-INSTRUCTIONS.md'] as const,
+] as const;
+
 const skillTemplateFiles = [
 	'decision-aware-design/SKILL.md',
 	'decision-aware-implement/SKILL.md',
@@ -149,6 +153,10 @@ export async function initStore(projectRoot: string, options: InitOptions = {}):
 		await ensureFile(path.join(paths.store, relativeFile), await renderTemplate(templatePath), created, existing, paths.root);
 	}
 
+	for (const [relativeFile, templatePath] of managedStoreTemplateFiles) {
+		await ensureFile(path.join(paths.store, relativeFile), await renderTemplate(templatePath), created, existing, paths.root);
+	}
+
 	await ensureConfig(paths, options.folder !== undefined, created, existing, updated);
 	await ensureFile(paths.domains, defaultDomains(), created, existing, paths.root);
 
@@ -174,6 +182,9 @@ export async function updateRuntimeAssets(projectRoot: string, options: InitOpti
 	await ensureDirectory(paths.docs, created, existing, paths.root);
 	for (const [relativeFile, templatePath] of storeTemplateFiles) {
 		await ensureFile(path.join(paths.store, relativeFile), await renderTemplate(templatePath), created, existing, paths.root);
+	}
+	for (const [relativeFile, templatePath] of managedStoreTemplateFiles) {
+		await updateFile(path.join(paths.store, relativeFile), await renderTemplate(templatePath), created, existing, updated, paths.root);
 	}
 
 	await ensureConfig(paths, options.folder !== undefined, created, existing, updated);
@@ -389,14 +400,9 @@ function createHarnessInstallContext(
 	}
 
 	return {
-		async ensureManagedInstructions(target) {
-			const rule = await renderTemplate('instructions/agent-instructions.md');
-			await ensureManagedInstructionBlock(
+		async removeManagedInstructions(target) {
+			await removeManagedInstructionBlock(
 				path.join(paths.targetRoot, target.relativePath),
-				target.title,
-				rule,
-				created,
-				existing,
 				updated,
 				paths.root,
 				processedInstructionTargets,
@@ -417,43 +423,25 @@ function createHarnessInstallContext(
 	};
 }
 
-async function ensureManagedInstructionBlock(
+async function removeManagedInstructionBlock(
 	target: string,
-	title: string,
-	rule: string,
-	created: string[],
-	existing: string[],
 	updated: string[],
 	projectRoot: string,
 	processedTargets: Set<string>,
 ): Promise<void> {
 	if (!await pathExists(target)) {
-		await fs.mkdir(path.dirname(target), { recursive: true });
-		await fs.writeFile(target, `# ${title}\n\n${rule}`, 'utf8');
-		processedTargets.add(await physicalPathIdentity(target));
-		created.push(formatRelative(projectRoot, target));
 		return;
 	}
 
 	const identity = await physicalPathIdentity(target);
 	if (processedTargets.has(identity)) {
-		const current = await fs.readFile(target, 'utf8');
-		const repaired = repairManagedInstructionBlock(current, rule);
-		if (repaired === current) {
-			existing.push(formatRelative(projectRoot, target));
-			return;
-		}
-
-		await fs.writeFile(target, repaired, 'utf8');
-		updated.push(formatRelative(projectRoot, target));
 		return;
 	}
 
 	const current = await fs.readFile(target, 'utf8');
-	const repaired = repairManagedInstructionBlock(current, rule);
+	const repaired = removeManagedInstructionBlockContents(current);
 	if (repaired === current) {
 		processedTargets.add(identity);
-		existing.push(formatRelative(projectRoot, target));
 		return;
 	}
 
@@ -462,24 +450,23 @@ async function ensureManagedInstructionBlock(
 	updated.push(formatRelative(projectRoot, target));
 }
 
-function repairManagedInstructionBlock(current: string, rule: string): string {
+function removeManagedInstructionBlockContents(current: string): string {
 	const marker = findManagedInstructionMarker(current);
 	const start = marker.start;
 	if (start === -1) {
-		const separator = current.endsWith('\n') ? '\n' : '\n\n';
-		return `${current}${separator}${rule}`;
+		return current;
 	}
 
 	const end = current.indexOf(marker.endMarker, start);
 	if (end === -1) {
-		return `${current.slice(0, start)}${rule}`;
+		return current.slice(0, start);
 	}
 
 	const endAfterMarker = end + marker.endMarker.length;
 	const afterEnd = current.slice(endAfterMarker).startsWith('\n')
 		? current.slice(endAfterMarker + 1)
 		: current.slice(endAfterMarker);
-	return `${current.slice(0, start)}${rule}${afterEnd}`;
+	return `${current.slice(0, start)}${afterEnd}`;
 }
 
 function findManagedInstructionMarker(current: string): { readonly start: number; readonly endMarker: string } {
@@ -578,16 +565,8 @@ const templateIncludes: Readonly<Record<string, string>> = {
 	crHowTo: 'include/crHowTo.md',
 };
 
-export async function readAgentInstructionsBody(): Promise<string> {
-	const rendered = await renderTemplate('instructions/agent-instructions.md');
-	return rendered
-		.replace(new RegExp(`^${escapeRegExp(sundialInstructionStartMarker)}\\n?`), '')
-		.replace(new RegExp(`${escapeRegExp(sundialInstructionEndMarker)}\\n?$`), '')
-		.trim();
-}
-
-function escapeRegExp(value: string): string {
-	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export async function readSundialInstructions(): Promise<string> {
+	return (await renderTemplate('instructions/SUNDIAL-INSTRUCTIONS.md')).trim();
 }
 
 async function renderTemplate(relativePath: string, seen: readonly string[] = []): Promise<string> {

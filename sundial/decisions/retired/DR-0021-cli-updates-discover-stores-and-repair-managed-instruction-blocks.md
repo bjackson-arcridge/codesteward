@@ -1,7 +1,7 @@
 ---
 id: DR-0021
 title: CLI updates discover stores and repair managed instruction blocks
-status: accepted
+status: retired
 domain: cli
 created: 2026-05-08
 references:
@@ -10,6 +10,7 @@ references:
   - packages/cli/src/core/templates/instructions/agent-instructions.md
 updated: 2026-05-08
 author: bjackson
+retired_by: DR-0033
 ---
 ## Decision
 

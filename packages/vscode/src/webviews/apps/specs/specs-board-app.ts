@@ -104,8 +104,10 @@ export class SpecsBoardApp extends LitElement {
 				grid-auto-flow: column;
 				grid-auto-columns: minmax(240px, 320px);
 				gap: 10px;
+				min-width: 0;
 				min-height: 0;
-				overflow: auto;
+				overflow-x: auto;
+				overflow-y: auto;
 				padding-bottom: 6px;
 			}
 
@@ -147,9 +149,7 @@ export class SpecsBoardApp extends LitElement {
 			}
 
 			.cards {
-				min-height: 0;
 				padding: 8px;
-				overflow-y: auto;
 			}
 
 			.empty-board,
@@ -204,8 +204,10 @@ export class SpecsBoardApp extends LitElement {
 			}
 
 			.spec-phase-actions {
-				display: flex;
-				gap: 2px;
+				display: inline-flex;
+				align-items: center;
+				gap: 1px;
+				vertical-align: middle;
 			}
 
 			.id {
@@ -389,6 +391,9 @@ export class SpecsBoardApp extends LitElement {
 				>${spec.title}</button>
 				<span slot="meta">
 					<span class=${spec.activeWorktree === true ? 'id active-worktree-label' : 'id'}>${spec.id}${spec.activeWorktree === true ? ' [Active Worktree]' : ''}</span>
+					${this.isSelectedWorkspace(spec)
+						? html`<span class="spec-phase-actions">${this.renderSpecPhaseActions(spec)}</span>`
+						: nothing}
 					${spec.workspace === undefined ? nothing : html`<span>${spec.workspace}</span>`}
 				</span>
 				<div slot="actions">
@@ -415,9 +420,6 @@ export class SpecsBoardApp extends LitElement {
 						@click=${() => this.send({ kind: 'delete', id: spec.id, ...(spec.workspace === undefined ? {} : { workspace: spec.workspace }) })}
 					></cs-icon-button>
 				</div>
-				${this.isSelectedWorkspace(spec)
-					? html`<div slot="body" class="spec-phase-actions">${this.renderSpecPhaseActions(spec)}</div>`
-					: nothing}
 			</cs-card>
 		`;
 	}

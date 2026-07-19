@@ -6,13 +6,12 @@ export interface HarnessSelection {
 export type HarnessRoot = '.claude' | '.agents';
 export type SkillTemplateSet = 'generic' | 'claude' | 'codex';
 
-export interface ManagedInstructionTarget {
+export interface LegacyInstructionTarget {
 	readonly relativePath: string;
-	readonly title: string;
 }
 
 export interface HarnessInstallContext {
-	ensureManagedInstructions(target: ManagedInstructionTarget): Promise<void>;
+	removeManagedInstructions(target: LegacyInstructionTarget): Promise<void>;
 	ensureSkillTemplates(input: SkillTemplateInstall): Promise<void>;
 	updateSkillTemplates(input: SkillTemplateInstall): Promise<void>;
 }
@@ -46,9 +45,8 @@ const claudeInstaller: AgentHarnessInstaller = {
 	name: 'claude',
 	root: '.claude',
 	async install(context) {
-		await context.ensureManagedInstructions({
+		await context.removeManagedInstructions({
 			relativePath: '.claude/CLAUDE.md',
-			title: 'Claude Code Instructions',
 		});
 		await context.ensureSkillTemplates({
 			root: '.claude',
@@ -56,9 +54,8 @@ const claudeInstaller: AgentHarnessInstaller = {
 		});
 	},
 	async update(context) {
-		await context.ensureManagedInstructions({
+		await context.removeManagedInstructions({
 			relativePath: '.claude/CLAUDE.md',
-			title: 'Claude Code Instructions',
 		});
 		await context.updateSkillTemplates({
 			root: '.claude',
@@ -71,9 +68,8 @@ const codexInstaller: AgentHarnessInstaller = {
 	name: 'codex',
 	root: '.agents',
 	async install(context) {
-		await context.ensureManagedInstructions({
+		await context.removeManagedInstructions({
 			relativePath: 'AGENTS.md',
-			title: 'Agent Instructions',
 		});
 		await context.ensureSkillTemplates({
 			root: '.agents',
@@ -81,9 +77,8 @@ const codexInstaller: AgentHarnessInstaller = {
 		});
 	},
 	async update(context) {
-		await context.ensureManagedInstructions({
+		await context.removeManagedInstructions({
 			relativePath: 'AGENTS.md',
-			title: 'Agent Instructions',
 		});
 		await context.updateSkillTemplates({
 			root: '.agents',

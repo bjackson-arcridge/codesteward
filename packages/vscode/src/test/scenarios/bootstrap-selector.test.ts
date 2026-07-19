@@ -124,17 +124,17 @@ function workspaceRoot(): string {
 async function ensureNoHarnesses(): Promise<void> {
 	const root = workspaceRoot();
 	await fs.rm(path.join(root, '.claude'), { recursive: true, force: true });
-	await fs.rm(path.join(root, 'AGENTS.md'), { force: true });
+	await fs.rm(path.join(root, '.agents'), { recursive: true, force: true });
 }
 
 async function ensureClaudeOnly(): Promise<void> {
 	const root = workspaceRoot();
-	await fs.rm(path.join(root, 'AGENTS.md'), { force: true });
+	await fs.rm(path.join(root, '.agents'), { recursive: true, force: true });
 	await fs.mkdir(path.join(root, '.claude'), { recursive: true });
 	await fs.writeFile(path.join(root, '.claude', 'CLAUDE.md'), '# fixture\n', 'utf8');
 }
 
 async function ensureBothHarnesses(): Promise<void> {
 	await ensureClaudeOnly();
-	await fs.writeFile(path.join(workspaceRoot(), 'AGENTS.md'), '# fixture\n', 'utf8');
+	await fs.mkdir(path.join(workspaceRoot(), '.agents'), { recursive: true });
 }

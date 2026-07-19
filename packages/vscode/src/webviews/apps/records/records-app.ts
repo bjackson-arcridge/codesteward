@@ -259,8 +259,10 @@ export class RecordsApp extends LitElement {
 			}
 
 			.spec-phase-actions {
-				display: flex;
-				gap: 2px;
+				display: inline-flex;
+				align-items: center;
+				gap: 1px;
+				vertical-align: middle;
 			}
 
 			.inline-prompt {
@@ -527,6 +529,9 @@ export class RecordsApp extends LitElement {
 				>${record.title}</button>
 				<span slot="meta">
 					<span class=${record.activeWorktree === true ? 'id active-worktree-label' : 'id'}>${record.id}${record.activeWorktree === true ? ' [Active Worktree]' : ''}</span>
+					${isSpec && this.isSelectedWorkspace(record)
+						? html`<span class="spec-phase-actions">${this.renderSpecPhaseActions(record)}</span>`
+						: nothing}
 					${this.actionMode === 'specs'
 						? showStatusBadge
 						? html`<cs-badge variant="inverse">${record.status ?? 'Planning'}</cs-badge>`
@@ -536,9 +541,6 @@ export class RecordsApp extends LitElement {
 					${record.workspace === undefined ? nothing : html`<span>${record.workspace}</span>`}
 				</span>
 				<div slot="actions">${this.renderActions(record)}</div>
-				${isSpec && this.isSelectedWorkspace(record)
-					? html`<div slot="body" class="spec-phase-actions">${this.renderSpecPhaseActions(record)}</div>`
-					: nothing}
 				${this.actionMode === 'research' && record.summary !== undefined && record.summary.length > 0
 					? html`<p slot="body" class="summary">${record.summary}</p>`
 					: nothing}

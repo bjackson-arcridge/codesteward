@@ -11,6 +11,16 @@ function readSpecsBoardAppSource(): string {
 }
 
 describe('Specs board add form', () => {
+	test('keeps overflowing lanes scrollable within the board', () => {
+		const source = readSpecsBoardAppSource();
+
+		assert.match(
+			source,
+			/\.board \{[\s\S]*?min-width: 0;[\s\S]*?min-height: 0;[\s\S]*?overflow-x: auto;[\s\S]*?overflow-y: auto;/,
+		);
+		assert.doesNotMatch(source, /\.cards \{[\s\S]*?overflow-y:/);
+	});
+
 	test('uses a native submit button so Add submits the form', () => {
 		const source = readSpecsBoardAppSource();
 
@@ -55,7 +65,8 @@ describe('Specs board add form', () => {
 	test('renders row-local spec phase launch actions', () => {
 		const source = readSpecsBoardAppSource();
 
-		assert.match(source, /slot="body" class="spec-phase-actions"/);
+		assert.match(source, /<span class="spec-phase-actions">\$\{this\.renderSpecPhaseActions\(spec\)\}<\/span>/);
+		assert.doesNotMatch(source, /slot="body" class="spec-phase-actions"/);
 		assert.match(source, /private isSelectedWorkspace\(spec: SpecCard\): boolean/);
 		assert.match(source, /return spec\.workspace === undefined \|\| spec\.workspace === this\.selectedWorkspace;/);
 		assert.match(source, /label="Plan spec"/);

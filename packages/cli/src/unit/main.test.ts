@@ -452,10 +452,13 @@ describe('bootstrapCommand', () => {
 
 		assert.match(result.stdout, /Initialized Sundial store/);
 		assert.match(result.stdout, /Configured folder: docs/);
-		assert.match(result.stdout, /docs\/AGENTS\.md/);
+		assert.match(result.stdout, /sundial\/SUNDIAL-INSTRUCTIONS\.md/);
+		assert.match(result.stdout, /docs\/\.agents\/skills\/decision-aware-design\/SKILL\.md/);
+		assert.doesNotMatch(result.stdout, /docs\/AGENTS\.md/);
 		assert.equal(result.stderr, '');
 		assert.equal(result.exitCode, undefined);
-		assert.match(await fs.readFile(path.join(root, 'docs', 'AGENTS.md'), 'utf8'), /sundial:agent-instructions/);
+		assert.match(await fs.readFile(path.join(root, 'sundial', 'SUNDIAL-INSTRUCTIONS.md'), 'utf8'), /sundial candidate create/);
+		await assert.rejects(fs.access(path.join(root, 'docs', 'AGENTS.md')));
 		await assert.rejects(fs.access(path.join(root, 'AGENTS.md')));
 	});
 
