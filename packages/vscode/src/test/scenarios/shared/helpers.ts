@@ -235,6 +235,7 @@ async function focusView(command: string): Promise<void> {
 	try {
 		await vscode.commands.executeCommand('workbench.view.extension.sundial');
 		await vscode.commands.executeCommand(command);
+		await wait(50);
 	} catch {
 		// Contexts and contributed views can become available shortly after activation in the test host.
 	}

@@ -56,8 +56,7 @@ suite('Scenario: records-and-candidates', () => {
 			expectedRetiredRecordCount,
 			`Expected ${expectedRetiredRecordCount} retired records: ${JSON.stringify(diagnostics)}`,
 		);
-		assert.equal(getSidebarViewVisibility('sundial.records.rejected'), 'collapsed');
-		assert.equal(getSidebarViewVisibility('sundial.records.retired'), 'collapsed');
+		assert.deepEqual(getInitializedSidebarViewIds(), ['sundial.main']);
 		assert.equal(diagnostics.recordsLastRendered?.recordCount, diagnostics.recordsLastState?.recordCount);
 		assert.equal(diagnostics.recordsLastRendered?.cardCount, diagnostics.recordsLastState?.recordCount);
 		assert.equal(diagnostics.recordsLastRendered?.emptyVisible, false);
@@ -83,6 +82,7 @@ suite('Scenario: records-and-candidates', () => {
 		const initialDiagnostics = await waitForWebviewDiagnostics();
 		assert.equal(initialDiagnostics.recordsLastRendered?.domainSelectOptionCount, 7);
 
+		await focusRecordsView();
 		await vscode.commands.executeCommand('sundial.internal.records.selectFilter', 'domain', 'vscode');
 		const domainDiagnostics = await waitForRecordFilterDiagnostics({
 			recordCount: 2,
@@ -90,6 +90,7 @@ suite('Scenario: records-and-candidates', () => {
 		});
 		assert.equal(domainDiagnostics.recordsLastRendered?.cardCount, 2);
 
+		await focusRecordsView();
 		await vscode.commands.executeCommand('sundial.internal.records.selectFilter', 'domain');
 		await waitForRecordFilterDiagnostics({ recordCount: expectedAcceptedRecordCount });
 	});
@@ -207,19 +208,16 @@ suite('Scenario: records-and-candidates', () => {
 	});
 });
 
-function getSidebarViewVisibility(id: string): string | undefined {
+function getInitializedSidebarViewIds(): string[] {
 	const extension = vscode.extensions.getExtension('arcridge.sundial');
 	const views = extension?.packageJSON?.contributes?.views?.sundial;
 	if (!Array.isArray(views)) {
 		throw new Error('Expected Sundial sidebar view contributions');
 	}
 
-	const view = views.find(item => typeof item === 'object' && item !== null && item.id === id);
-	if (view === undefined) {
-		throw new Error(`Expected sidebar view contribution ${id}`);
-	}
-
-	return view.visibility;
+	return views
+		.filter(item => typeof item === 'object' && item !== null && item.when === 'sundial.workspaceInitialized')
+		.map(item => item.id);
 }
 
 function getCandidateFixturePath(filename: string): string {

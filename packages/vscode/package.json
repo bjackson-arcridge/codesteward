@@ -2,7 +2,7 @@
   "name": "sundial",
   "displayName": "Sundial",
   "description": "Markdown-backed Decision Records and agent skills for AI coding workflows.",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "publisher": "arcridge",
   "license": "Apache-2.0",
   "homepage": "https://github.com/bjackson-arcridge/sundial/tree/main/packages/vscode#readme",
@@ -187,42 +187,10 @@
           "when": "sundial.workspaceUninitialized"
         },
         {
-          "id": "sundial.records",
-          "name": "DECISION RECORDS",
+          "id": "sundial.main",
+          "name": "Sundial",
           "type": "webview",
           "when": "sundial.workspaceInitialized"
-        },
-        {
-          "id": "sundial.research",
-          "name": "RESEARCH",
-          "type": "webview",
-          "when": "sundial.workspaceInitialized"
-        },
-        {
-          "id": "sundial.specs",
-          "name": "SPECS",
-          "type": "webview",
-          "when": "sundial.workspaceInitialized"
-        },
-        {
-          "id": "sundial.candidates",
-          "name": "CANDIDATES",
-          "type": "webview",
-          "when": "sundial.workspaceInitialized"
-        },
-        {
-          "id": "sundial.records.rejected",
-          "name": "REJECTED DRS",
-          "type": "webview",
-          "when": "sundial.workspaceInitialized",
-          "visibility": "collapsed"
-        },
-        {
-          "id": "sundial.records.retired",
-          "name": "RETIRED DRS",
-          "type": "webview",
-          "when": "sundial.workspaceInitialized",
-          "visibility": "collapsed"
         }
       ]
     },

@@ -8,9 +8,11 @@ interface MenuContribution {
 }
 
 interface PackageManifest {
+	readonly version?: string;
 	readonly scripts?: Record<string, string>;
 	readonly contributes?: {
 		readonly commands?: readonly MenuContribution[];
+		readonly views?: Record<string, readonly { readonly id?: string; readonly type?: string; readonly when?: string }[]>;
 		readonly configuration?: {
 			readonly properties?: Record<string, { readonly type?: string; readonly default?: unknown; readonly scope?: string; readonly description?: string }>;
 		};
@@ -28,6 +30,20 @@ function readExtensionSource(): string {
 }
 
 describe('package manifest contributions', () => {
+	test('contributes one initialized Sundial sidebar webview', () => {
+		const manifest = readPackageManifest();
+		const views = manifest.contributes?.views?.sundial ?? [];
+		const initializedViews = views.filter(view => view.when === 'sundial.workspaceInitialized');
+
+		assert.equal(manifest.version, '0.3.0');
+		assert.deepEqual(initializedViews, [{
+			id: 'sundial.main',
+			name: 'Sundial',
+			type: 'webview',
+			when: 'sundial.workspaceInitialized',
+		}]);
+	});
+
 	test('does not show bootstrap as a candidates view title button', () => {
 		const manifest = readPackageManifest();
 		const viewTitle = manifest.contributes?.menus?.['view/title'] ?? [];

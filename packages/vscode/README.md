@@ -29,6 +29,8 @@ The Sundial activity bar adds webview-backed sidebar sections for the day-to-day
 - **Rejected and Retired DRs**: inspect lifecycle history, promote records back when needed, or delete old files from disk.
 - **Welcome and Diagnostics**: initialize new workspaces, install the CLI, and inspect extension diagnostics when something needs debugging.
 
+The main sidebar behaves as an accordion: opening any governance section closes the others, and the selected section uses all height not occupied by the section headers.
+
 The extension watches `sundial/decisions`, `sundial/research`, and `sundial/specs` so the sidebar refreshes when files change outside VS Code, including changes made by terminal commands or agent runs.
 
 ## Agent Workflows

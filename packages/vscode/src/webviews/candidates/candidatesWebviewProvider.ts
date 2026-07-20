@@ -13,6 +13,8 @@ export interface CandidatesServices {
 
 export class CandidatesWebviewProvider implements vscode.WebviewViewProvider {
 	private readonly routers = new Set<MessageRouter<WebviewToHost, HostToWebview>>();
+	private readonly messageEmitter = new vscode.EventEmitter<HostToWebview>();
+	readonly onDidPostMessage = this.messageEmitter.event;
 
 	constructor(
 		private readonly extensionUri: vscode.Uri,
@@ -47,22 +49,30 @@ export class CandidatesWebviewProvider implements vscode.WebviewViewProvider {
 	}
 
 	async refresh(): Promise<void> {
-		const state = await this.buildState();
-		for (const router of this.routers) {
-			router.post(state);
-		}
+		this.post(await this.getState());
+	}
+
+	getState(): Promise<HostToWebview> {
+		return this.buildState();
+	}
+
+	handleMessage(message: WebviewToHost): void | Promise<void> {
+		return this.services.onCommand(message);
 	}
 
 	clickCandidateForDiagnostics(id: string, target: 'title'): void {
-		for (const router of this.routers) {
-			router.post({ kind: 'diagnosticClickCandidate', id, target });
-		}
+		this.post({ kind: 'diagnosticClickCandidate', id, target });
 	}
 
 	selectProviderForDiagnostics(provider: BootstrapProvider): void {
+		this.post({ kind: 'diagnosticSelectProvider', provider });
+	}
+
+	private post(message: HostToWebview): void {
 		for (const router of this.routers) {
-			router.post({ kind: 'diagnosticSelectProvider', provider });
+			router.post(message);
 		}
+		this.messageEmitter.fire(message);
 	}
 
 	private async buildState(): Promise<HostToWebview> {

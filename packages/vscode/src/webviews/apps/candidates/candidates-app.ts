@@ -1,7 +1,7 @@
 import { LitElement, css, html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { tokenStyles } from '../shared/styles.js';
-import { connectRefreshTriggers, getHost, readInitialState } from '../shared/host.js';
+import { connectRefreshTriggers } from '../shared/host.js';
 import { assertNever } from '../shared/guards.js';
 import {
 	type BootstrapProvider,
@@ -182,7 +182,6 @@ export class CandidatesApp extends LitElement {
 		`,
 	];
 
-	private readonly host = getHost<WebviewToHost, HostToWebview>();
 	private stopRefreshTriggers?: () => void;
 	private promptReturnTarget?: HTMLElement;
 	@state() private candidates: readonly CandidateSummary[] = [];
@@ -194,22 +193,12 @@ export class CandidatesApp extends LitElement {
 
 	connectedCallback(): void {
 		super.connectedCallback();
-		const persisted = this.host.getState();
-		const initial = persisted !== undefined && isHostToWebview(persisted)
-			? persisted
-			: readInitialState<HostToWebview>();
-		if (initial !== undefined && isHostToWebview(initial)) {
-			this.applyState(initial);
-		}
-
-		window.addEventListener('message', this.handleMessage);
 		this.stopRefreshTriggers?.();
 		this.stopRefreshTriggers = connectRefreshTriggers(() => this.send({ kind: 'requestRefresh' }));
 	}
 
 	disconnectedCallback(): void {
 		super.disconnectedCallback();
-		window.removeEventListener('message', this.handleMessage);
 		this.stopRefreshTriggers?.();
 		this.stopRefreshTriggers = undefined;
 	}
@@ -460,18 +449,17 @@ export class CandidatesApp extends LitElement {
 		}
 	}
 
-	private handleMessage = (event: MessageEvent<unknown>): void => {
-		if (!isHostToWebview(event.data)) {
+	acceptHostMessage(message: unknown): void {
+		if (!isHostToWebview(message)) {
 			return;
 		}
 
-		this.applyState(event.data);
-	};
+		this.applyState(message);
+	}
 
 	private applyState(message: HostToWebview): void {
 		switch (message.kind) {
 			case 'state':
-				this.host.setState(message);
 				this.candidates = message.candidates;
 				this.installedProviders = message.installedProviders;
 				this.hasAcceptedRecords = message.hasAcceptedRecords;
@@ -520,6 +508,10 @@ export class CandidatesApp extends LitElement {
 	}
 
 	private send(message: WebviewToHost): void {
-		this.host.postMessage(message);
+		this.dispatchEvent(new CustomEvent<WebviewToHost>('cs-section-message', {
+			detail: message,
+			bubbles: true,
+			composed: true,
+		}));
 	}
 }

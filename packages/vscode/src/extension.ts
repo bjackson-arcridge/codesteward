@@ -22,6 +22,8 @@ import { WelcomeWebviewProvider } from './webviews/welcome/welcomeWebviewProvide
 import { RecordsWebviewProvider } from './webviews/records/recordsWebviewProvider';
 import { CandidatesWebviewProvider } from './webviews/candidates/candidatesWebviewProvider';
 import { SpecsBoardPanel, type SpecsBoardState } from './webviews/specs/specsBoardPanel';
+import { MainSidebarWebviewProvider } from './webviews/main/mainSidebarWebviewProvider';
+import type { SidebarSection } from './webviews/main/messages';
 import type { RecordClickTarget, RecordRenderDiagnostic, RecordSummary, SpecRecordGroup } from './webviews/records/messages';
 import type { BootstrapProvider, CandidateRenderDiagnostic, CandidateSummary } from './webviews/candidates/messages';
 import type { SpecCard, SpecsRenderDiagnostic } from './webviews/specs/messages';
@@ -487,13 +489,21 @@ export function activate(context: vscode.ExtensionContext): void {
 		},
 	});
 
+	const mainSidebarProvider = new MainSidebarWebviewProvider(context.extensionUri, context.workspaceState, {
+		records: recordsProvider,
+		research: researchProvider,
+		specs: specsProvider,
+		candidates: candidatesProvider,
+		rejected: rejectedRecordsProvider,
+		retired: retiredRecordsProvider,
+	});
+	const focusSidebarSection = async (section: SidebarSection): Promise<void> => {
+		await vscode.commands.executeCommand('sundial.main.focus');
+		await mainSidebarProvider.showSection(section);
+	};
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.welcome', welcomeProvider));
-	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.records', recordsProvider));
-	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.research', researchProvider));
-	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.specs', specsProvider));
-	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.records.rejected', rejectedRecordsProvider));
-	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.records.retired', retiredRecordsProvider));
-	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.candidates', candidatesProvider));
+	context.subscriptions.push(vscode.window.registerWebviewViewProvider('sundial.main', mainSidebarProvider));
+	context.subscriptions.push(mainSidebarProvider);
 	context.subscriptions.push(specsBoardPanel);
 	const governanceWatcher = vscode.workspace.createFileSystemWatcher('**/sundial/{decisions,research,specs}/**/*.{md,yml,yaml}');
 	context.subscriptions.push(
@@ -511,6 +521,12 @@ export function activate(context: vscode.ExtensionContext): void {
 	);
 
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.installCli', () => installCli(welcomeProvider)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.focus', () => focusSidebarSection('records')));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.research.focus', () => focusSidebarSection('research')));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.focus', () => focusSidebarSection('specs')));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.focus', () => focusSidebarSection('candidates')));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.rejected.focus', () => focusSidebarSection('rejected')));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.retired.focus', () => focusSidebarSection('retired')));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.bootstrap', () => bootstrap(candidatesProvider)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.filterByDomain', () => runFilterByDomain(recordsState, recordsProvider)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.research.filterByDomain', () => runFilterByDomain(researchState, researchProvider)));
@@ -839,6 +855,7 @@ async function buildDiagnostics(
 			'dist/webviews/records.js',
 			'dist/webviews/candidates.js',
 			'dist/webviews/specs.js',
+			'dist/webviews/main.js',
 			'media/codicon.css',
 			'media/codicon.ttf',
 		].map(relativePath => assetDiagnostic(extensionUri, relativePath))),

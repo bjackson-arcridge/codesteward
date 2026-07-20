@@ -24,6 +24,8 @@ export interface RecordsServices {
 
 export class RecordsWebviewProvider implements vscode.WebviewViewProvider {
 	private readonly routers = new Set<MessageRouter<WebviewToHost, HostToWebview>>();
+	private readonly messageEmitter = new vscode.EventEmitter<HostToWebview>();
+	readonly onDidPostMessage = this.messageEmitter.event;
 
 	constructor(
 		private readonly extensionUri: vscode.Uri,
@@ -58,64 +60,66 @@ export class RecordsWebviewProvider implements vscode.WebviewViewProvider {
 	}
 
 	async refresh(): Promise<void> {
-		const state = await this.buildState();
-		for (const router of this.routers) {
-			router.post(state);
-		}
+		this.post(await this.getState());
+	}
+
+	getState(): Promise<HostToWebview> {
+		return this.buildState();
+	}
+
+	handleMessage(message: WebviewToHost): void | Promise<void> {
+		return this.services.onCommand(message);
 	}
 
 	selectFilterForDiagnostics(filter: 'domain', value: string | undefined): void {
-		for (const router of this.routers) {
-			router.post({
-				kind: 'diagnosticSelectFilter',
-				filter,
-				...(value === undefined ? {} : { value }),
-			});
-		}
+		this.post({
+			kind: 'diagnosticSelectFilter',
+			filter,
+			...(value === undefined ? {} : { value }),
+		});
 	}
 
 	clickRecordForDiagnostics(id: string, target: RecordClickTarget, workspace?: string): void {
-		for (const router of this.routers) {
-			router.post({
-				kind: 'diagnosticClickRecord',
-				id,
-				target,
-				...(workspace === undefined ? {} : { workspace }),
-			});
-		}
+		this.post({
+			kind: 'diagnosticClickRecord',
+			id,
+			target,
+			...(workspace === undefined ? {} : { workspace }),
+		});
 	}
 
 	createSpecForDiagnostics(title: string, status?: string, workspace?: string): void {
-		for (const router of this.routers) {
-			router.post({
-				kind: 'diagnosticCreateSpec',
-				title,
-				...(status === undefined ? {} : { status }),
-				...(workspace === undefined ? {} : { workspace }),
-			});
-		}
+		this.post({
+			kind: 'diagnosticCreateSpec',
+			title,
+			...(status === undefined ? {} : { status }),
+			...(workspace === undefined ? {} : { workspace }),
+		});
 	}
 
 	moveSpecForDiagnostics(id: string, status: string, workspace?: string): void {
-		for (const router of this.routers) {
-			router.post({
-				kind: 'diagnosticMoveSpec',
-				id,
-				status,
-				...(workspace === undefined ? {} : { workspace }),
-			});
-		}
+		this.post({
+			kind: 'diagnosticMoveSpec',
+			id,
+			status,
+			...(workspace === undefined ? {} : { workspace }),
+		});
 	}
 
 	deleteSpecForDiagnostics(id: string, workspace?: string, skipConfirmation = false): void {
+		this.post({
+			kind: 'diagnosticDeleteSpec',
+			id,
+			...(workspace === undefined ? {} : { workspace }),
+			...(skipConfirmation ? { skipConfirmation } : {}),
+		});
+	}
+
+	private post(message: HostToWebview): void {
 		for (const router of this.routers) {
-			router.post({
-				kind: 'diagnosticDeleteSpec',
-				id,
-				...(workspace === undefined ? {} : { workspace }),
-				...(skipConfirmation ? { skipConfirmation } : {}),
-			});
+			router.post(message);
 		}
+		this.messageEmitter.fire(message);
 	}
 
 	private async buildState(): Promise<HostToWebview> {
