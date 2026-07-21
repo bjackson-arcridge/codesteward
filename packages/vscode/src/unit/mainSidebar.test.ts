@@ -58,7 +58,14 @@ describe('main sidebar accordion', () => {
 		assert.match(source, /case 'Home':/);
 		assert.match(source, /case 'End':/);
 		assert.match(source, /@contextmenu=\$\{this\.handleHeaderContextMenu\}/);
+		assert.match(source, /openAt\(header, event\.clientX, event\.clientY, false\)/);
 		assert.match(source, /Hide' : 'Show'/);
 		assert.match(source, /visibleSections/);
+		const popoverSource = fs.readFileSync(
+			path.resolve(__dirname, '../../src/webviews/apps/shared/components/cs-popover.ts'),
+			'utf8',
+		);
+		assert.match(popoverSource, /@mouseleave=\$\{this\.handleSurfaceMouseLeave\}/);
+		assert.match(popoverSource, /getBoundingClientRect: \(\) => new DOMRect\(x, y, 0, 0\)/);
 	});
 });

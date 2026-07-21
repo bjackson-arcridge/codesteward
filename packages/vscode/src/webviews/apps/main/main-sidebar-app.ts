@@ -220,7 +220,7 @@ export class MainSidebarApp extends LitElement {
 		event.preventDefault();
 		const header = event.currentTarget;
 		if (header instanceof HTMLElement) {
-			this.contextMenu?.openFor(header, false);
+			this.contextMenu?.openAt(header, event.clientX, event.clientY, false);
 		}
 	};
 

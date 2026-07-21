@@ -1,6 +1,6 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
-import { autoUpdate, computePosition, flip, offset, shift, type Placement } from '@floating-ui/dom';
+import { autoUpdate, computePosition, flip, offset, shift, type Placement, type VirtualElement } from '@floating-ui/dom';
 import { tokenStyles } from '../styles.js';
 
 @customElement('cs-popover')
@@ -40,6 +40,7 @@ export class CsPopover extends LitElement {
 
 	private cleanupPosition?: () => void;
 	private anchor: HTMLElement | null = null;
+	private virtualAnchor: VirtualElement | null = null;
 	private previousFocus: HTMLElement | null = null;
 	private documentClickListener?: (event: MouseEvent) => void;
 	private keydownListener?: (event: KeyboardEvent) => void;
@@ -47,7 +48,13 @@ export class CsPopover extends LitElement {
 	render() {
 		return html`
 			<slot name="anchor" @click=${this.handleAnchorClick}></slot>
-			<div class="surface" role="menu" tabindex="-1" data-open=${this.open ? 'true' : 'false'}>
+			<div
+				class="surface"
+				role="menu"
+				tabindex="-1"
+				data-open=${this.open ? 'true' : 'false'}
+				@mouseleave=${this.handleSurfaceMouseLeave}
+			>
 				<slot></slot>
 			</div>
 		`;
@@ -74,6 +81,17 @@ export class CsPopover extends LitElement {
 
 	openFor(anchor: HTMLElement, restoreFocus = true): void {
 		this.anchor = anchor;
+		this.virtualAnchor = null;
+		this.previousFocus = restoreFocus ? ((document.activeElement as HTMLElement | null) ?? anchor) : null;
+		this.openMenu();
+	}
+
+	openAt(anchor: HTMLElement, x: number, y: number, restoreFocus = true): void {
+		this.anchor = anchor;
+		this.virtualAnchor = {
+			contextElement: anchor,
+			getBoundingClientRect: () => new DOMRect(x, y, 0, 0),
+		};
 		this.previousFocus = restoreFocus ? ((document.activeElement as HTMLElement | null) ?? anchor) : null;
 		this.openMenu();
 	}
@@ -90,6 +108,7 @@ export class CsPopover extends LitElement {
 		event.stopPropagation();
 		const target = event.composedPath().find((node): node is HTMLElement => node instanceof HTMLElement && node.matches('[slot="anchor"], [slot="anchor"] *')) ?? null;
 		this.anchor = target ?? this.findAnchor();
+		this.virtualAnchor = null;
 		if (this.open) {
 			this.closeMenu();
 			return;
@@ -97,6 +116,10 @@ export class CsPopover extends LitElement {
 
 		this.previousFocus = (document.activeElement as HTMLElement | null) ?? this.anchor;
 		this.openMenu();
+	};
+
+	private readonly handleSurfaceMouseLeave = (): void => {
+		this.closeMenu(false);
 	};
 
 	private findAnchor(): HTMLElement | null {
@@ -111,9 +134,10 @@ export class CsPopover extends LitElement {
 			return;
 		}
 
-		this.cleanupPosition = autoUpdate(anchor, this.surface, () => {
-			void computePosition(anchor, this.surface, {
-				placement: this.placement,
+		const reference = this.virtualAnchor ?? anchor;
+		this.cleanupPosition = autoUpdate(reference, this.surface, () => {
+			void computePosition(reference, this.surface, {
+				placement: this.virtualAnchor === null ? this.placement : 'bottom-start',
 				middleware: [offset(4), flip(), shift({ padding: 8 })],
 			}).then(({ x, y }) => {
 				this.surface.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
@@ -153,7 +177,6 @@ export class CsPopover extends LitElement {
 			document.removeEventListener('mousedown', this.documentClickListener, true);
 			this.documentClickListener = undefined;
 		}
-
 		if (this.keydownListener !== undefined) {
 			document.removeEventListener('keydown', this.keydownListener, true);
 			this.keydownListener = undefined;
