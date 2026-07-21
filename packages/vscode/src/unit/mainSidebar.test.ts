@@ -9,6 +9,7 @@ describe('main sidebar message protocol', () => {
 		assert.equal(isHostToWebview({
 			kind: 'state',
 			activeSection: 'records',
+			visibleSections: ['records'],
 			sectionState: { kind: 'state', records: [] },
 		}), true);
 		assert.equal(isHostToWebview({
@@ -17,6 +18,7 @@ describe('main sidebar message protocol', () => {
 			message: { kind: 'state', candidates: [], installedProviders: [], hasAcceptedRecords: false },
 		}), true);
 		assert.equal(isWebviewToHost({ kind: 'selectSection', section: 'specs' }), true);
+		assert.equal(isWebviewToHost({ kind: 'setSectionVisibility', section: 'specs', visible: false }), true);
 		assert.equal(isWebviewToHost({
 			kind: 'sectionMessage',
 			section: 'specs',
@@ -28,9 +30,11 @@ describe('main sidebar message protocol', () => {
 		assert.equal(isHostToWebview({
 			kind: 'state',
 			activeSection: 'records',
+			visibleSections: ['specs'],
 			sectionState: { kind: 'state', candidates: [], installedProviders: [], hasAcceptedRecords: false },
 		}), false);
 		assert.equal(isWebviewToHost({ kind: 'selectSection', section: 'unknown' }), false);
+		assert.equal(isWebviewToHost({ kind: 'setSectionVisibility', section: 'specs', visible: 'false' }), false);
 		assert.equal(isWebviewToHost({
 			kind: 'sectionMessage',
 			section: 'candidates',
@@ -53,5 +57,8 @@ describe('main sidebar accordion', () => {
 		assert.match(source, /case 'ArrowUp':/);
 		assert.match(source, /case 'Home':/);
 		assert.match(source, /case 'End':/);
+		assert.match(source, /@contextmenu=\$\{this\.handleHeaderContextMenu\}/);
+		assert.match(source, /Hide' : 'Show'/);
+		assert.match(source, /visibleSections/);
 	});
 });

@@ -17,11 +17,12 @@ export type SectionHostToWebview = RecordHostToWebview | CandidateHostToWebview;
 export type SectionWebviewToHost = RecordWebviewToHost | CandidateWebviewToHost;
 
 export type HostToWebview =
-	| { kind: 'state'; activeSection: SidebarSection; sectionState: SectionHostToWebview }
+	| { kind: 'state'; activeSection: SidebarSection; visibleSections: readonly SidebarSection[]; sectionState: SectionHostToWebview }
 	| { kind: 'sectionMessage'; section: SidebarSection; message: SectionHostToWebview };
 
 export type WebviewToHost =
 	| { kind: 'selectSection'; section: SidebarSection }
+	| { kind: 'setSectionVisibility'; section: SidebarSection; visible: boolean }
 	| { kind: 'sectionMessage'; section: SidebarSection; message: SectionWebviewToHost };
 
 export function isHostToWebview(value: unknown): value is HostToWebview {
@@ -31,6 +32,8 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 
 	if (value.kind === 'state') {
 		return isSidebarSection(value.activeSection)
+			&& isVisibleSections(value.visibleSections)
+			&& value.visibleSections.includes(value.activeSection)
 			&& isSectionHostMessage(value.activeSection, value.sectionState);
 	}
 
@@ -47,6 +50,9 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 	if (value.kind === 'selectSection') {
 		return isSidebarSection(value.section);
 	}
+	if (value.kind === 'setSectionVisibility') {
+		return isSidebarSection(value.section) && typeof value.visible === 'boolean';
+	}
 
 	return value.kind === 'sectionMessage'
 		&& isSidebarSection(value.section)
@@ -55,6 +61,13 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 
 export function isSidebarSection(value: unknown): value is SidebarSection {
 	return typeof value === 'string' && sidebarSections.includes(value as SidebarSection);
+}
+
+function isVisibleSections(value: unknown): value is readonly SidebarSection[] {
+	return Array.isArray(value)
+		&& value.length > 0
+		&& value.every(isSidebarSection)
+		&& new Set(value).size === value.length;
 }
 
 function isSectionHostMessage(section: SidebarSection, value: unknown): value is SectionHostToWebview {

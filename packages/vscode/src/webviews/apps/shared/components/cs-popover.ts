@@ -72,6 +72,12 @@ export class CsPopover extends LitElement {
 		this.open = true;
 	}
 
+	openFor(anchor: HTMLElement, restoreFocus = true): void {
+		this.anchor = anchor;
+		this.previousFocus = restoreFocus ? ((document.activeElement as HTMLElement | null) ?? anchor) : null;
+		this.openMenu();
+	}
+
 	closeMenu(restoreFocus = true): void {
 		const previous = this.previousFocus;
 		this.open = false;
