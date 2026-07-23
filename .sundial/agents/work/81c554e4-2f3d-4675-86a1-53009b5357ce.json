@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "id": "81c554e4-2f3d-4675-86a1-53009b5357ce",
+  "agentId": "8f34a90c-0839-4ed2-9d7d-6b9bf75b7058",
+  "source": {
+    "uri": "file:///Users/bjackson/codesteward/sundial/specs/SPEC-0011-expand-worktree-support.md",
+    "path": "sundial/specs/SPEC-0011-expand-worktree-support.md",
+    "line": 18,
+    "text": "",
+    "before": [
+      "The shipped `arcridge.sundial` 0.4.2 board knows only whether the current workspace is linked and whether its folder name starts with a spec ID. ",
+      "It disables worktree creation in every linked worktree, cannot identify an associated worktree elsewhere, and opens worktrees with Sundial-owned Git and `vscode.openFolder` logic. ",
+      "Navigation uses VS Code's stable `vscode.openFolder` command with a file URI and current-window reuse. "
+    ],
+    "after": [
+      "Spawned worktrees are trusted by default without disabling VS Code Workspace Trust. VS Code's stable extension API can observe trust but cannot grant it to an arbitrary URI, so new worktrees live under the already-trusted main repository at `.sundial-worktrees/<spec-file-basename>`. VS Code then inherits the main folder's trust. The editor CLI idempotently adds `.sundial-worktrees/` to the common repository's `.git/info/exclude` so the local container does not dirty the main checkout or require a tracked ignore rule. Existing worktrees outside that trusted parent retain VS Code's normal trust behavior.",
+      "Each specification card has one of four worktree states",
+      "None - No work tree exists"
+    ]
+  },
+  "prompt": {
+    "preset": "%Q",
+    "scope": "line",
+    "text": "How do we spawn new worktrees in the current implementation?  confirm"
+  },
+  "enqueuedAt": "2026-07-23T16:22:25.316Z",
+  "updatedAt": "2026-07-23T16:27:11.187Z",
+  "ready": true,
+  "status": "completed",
+  "lastAssignmentSequence": 2,
+  "updates": [
+    {
+      "at": "2026-07-23T16:22:25.316Z",
+      "kind": "enqueued",
+      "message": "Queued for Bob."
+    },
+    {
+      "at": "2026-07-23T16:22:25.470Z",
+      "kind": "ready",
+      "message": "Annotation saved; ready for assignment."
+    },
+    {
+      "at": "2026-07-23T16:22:25.598Z",
+      "kind": "claimed",
+      "message": "Assigned to Bob."
+    },
+    {
+      "at": "2026-07-23T16:22:53.508Z",
+      "kind": "requeued",
+      "message": "Returned to queue after the editor restarted."
+    },
+    {
+      "at": "2026-07-23T16:22:54.180Z",
+      "kind": "claimed",
+      "message": "Assigned to Bob."
+    },
+    {
+      "at": "2026-07-23T16:23:31.656Z",
+      "kind": "status",
+      "message": "I am confirming the shipped worktree-spawn path from implementation, not assuming the proposed nested-container design is live. I will verify its target path, Git commands, linked-worktree guard, and folder-opening behavior."
+    },
+    {
+      "at": "2026-07-23T16:26:28.099Z",
+      "kind": "status",
+      "message": "Inspection confirms 0.4.2 creates sibling worktrees in the VS Code extension host and opens them in a new window. I am now checking focused tests and documentation so the answer separates shipped behavior from SPEC-0011 proposed behavior."
+    },
+    {
+      "at": "2026-07-23T16:26:49.796Z",
+      "kind": "status",
+      "message": "Focused compiled tests passed 21/21, covering sibling paths, linked-worktree rejection, both Git add forms, existing-worktree opening, and VS Code handoff. I am preparing the confirmation with exact source locations."
+    },
+    {
+      "at": "2026-07-23T16:27:11.187Z",
+      "kind": "completed",
+      "message": "Official response recorded."
+    }
+  ],
+  "readyAt": "2026-07-23T16:22:25.470Z",
+  "pendingResponse": {
+    "assignment": {
+      "sessionId": "d7d661fd-925d-4c20-a0d7-97cb29c116e9",
+      "sequence": 2,
+      "claimedAt": "2026-07-23T16:22:54.180Z"
+    },
+    "path": ".sundial/81c554e4-2f3d-4675-86a1-53009b5357ceresponse.md",
+    "bodyDigest": "094c61e035098f099be07e0499273f7bc43a0728ac683adafc18730fcea91b86",
+    "sourceUri": "file:///Users/bjackson/codesteward/sundial/specs/SPEC-0011-expand-worktree-support.md",
+    "file": "sundial/specs/SPEC-0011-expand-worktree-support.md",
+    "createdAt": "2026-07-23T16:27:11.176Z",
+    "phase": "completed",
+    "receipt": {
+      "file": "sundial/specs/SPEC-0011-expand-worktree-support.md",
+      "completedAt": "2026-07-23T16:27:11.187Z"
+    }
+  }
+}
