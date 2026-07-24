@@ -20,9 +20,9 @@ The Sundial documents bar adds a sidebar with sections capturing the types of su
 - **Research**: Captures research on programmatic boundaries or dependency behaviors; make durable so the same research can be applied when implmenting multiple features; or just to record project assumptions.
 - **Specs**: A way to organize agent workstreams; lightweight spec driven development.
  * **Workflow** Specs flow through Backlog, Todo, Active, Done, and Archived states.
- * **Template** Create new specs quickly with customizabler templates.
- * **Worktree Management:** Spec are a worktree management and navigation plane: create managed worktrees, open an associated worktree, return to the primary checkout, and automated merging and cleanup.
- .  **Specs Board**: Offers a kanban-style view of specs as cards on a board.
+ * **Template** Customize `sundial/templates/spec.md` from the Specs sidebar. New specs substitute `{{id}}`, `{{title}}`, `{{status}}`, `{{created}}`, `{{updated}}`, and `{{created_by}}` while Sundial adds workflow frontmatter.
+ * **Worktree Management:** Specs are a worktree management and navigation plane: create managed worktrees, open an associated worktree, return to the primary checkout, and automate merging and cleanup.
+ * **Specs Board**: Offers a kanban-style view of specs as cards on a board.
 The extension watches `sundial/decisions`, `sundial/research`, and `sundial/specs` so the sidebar refreshes when files change outside VS Code, including changes made by terminal commands or agent runs.
 
 ## Decisions as Code
@@ -33,6 +33,7 @@ Sundial is built around a project-local store, not a hosted service.  By default
 - `sundial/decisions/rejected/` and `sundial/decisions/retired/` preserve decision history.
 - `sundial/research/` stores longer reference notes that agents can retrieve later.
 - `sundial/specs/` stores living implementation specs and `workflow.yml` for spec lanes.
+- `sundial/templates/spec.md` stores the customizable body template used for new specs.
 - `sundial/domains.md` keeps the project domain vocabulary visible in source control.
 
 ## Agent Skills
@@ -70,6 +71,7 @@ Sundial contributes these user-facing commands:
 - `Sundial: Clear Research Filters`
 - `Sundial: Open Research Preview`
 - `Sundial: Edit Research Source`
+- `Sundial: Customize Spec Template`
 - `Sundial: Open Specs Board`
 - `Sundial: Open Spec`
 - `Sundial: Open Candidate Preview`

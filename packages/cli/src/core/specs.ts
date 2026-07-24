@@ -7,6 +7,8 @@ import { type StorePaths } from './store';
 export const defaultSpecLanes = ['Backlog', 'Todo', 'Active', 'Done'] as const;
 const defaultSpecSidebarOrder = ['Active', 'Todo', 'Backlog', 'Done', 'Archive'] as const;
 const specsDirectoryName = 'specs';
+const templatesDirectoryName = 'templates';
+const specTemplateFileName = 'spec.md';
 const workflowFileName = 'workflow.yml';
 
 export interface SpecWorkflowStatus {
@@ -50,12 +52,62 @@ export interface SpecDeleteResult {
 	readonly spec: SpecRecord;
 }
 
+export interface SpecTemplateResult {
+	readonly filePath: string;
+	readonly created: boolean;
+}
+
 export function specsDirectory(paths: StorePaths): string {
 	return path.join(paths.store, specsDirectoryName);
 }
 
 export function specsWorkflowPath(paths: StorePaths): string {
 	return path.join(specsDirectory(paths), workflowFileName);
+}
+
+export function specTemplatePath(paths: StorePaths): string {
+	return path.join(paths.store, templatesDirectoryName, specTemplateFileName);
+}
+
+export function defaultSpecTemplate(): string {
+	return [
+		'# {{title}}',
+		'',
+		'## Discovery',
+		'',
+		'## Applicable Decision Records',
+		'',
+		'## Applicable Research Notes',
+		'',
+		'## Planned Approach',
+		'',
+		'## Rejected Alternatives',
+		'',
+		'## Test Plan',
+		'',
+		'## Open Questions',
+		'',
+		'## Implementation Log',
+		'',
+		'## Test Log',
+		'',
+	].join('\n');
+}
+
+export async function ensureSpecTemplate(paths: StorePaths): Promise<SpecTemplateResult> {
+	const filePath = specTemplatePath(paths);
+	await fs.mkdir(path.dirname(filePath), { recursive: true });
+
+	try {
+		await fs.writeFile(filePath, defaultSpecTemplate(), { encoding: 'utf8', flag: 'wx' });
+		return { filePath, created: true };
+	} catch (error) {
+		if (isNodeError(error) && error.code === 'EEXIST') {
+			return { filePath, created: false };
+		}
+
+		throw error;
+	}
 }
 
 export function defaultSpecsWorkflow(): string {
@@ -110,14 +162,15 @@ export async function createSpec(paths: StorePaths, input: SpecCreateInput): Pro
 
 	const id = await nextSpecId(paths);
 	const filePath = path.join(specsDirectory(paths), `${id}-${slugify(input.title)}.md`);
-	const markdown = renderSpecMarkdown({
+	const frontmatter = {
 		id,
 		title: input.title,
 		status,
 		created: input.created,
 		updated: input.created,
 		created_by: input.author,
-	});
+	};
+	const markdown = renderSpecMarkdown(frontmatter, await readSpecTemplate(paths));
 
 	await fs.writeFile(filePath, markdown, 'utf8');
 	const spec = await readSpecFile(filePath);
@@ -219,31 +272,19 @@ async function readSpecFile(filePath: string): Promise<SpecRecord> {
 	};
 }
 
-function renderSpecMarkdown(frontmatter: Record<string, FrontmatterValue>): string {
-	return [
-		renderFrontmatter(frontmatter),
-		'',
-		'# {{title}}',
-		'',
-		'## Discovery',
-		'',
-		'## Applicable Decision Records',
-		'',
-		'## Applicable Research Notes',
-		'',
-		'## Planned Approach',
-		'',
-		'## Rejected Alternatives',
-		'',
-		'## Test Plan',
-		'',
-		'## Open Questions',
-		'',
-		'## Implementation Log',
-		'',
-		'## Test Log',
-		'',
-	].join('\n').replace('{{title}}', String(frontmatter.title));
+async function readSpecTemplate(paths: StorePaths): Promise<string> {
+	const result = await ensureSpecTemplate(paths);
+	return await fs.readFile(result.filePath, 'utf8');
+}
+
+function renderSpecMarkdown(frontmatter: Record<string, FrontmatterValue>, template: string): string {
+	let body = template;
+	for (const [key, value] of Object.entries(frontmatter)) {
+		body = body.replaceAll(`{{${key}}}`, () => String(value));
+	}
+
+	const markdown = `${renderFrontmatter(frontmatter)}\n\n${body}`;
+	return markdown.endsWith('\n') ? markdown : `${markdown}\n`;
 }
 
 function renderSpecBoardMarkdown(specs: readonly SpecRecord[], lanes: readonly string[] = defaultSpecLanes): string {

@@ -393,6 +393,7 @@ export class RecordsApp extends LitElement {
 				} : {}),
 				...(this.actionMode === 'specs' ? {
 					groupCount: this.renderRoot.querySelectorAll('.spec-group').length,
+					customizeSpecTemplateButtonVisible: this.renderRoot.querySelector('[data-action="customize-spec-template"]') !== null,
 					openBoardButtonVisible: this.renderRoot.querySelector('[data-action="open-kanban"]') !== null,
 					specAddFormVisible: this.renderRoot.querySelector('[data-action="add-spec"]') !== null,
 					specWorktreeActionCount: this.renderRoot.querySelectorAll('[data-worktree-action]').length,
@@ -417,6 +418,18 @@ export class RecordsApp extends LitElement {
 
 	private renderSpecs() {
 		return html`
+			<button
+				class="specs-launcher"
+				type="button"
+				data-action="customize-spec-template"
+				@click=${() => this.send({
+					kind: 'openSpecTemplate',
+					...(this.selectedWorkspace.length === 0 ? {} : { workspace: this.selectedWorkspace }),
+				})}
+			>
+				<cs-icon icon="edit"></cs-icon>
+				<span>Customize Spec Template</span>
+			</button>
 			<button
 				class="specs-launcher"
 				type="button"

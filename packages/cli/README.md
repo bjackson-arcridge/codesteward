@@ -52,6 +52,8 @@ project/
   sundial/
     SUNDIAL-INSTRUCTIONS.md
     domains.md
+    templates/
+      spec.md
     decisions/
       accepted/
         adr-001-testing-strategy.md
@@ -87,6 +89,7 @@ sundial candidate retire CAND-0001 [--by DR-0001]
 sundial candidate dismiss CAND-0001
 
 sundial spec create --title "Implementation title" [--status Backlog]
+sundial spec template
 sundial spec list [--status Active]
 sundial spec status SPEC-0001 Active
 sundial spec show SPEC-0001
@@ -99,10 +102,12 @@ sundial worktree finish SPEC-0001 --expected-primary <sha> --expected-worktree <
 
 Notes:
 
+- Run `sundial update [--root <path>]` without harness flags to refresh shared store assets only; add `--claude` and/or `--codex` when agent runtime assets should also be refreshed.
 - Enabled accepted DRs are the only precedent retrieved by `dr retrieve`.
 - Repeat `--domain` on one `dr retrieve` call to retrieve all relevant domain branches together.
 - Candidate DRs can include a proposed domain with a description; accepting the DR appends that proposal to `sundial/domains.md`.
 - DRs can include a `## Appendix` section for human-facing explanatory context; short and medium retrieval omit it.
+- New specs render the customizable body in `sundial/templates/spec.md`; it can use `{{id}}`, `{{title}}`, `{{status}}`, `{{created}}`, `{{updated}}`, and `{{created_by}}`.
 - Managed spec worktrees use `.sundial-worktrees/<spec-file-basename>` below the primary checkout. Creation and finish are guarded by current topology and Git state; `--json` returns the versioned contract used by the VS Code extension.
 
 ## VS Code

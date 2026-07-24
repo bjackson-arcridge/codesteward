@@ -3,6 +3,8 @@ import { customElement, property } from 'lit/decorators.js';
 
 const codiconGlyphs: Readonly<Record<string, string>> = {
 	add: '\uea60',
+	'arrow-left': '\uea9b',
+	'arrow-right': '\uea9c',
 	'arrow-up': '\ueaa1',
 	archive: '\uea98',
 	check: '\ueab2',
@@ -14,11 +16,13 @@ const codiconGlyphs: Readonly<Record<string, string>> = {
 	eye: '\uea70',
 	'eye-closed': '\ueae7',
 	'go-to-file': '\uea94',
+	'git-merge': '\ueafe',
 	'list-tree': '\ueb84',
 	'open-preview': '\ueb28',
 	replace: '\ueb3d',
 	'repo-forked': '\uea63',
 	trash: '\uea81',
+	warning: '\uea6c',
 };
 
 @customElement('cs-icon')

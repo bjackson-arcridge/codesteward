@@ -44,6 +44,7 @@ import {
 import {
 	createSpec,
 	deleteSpec,
+	ensureSpecTemplate,
 	findSpec,
 	listSpecs,
 	readSpecLanes,
@@ -480,6 +481,11 @@ async function runSpec(
 		return;
 	}
 
+	if (subcommand === 'template') {
+		await runSpecTemplate(options, subcommandArgs, io);
+		return;
+	}
+
 	if (subcommand === 'list') {
 		await runSpecList(options, subcommandArgs, io);
 		return;
@@ -510,7 +516,7 @@ async function runSpec(
 		return;
 	}
 
-	write(io.stderr, 'Usage: sundial spec (create | list | board | show | status | update-status | delete | lanes)\n');
+	write(io.stderr, 'Usage: sundial spec (create | template | list | board | show | status | update-status | delete | lanes)\n');
 	io.exitCode = 64;
 }
 
@@ -734,6 +740,33 @@ async function runSpecCreate(
 			write(io.stdout, `Created ${result.spec.id} ${result.spec.title}\n`);
 			write(io.stdout, `Status: ${result.spec.status}\n`);
 			write(io.stdout, `Path: ${formatPath(paths, result.spec.filePath)}\n`);
+		}
+	} catch (error) {
+		writeError(error, io);
+	}
+}
+
+async function runSpecTemplate(
+	options: CliOptions,
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
+): Promise<void> {
+	if (args.length > 0) {
+		write(io.stderr, 'Usage: sundial spec template\n');
+		io.exitCode = 64;
+		return;
+	}
+
+	const paths = await requireStore(options.cwd, io);
+	if (paths === undefined) {
+		return;
+	}
+
+	try {
+		const result = await ensureSpecTemplate(paths);
+		if (!options.quiet) {
+			write(io.stdout, result.created ? 'Created spec template.\n' : 'Spec template already exists.\n');
+			write(io.stdout, `Path: ${formatPath(paths, result.filePath)}\n`);
 		}
 	} catch (error) {
 		writeError(error, io);
@@ -1957,10 +1990,6 @@ function parseUpdateArgs(
 			continue;
 		}
 
-		return updateUsageError(io);
-	}
-
-	if (!claude && !codex && folder === undefined) {
 		return updateUsageError(io);
 	}
 

@@ -16,6 +16,9 @@ describe('Records app specs sidebar mode', () => {
 
 		assert.match(source, /private renderSpecs\(\)/);
 		assert.match(source, /class="specs-launcher"/);
+		assert.match(source, /Customize Spec Template/);
+		assert.match(source, /kind: 'openSpecTemplate'/);
+		assert.ok(source.indexOf('Customize Spec Template') < source.indexOf('Open Kanban View'));
 		assert.match(source, /Open Kanban View/);
 		assert.match(source, /kind: 'openBoard'/);
 	});

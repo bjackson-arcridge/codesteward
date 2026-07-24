@@ -14,7 +14,7 @@ describe('CLI main', () => {
 
 		const result = await runCli(root, ['--version']);
 
-		assert.equal(packageJson.version, '0.6.0');
+		assert.equal(packageJson.version, '0.7.1');
 		assert.equal(result.stdout, `${packageJson.version}\n`);
 		assert.equal(result.stderr, '');
 		assert.equal(result.exitCode, undefined);
@@ -298,6 +298,58 @@ describe('CLI main', () => {
 		assert.equal(invalid.exitCode, 1);
 	});
 
+	test('renders new specs from the customizable store template', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-spec-template-'));
+		const init = await initStore(root);
+		await fs.writeFile(path.join(init.paths.store, 'templates', 'spec.md'), [
+			'# Custom: {{title}}',
+			'',
+			'ID {{id}} is {{status}}.',
+			'Created {{created}} and updated {{updated}} by {{created_by}}.',
+			'Again: {{title}}.',
+			'',
+		].join('\n'), 'utf8');
+
+		const created = await runCli(root, ['spec', 'create', '--title', 'Template $& tokens', '--status', 'Todo']);
+		const shown = await runCli(root, ['spec', 'show', 'SPEC-0001']);
+
+		assert.match(created.stdout, /Created SPEC-0001 Template \$& tokens/);
+		assert.match(shown.stdout, /# Custom: Template \$& tokens/);
+		assert.match(shown.stdout, /ID SPEC-0001 is Todo\./);
+		assert.match(shown.stdout, /Created (\d{4}-\d{2}-\d{2}) and updated \1 by /);
+		assert.match(shown.stdout, /Again: Template \$& tokens\./);
+		assert.doesNotMatch(shown.stdout, /\{\{(?:id|title|status|created|updated|created_by)\}\}/);
+	});
+
+	test('creates only a missing spec template through the specialized command', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-spec-template-command-'));
+		const init = await initStore(root);
+		const templatePath = path.join(init.paths.store, 'templates', 'spec.md');
+		await fs.rm(templatePath);
+
+		const created = await runCli(root, ['spec', 'template']);
+		assert.equal(created.stdout, [
+			'Created spec template.',
+			'Path: sundial/templates/spec.md',
+			'',
+		].join('\n'));
+		assert.match(await fs.readFile(templatePath, 'utf8'), /## Discovery/);
+
+		await fs.writeFile(templatePath, '# Keep my custom template\n', 'utf8');
+		const existing = await runCli(root, ['spec', 'template']);
+		assert.equal(existing.stdout, [
+			'Spec template already exists.',
+			'Path: sundial/templates/spec.md',
+			'',
+		].join('\n'));
+		assert.equal(await fs.readFile(templatePath, 'utf8'), '# Keep my custom template\n');
+
+		const invalid = await runCli(root, ['spec', 'template', '--force']);
+		assert.equal(invalid.stdout, '');
+		assert.equal(invalid.stderr, 'Usage: sundial spec template\n');
+		assert.equal(invalid.exitCode, 64);
+	});
+
 	test('reports validation state from the status command', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-status-validation-'));
 		const init = await initStore(root);
@@ -363,6 +415,43 @@ describe('CLI main', () => {
 		assert.match(implementSkillContents, /name: decision-aware-implement/);
 		assert.match(researchSkillContents, /name: remember-research/);
 		assert.equal(result.stderr, '');
+	});
+
+	test('updates shared store assets without reinstalling agent runtimes', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-update-shared-'));
+		const init = await initStore(root);
+		const specTemplatePath = path.join(init.paths.store, 'templates', 'spec.md');
+		await fs.unlink(specTemplatePath);
+
+		const result = await runCli(root, ['update', '--root', root]);
+
+		assert.match(result.stdout, /Updated Sundial files/);
+		assert.match(result.stdout, /sundial\/templates\/spec\.md/);
+		assert.equal(await fs.readFile(specTemplatePath, 'utf8'), [
+			'# {{title}}',
+			'',
+			'## Discovery',
+			'',
+			'## Applicable Decision Records',
+			'',
+			'## Applicable Research Notes',
+			'',
+			'## Planned Approach',
+			'',
+			'## Rejected Alternatives',
+			'',
+			'## Test Plan',
+			'',
+			'## Open Questions',
+			'',
+			'## Implementation Log',
+			'',
+			'## Test Log',
+			'',
+		].join('\n'));
+		assert.doesNotMatch(result.stdout, /\.agents|\.claude/);
+		assert.equal(result.stderr, '');
+		assert.equal(result.exitCode, undefined);
 	});
 
 	test('updates generated skill files from a nested project directory', async () => {

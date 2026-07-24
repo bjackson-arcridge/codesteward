@@ -29,7 +29,7 @@ import type { CandidateRenderDiagnostic, CandidateSummary } from './webviews/can
 import type { SpecCard, SpecsRenderDiagnostic } from './webviews/specs/messages';
 import type { WebviewToHost as WelcomeWebviewToHost, WelcomeRenderDiagnostic } from './webviews/welcome/messages';
 import { renderMarkdownPreviewSource } from './markdownPreview';
-import { sundialCliCommand, sundialCliInstallArgs } from './sundialCli';
+import { sundialCliCommand, sundialCliInstallArgs, sundialCliSpecTemplateArgs } from './sundialCli';
 import { MarkdownCommentBubbleDecorations } from './commentBubbles';
 import {
 	cardWorktreeStates,
@@ -336,6 +336,11 @@ export function activate(context: vscode.ExtensionContext): void {
 				return;
 			}
 
+			if (message.kind === 'openSpecTemplate') {
+				await openSpecTemplate(message.workspace);
+				return;
+			}
+
 			if (message.kind === 'toggleSpecGroup') {
 				await setSpecGroupCollapsed(context, message.status, message.collapsed);
 				await specsProvider.refresh();
@@ -543,6 +548,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.editSource', (id?: string) => editRecordSource(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.research.openPreview', (id?: string) => previewResearch(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.research.editSource', (id?: string) => editResearchSource(id)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.customizeTemplate', (workspace?: string) => openSpecTemplate(workspace)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.openBoard', () => specsBoardPanel.reveal()));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.openSpec', (id?: string) => openSpec(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.spawnWorktree', (id?: string, workspace?: string) =>
@@ -1249,6 +1255,26 @@ async function openSpec(id: string | undefined, workspace?: string): Promise<voi
 	}
 
 	await openMarkdownSource(filePath);
+}
+
+async function openSpecTemplate(workspace?: string): Promise<void> {
+	const root = await specWorkspaceRootForCommand(workspace);
+	if (root === undefined) {
+		return;
+	}
+
+	const templatePath = path.join(root, 'sundial', 'templates', 'spec.md');
+	try {
+		if (!await fileExists(templatePath)) {
+			await runSundial(root, sundialCliSpecTemplateArgs());
+		}
+		if (!await fileExists(templatePath)) {
+			throw new Error('The Sundial CLI did not create sundial/templates/spec.md. Update the CLI and try again.');
+		}
+		await openMarkdownSource(templatePath);
+	} catch (error) {
+		showCommandError(error);
+	}
 }
 
 async function handleSpecWorktreeAction(

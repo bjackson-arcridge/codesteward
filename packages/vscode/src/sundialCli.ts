@@ -4,3 +4,7 @@ export const sundialCliNpmPackage = '@arcridge/sundial';
 export function sundialCliInstallArgs(): readonly string[] {
 	return ['install', '-g', sundialCliNpmPackage];
 }
+
+export function sundialCliSpecTemplateArgs(): readonly string[] {
+	return ['spec', 'template'];
+}

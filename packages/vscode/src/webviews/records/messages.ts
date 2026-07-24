@@ -29,6 +29,7 @@ export interface RecordRenderDiagnostic {
 	readonly domainFilter?: string;
 	readonly domainSelectOptionCount?: number;
 	readonly groupCount?: number;
+	readonly customizeSpecTemplateButtonVisible?: boolean;
 	readonly openBoardButtonVisible?: boolean;
 	readonly specAddFormVisible?: boolean;
 	readonly specWorktreeActionCount?: number;
@@ -57,6 +58,7 @@ export type HostToWebview =
 export type WebviewToHost =
 	| { kind: 'preview'; id: string }
 	| { kind: 'edit'; id: string }
+	| { kind: 'openSpecTemplate'; workspace?: string }
 	| { kind: 'openBoard' }
 	| { kind: 'createSpec'; title: string; status: string; workspace?: string }
 	| { kind: 'moveSpec'; id: string; status: string; workspace?: string }
@@ -293,6 +295,10 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 		return isRecordRenderDiagnostic(message.diagnostic);
 	}
 
+	if (message.kind === 'openSpecTemplate') {
+		return message.workspace === undefined || typeof message.workspace === 'string';
+	}
+
 	return message.kind === 'clearFilters'
 		|| message.kind === 'openBoard'
 		|| message.kind === 'requestRefresh';
@@ -310,6 +316,7 @@ function isRecordRenderDiagnostic(value: unknown): value is RecordRenderDiagnost
 		domainFilter?: unknown;
 		domainSelectOptionCount?: unknown;
 		groupCount?: unknown;
+		customizeSpecTemplateButtonVisible?: unknown;
 		openBoardButtonVisible?: unknown;
 		specAddFormVisible?: unknown;
 		specWorktreeActionCount?: unknown;
@@ -321,6 +328,7 @@ function isRecordRenderDiagnostic(value: unknown): value is RecordRenderDiagnost
 		&& (diagnostic.domainFilter === undefined || typeof diagnostic.domainFilter === 'string')
 		&& (diagnostic.domainSelectOptionCount === undefined || typeof diagnostic.domainSelectOptionCount === 'number')
 		&& (diagnostic.groupCount === undefined || typeof diagnostic.groupCount === 'number')
+		&& (diagnostic.customizeSpecTemplateButtonVisible === undefined || typeof diagnostic.customizeSpecTemplateButtonVisible === 'boolean')
 		&& (diagnostic.openBoardButtonVisible === undefined || typeof diagnostic.openBoardButtonVisible === 'boolean')
 		&& (diagnostic.specAddFormVisible === undefined || typeof diagnostic.specAddFormVisible === 'boolean')
 		&& (diagnostic.specWorktreeActionCount === undefined || typeof diagnostic.specWorktreeActionCount === 'number')

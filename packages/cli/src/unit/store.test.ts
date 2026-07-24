@@ -21,6 +21,8 @@ describe('store bootstrap', () => {
 		assert.ok(first.created.includes('sundial/specs'));
 		assert.ok(first.created.includes('sundial/specs/.gitkeep'));
 		assert.ok(first.created.includes('sundial/specs/workflow.yml'));
+		assert.ok(first.created.includes('sundial/templates'));
+		assert.ok(first.created.includes('sundial/templates/spec.md'));
 		assert.ok(first.created.includes('sundial/decisions/retired'));
 		assert.ok(first.created.includes('sundial/decisions/accepted/.gitkeep'));
 		assert.ok(first.created.includes('sundial/decisions/candidates/.gitkeep'));
@@ -33,6 +35,7 @@ describe('store bootstrap', () => {
 		assert.ok(second.existing.includes('sundial/research/.gitkeep'));
 		assert.ok(second.existing.includes('sundial/specs/.gitkeep'));
 		assert.ok(second.existing.includes('sundial/specs/workflow.yml'));
+		assert.ok(second.existing.includes('sundial/templates/spec.md'));
 		assert.ok(second.existing.includes('sundial/decisions/accepted/.gitkeep'));
 
 		await fs.mkdir(path.join(root, 'src', 'nested'), { recursive: true });
@@ -93,6 +96,28 @@ describe('store bootstrap', () => {
 			'      visible: false',
 			'    sidebar:',
 			'      visible: true',
+			'',
+		].join('\n'));
+		assert.equal(await fs.readFile(path.join(root, 'sundial', 'templates', 'spec.md'), 'utf8'), [
+			'# {{title}}',
+			'',
+			'## Discovery',
+			'',
+			'## Applicable Decision Records',
+			'',
+			'## Applicable Research Notes',
+			'',
+			'## Planned Approach',
+			'',
+			'## Rejected Alternatives',
+			'',
+			'## Test Plan',
+			'',
+			'## Open Questions',
+			'',
+			'## Implementation Log',
+			'',
+			'## Test Log',
 			'',
 		].join('\n'));
 		await assert.rejects(fs.access(path.join(root, 'sundial', 'specs', 'board.md')));
@@ -203,11 +228,13 @@ describe('store bootstrap', () => {
 		const reviewSkillPath = path.join(root, '.agents', 'skills', 'decision-aware-review', 'SKILL.md');
 		const researchSkillPath = path.join(root, '.agents', 'skills', 'remember-research', 'SKILL.md');
 		const instructionsPath = path.join(root, 'sundial', 'SUNDIAL-INSTRUCTIONS.md');
+		const specTemplatePath = path.join(root, 'sundial', 'templates', 'spec.md');
 		await fs.writeFile(designSkillPath, 'custom design skill\n', 'utf8');
 		await fs.writeFile(implementSkillPath, 'custom implement skill\n', 'utf8');
 		await fs.writeFile(reviewSkillPath, 'custom review skill\n', 'utf8');
 		await fs.writeFile(researchSkillPath, 'custom research skill\n', 'utf8');
 		await fs.writeFile(instructionsPath, 'stale instructions\n', 'utf8');
+		await fs.writeFile(specTemplatePath, '# Custom {{title}}\n', 'utf8');
 
 		const result = await updateRuntimeAssets(root, { codex: true });
 		const designSkillContents = await fs.readFile(designSkillPath, 'utf8');
@@ -221,12 +248,14 @@ describe('store bootstrap', () => {
 		assert.ok(result.updated.includes('.agents/skills/decision-aware-review/SKILL.md'));
 		assert.ok(result.updated.includes('.agents/skills/remember-research/SKILL.md'));
 		assert.ok(result.updated.includes('sundial/SUNDIAL-INSTRUCTIONS.md'));
+		assert.ok(result.existing.includes('sundial/templates/spec.md'));
 		assert.equal(result.updated.includes('.agents/agents/decision-aware-code-review.md'), false);
 		assert.equal(designSkillContents, await readTemplate('skills/codex/decision-aware-design/SKILL.md'));
 		assert.equal(implementSkillContents, await readTemplate('skills/codex/decision-aware-implement/SKILL.md'));
 		assert.equal(reviewSkillContents, await readTemplate('skills/codex/decision-aware-review/SKILL.md'));
 		assert.equal(researchSkillContents, await readTemplate('skills/codex/remember-research/SKILL.md'));
 		assert.match(instructions, /# Sundial Agent Instructions/);
+		assert.equal(await fs.readFile(specTemplatePath, 'utf8'), '# Custom {{title}}\n');
 	});
 
 	test('updates the configured folder and installs runtime assets there', async () => {

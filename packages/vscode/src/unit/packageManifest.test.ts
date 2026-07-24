@@ -35,7 +35,7 @@ describe('package manifest contributions', () => {
 		const views = manifest.contributes?.views?.sundial ?? [];
 		const initializedViews = views.filter(view => view.when === 'sundial.workspaceInitialized');
 
-		assert.equal(manifest.version, '0.6.0');
+		assert.equal(manifest.version, '0.7.3');
 		assert.deepEqual(initializedViews, [{
 			id: 'sundial.main',
 			name: 'Sundial',
@@ -66,6 +66,10 @@ describe('package manifest contributions', () => {
 		const viewTitle = manifest.contributes?.menus?.['view/title'] ?? [];
 
 		assert.equal(Object.hasOwn(manifest, 'extensionDependencies'), false);
+		assert.equal(
+			commands.some(item => item.command === 'sundial.specs.customizeTemplate'),
+			true,
+		);
 		assert.equal(
 			commands.some(item => item.command === 'sundial.specs.openSpec'),
 			true,
@@ -104,6 +108,10 @@ describe('package manifest contributions', () => {
 		assert.match(source, /if \(message\.kind === 'specWorktreeAction'\) {\s*await handleSpecWorktreeAction\(message\.action, message\.id, message\.workspace, specsProvider, specsBoardPanel\);/);
 		assert.match(source, /if \(message\.kind === 'worktreeAction'\) {\s*await handleSpecWorktreeAction\(message\.action, message\.id, message\.workspace, specsProvider, specsBoardPanel\);/);
 		assert.match(source, /if \(message\.kind === 'createSpec'\) {\s*await createSpec\(message\.title, message\.status, message\.workspace, specsProvider, specsBoardPanel\);/);
+		assert.match(source, /if \(message\.kind === 'openSpecTemplate'\) {\s*await openSpecTemplate\(message\.workspace\);/);
+		assert.match(source, /const templatePath = path\.join\(root, 'sundial', 'templates', 'spec\.md'\);/);
+		assert.match(source, /await runSundial\(root, sundialCliSpecTemplateArgs\(\)\);/);
+		assert.match(source, /await openMarkdownSource\(templatePath\);/);
 		assert.match(source, /if \(message\.kind === 'deleteSpec'\) {\s*await deleteSpec\(message\.id, message\.workspace, specsProvider, specsBoardPanel, message\.skipConfirmation === true\);/);
 		assert.match(source, /const output = await runSundial\(root, \['spec', 'create', '--title', title, '--status', status\]\);/);
 		assert.match(source, /await openMarkdownSource\(createdPath\);/);

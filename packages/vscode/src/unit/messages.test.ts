@@ -268,6 +268,8 @@ describe('records message guards', () => {
 		assert.equal(isRecordsClient({ kind: 'retire', id: 'DR-1', retiredBy: '' }), true);
 		assert.equal(isRecordsClient({ kind: 'promote', id: 'CAND-1' }), true);
 		assert.equal(isRecordsClient({ kind: 'delete', id: 'CAND-1' }), true);
+		assert.equal(isRecordsClient({ kind: 'openSpecTemplate' }), true);
+		assert.equal(isRecordsClient({ kind: 'openSpecTemplate', workspace: 'repo' }), true);
 		assert.equal(isRecordsClient({ kind: 'openBoard' }), true);
 		assert.equal(isRecordsClient({ kind: 'createSpec', title: 'New spec', status: 'Backlog', workspace: 'repo' }), true);
 		assert.equal(isRecordsClient({ kind: 'moveSpec', id: 'SPEC-0001', status: 'Archive', workspace: 'repo' }), true);
@@ -287,6 +289,7 @@ describe('records message guards', () => {
 				domainFilter: 'vscode',
 				domainSelectOptionCount: 2,
 				groupCount: 3,
+				customizeSpecTemplateButtonVisible: true,
 				openBoardButtonVisible: true,
 				specAddFormVisible: true,
 				specWorktreeActionCount: 1,
@@ -300,6 +303,7 @@ describe('records message guards', () => {
 		assert.equal(isRecordsClient({ kind: 'setDomainFilter', domainFilter: 5 }), false);
 		assert.equal(isRecordsClient({ kind: 'toggleEnabled', id: 'DR-1', enabled: 'false' }), false);
 		assert.equal(isRecordsClient({ kind: 'retire', id: 'DR-1' }), false);
+		assert.equal(isRecordsClient({ kind: 'openSpecTemplate', workspace: 5 }), false);
 		assert.equal(isRecordsClient({ kind: 'toggleSpecGroup', status: 'Active' }), false);
 		assert.equal(isRecordsClient({ kind: 'createSpec', title: 'New spec' }), false);
 		assert.equal(isRecordsClient({ kind: 'moveSpec', id: 'SPEC-0001' }), false);

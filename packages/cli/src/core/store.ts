@@ -1,6 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { defaultSpecsWorkflow } from './specs';
+import { defaultSpecsWorkflow, defaultSpecTemplate } from './specs';
 import {
 	selectedHarnessInstallers,
 	type AgentHarnessInstaller,
@@ -26,6 +26,7 @@ const directoryLayout = [
 	'research',
 	'specs',
 	'sessions',
+	'templates',
 ] as const;
 
 const decisionRecordDirectoryKeepFiles = [
@@ -39,6 +40,7 @@ const decisionRecordDirectoryKeepFiles = [
 
 const storeSeedFiles = [
 	['specs/workflow.yml', defaultSpecsWorkflow()] as const,
+	['templates/spec.md', defaultSpecTemplate()] as const,
 ] as const;
 
 const storeTemplateFiles = [
@@ -180,6 +182,10 @@ export async function updateRuntimeAssets(projectRoot: string, options: InitOpti
 
 	await ensureConfiguredTargetDirectory(paths, created, existing);
 	await ensureDirectory(paths.docs, created, existing, paths.root);
+	await ensureDirectory(path.join(paths.store, 'templates'), created, existing, paths.root);
+	for (const [relativeFile, contents] of storeSeedFiles) {
+		await ensureFile(path.join(paths.store, relativeFile), contents, created, existing, paths.root);
+	}
 	for (const [relativeFile, templatePath] of storeTemplateFiles) {
 		await ensureFile(path.join(paths.store, relativeFile), await renderTemplate(templatePath), created, existing, paths.root);
 	}
