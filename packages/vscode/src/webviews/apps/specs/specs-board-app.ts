@@ -180,9 +180,19 @@ export class SpecsBoardApp extends LitElement {
 				cursor: grabbing;
 			}
 
-			.spec-card[active-worktree='true'] {
+			.spec-card[worktree-state='associatedActive'] {
 				border-color: var(--vscode-gitDecoration-addedResourceForeground, var(--cs-focus));
 				background: color-mix(in srgb, var(--cs-card-bg) 82%, var(--vscode-gitDecoration-addedResourceForeground, var(--cs-focus)) 18%);
+			}
+
+			.spec-card[worktree-state='associatedElsewhere'] {
+				border-color: var(--vscode-textLink-foreground, var(--cs-focus));
+				background: color-mix(in srgb, var(--cs-card-bg) 88%, var(--vscode-textLink-foreground, var(--cs-focus)) 12%);
+			}
+
+			.spec-card[worktree-state='error'] {
+				border-color: var(--vscode-gitDecoration-conflictingResourceForeground, var(--vscode-editorWarning-foreground));
+				background: color-mix(in srgb, var(--cs-card-bg) 88%, var(--vscode-gitDecoration-conflictingResourceForeground, var(--vscode-editorWarning-foreground)) 12%);
 			}
 
 			.title-button {
@@ -214,9 +224,17 @@ export class SpecsBoardApp extends LitElement {
 				font-family: var(--vscode-editor-font-family);
 			}
 
-			.active-worktree-label {
+			.worktree-state-label[data-state='associatedActive'] {
 				color: var(--vscode-gitDecoration-addedResourceForeground, var(--cs-focus));
 				font-weight: 600;
+			}
+
+			.worktree-state-label[data-state='associatedElsewhere'] {
+				color: var(--vscode-textLink-foreground, var(--cs-focus));
+			}
+
+			.worktree-state-label[data-state='error'] {
+				color: var(--vscode-gitDecoration-conflictingResourceForeground, var(--vscode-editorWarning-foreground));
 			}
 
 			@media (max-width: 720px) {
@@ -289,7 +307,7 @@ export class SpecsBoardApp extends LitElement {
 				specCount: this.specs.length,
 				cardCount: this.renderRoot.querySelectorAll('cs-card').length,
 				emptyVisible: this.renderRoot.querySelector('.empty-board') !== null,
-				worktreeActionCount: this.renderRoot.querySelectorAll('[data-spec-target="worktree"]').length,
+				worktreeActionCount: this.renderRoot.querySelectorAll('[data-worktree-action]').length,
 			},
 		});
 	}
@@ -369,13 +387,12 @@ export class SpecsBoardApp extends LitElement {
 	}
 
 	private renderCard(spec: SpecCard) {
-		const spawnWorktreeDisabled = spec.worktreeSpawnDisabled === true;
 		return html`
 			<cs-card
 				class="spec-card"
 				draggable="true"
 				dragging=${this.draggedSpecId === spec.id ? 'true' : 'false'}
-				active-worktree=${spec.activeWorktree === true ? 'true' : 'false'}
+				worktree-state=${spec.worktree.kind}
 				data-spec-id=${spec.id}
 				@dragstart=${(event: DragEvent) => this.handleCardDragStart(event, spec)}
 				@dragend=${this.handleCardDragEnd}
@@ -390,21 +407,17 @@ export class SpecsBoardApp extends LitElement {
 					@click=${() => this.send({ kind: 'open', id: spec.id, ...(spec.workspace === undefined ? {} : { workspace: spec.workspace }) })}
 				>${spec.title}</button>
 				<span slot="meta">
-					<span class=${spec.activeWorktree === true ? 'id active-worktree-label' : 'id'}>${spec.id}${spec.activeWorktree === true ? ' [Active Worktree]' : ''}</span>
+					<span class="id">${spec.id}</span>
+					${spec.worktree.kind === 'none'
+						? nothing
+						: html`<span class="worktree-state-label" data-state=${spec.worktree.kind}>${this.worktreeStateLabel(spec.worktree.kind)}</span>`}
 					${this.isSelectedWorkspace(spec)
 						? html`<span class="spec-phase-actions">${this.renderSpecPhaseActions(spec)}</span>`
 						: nothing}
 					${spec.workspace === undefined ? nothing : html`<span>${spec.workspace}</span>`}
 				</span>
 				<div slot="actions">
-					<cs-icon-button
-						icon="repo-forked"
-						label=${spawnWorktreeDisabled ? 'Spawn worktree unavailable from a worktree' : 'Spawn worktree'}
-						?disabled=${spawnWorktreeDisabled}
-						data-spec-id=${spec.id}
-						data-spec-target="worktree"
-						@click=${() => this.send({ kind: 'spawnWorktree', id: spec.id, ...(spec.workspace === undefined ? {} : { workspace: spec.workspace }) })}
-					></cs-icon-button>
+					${this.renderWorktreeActions(spec)}
 					<cs-icon-button
 						icon="archive"
 						label="Archive spec"
@@ -422,6 +435,40 @@ export class SpecsBoardApp extends LitElement {
 				</div>
 			</cs-card>
 		`;
+	}
+
+	private renderWorktreeActions(spec: SpecCard) {
+		const actions = spec.worktree.kind === 'none'
+			? [{ action: 'createWorktree' as const, icon: 'repo-forked', label: 'Create worktree' }]
+			: spec.worktree.kind === 'associatedElsewhere'
+				? [
+					{ action: 'openWorktree' as const, icon: 'arrow-right', label: 'Open worktree' },
+					...(spec.worktree.canFinish ? [{ action: 'finishWorktree' as const, icon: 'git-merge', label: 'Finish worktree' }] : []),
+				]
+				: spec.worktree.kind === 'associatedActive'
+					? [{ action: 'returnPrimary' as const, icon: 'arrow-left', label: 'Return to primary worktree' }]
+					: [{ action: 'showWorktreeError' as const, icon: 'warning', label: 'Show worktree error' }];
+		return actions.map(item => html`
+			<cs-icon-button
+				icon=${item.icon}
+				label=${item.label}
+				data-spec-id=${spec.id}
+				data-spec-target=${item.action}
+				data-worktree-action=${item.action}
+				@click=${() => this.send({
+					kind: 'worktreeAction',
+					action: item.action,
+					id: spec.id,
+					...(spec.workspace === undefined ? {} : { workspace: spec.workspace }),
+				})}
+			></cs-icon-button>
+		`);
+	}
+
+	private worktreeStateLabel(kind: 'associatedElsewhere' | 'associatedActive' | 'error'): string {
+		return kind === 'associatedActive' ? 'Active Worktree'
+			: kind === 'associatedElsewhere' ? 'Worktree Elsewhere'
+				: 'Worktree Error';
 	}
 
 	private renderSpecPhaseActions(spec: SpecCard) {
@@ -488,9 +535,11 @@ export class SpecsBoardApp extends LitElement {
 						status: 'Archive',
 						...(message.workspace === undefined ? {} : { workspace: message.workspace }),
 					});
-				} else if (message.target === 'worktree') {
+				} else if (message.target === 'createWorktree' || message.target === 'openWorktree' || message.target === 'returnPrimary'
+					|| message.target === 'finishWorktree' || message.target === 'showWorktreeError') {
 					this.send({
-						kind: 'spawnWorktree',
+						kind: 'worktreeAction',
+						action: message.target,
 						id: message.id,
 						...(message.workspace === undefined ? {} : { workspace: message.workspace }),
 					});

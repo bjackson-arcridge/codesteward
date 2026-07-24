@@ -24,14 +24,23 @@ import { CandidatesWebviewProvider } from './webviews/candidates/candidatesWebvi
 import { SpecsBoardPanel, type SpecsBoardState } from './webviews/specs/specsBoardPanel';
 import { MainSidebarWebviewProvider } from './webviews/main/mainSidebarWebviewProvider';
 import type { SidebarSection } from './webviews/main/messages';
-import type { RecordClickTarget, RecordRenderDiagnostic, RecordSummary, SpecRecordGroup } from './webviews/records/messages';
-import type { BootstrapProvider, CandidateRenderDiagnostic, CandidateSummary } from './webviews/candidates/messages';
+import type { RecordClickTarget, RecordRenderDiagnostic, RecordSummary, SpecRecordGroup, SpecWorktreeAction } from './webviews/records/messages';
+import type { CandidateRenderDiagnostic, CandidateSummary } from './webviews/candidates/messages';
 import type { SpecCard, SpecsRenderDiagnostic } from './webviews/specs/messages';
 import type { WebviewToHost as WelcomeWebviewToHost, WelcomeRenderDiagnostic } from './webviews/welcome/messages';
 import { renderMarkdownPreviewSource } from './markdownPreview';
 import { sundialCliCommand, sundialCliInstallArgs } from './sundialCli';
 import { MarkdownCommentBubbleDecorations } from './commentBubbles';
-import { gitWorktreeContext, spawnSpecWorktree as runSpecWorktreeLaunch, type SpawnSpecWorktreeResult } from './specWorktrees';
+import {
+	cardWorktreeStates,
+	formatRebaseRecoveryPrompt,
+	parseWorktreeCreated,
+	parseWorktreeFinish,
+	parseWorktreePreflight,
+	parseWorktreeTopology,
+	type SpecWorktreeState,
+	type WorktreeConflicts,
+} from './specWorktrees';
 import {
 	buildClaudeSpecSessionUri,
 	buildCodexSpecSessionArguments,
@@ -343,8 +352,8 @@ export function activate(context: vscode.ExtensionContext): void {
 				return;
 			}
 
-			if (message.kind === 'spawnSpecWorktree') {
-				await spawnSpecWorktree(message.id, message.workspace);
+			if (message.kind === 'specWorktreeAction') {
+				await handleSpecWorktreeAction(message.action, message.id, message.workspace, specsProvider, specsBoardPanel);
 				return;
 			}
 
@@ -397,8 +406,8 @@ export function activate(context: vscode.ExtensionContext): void {
 				return;
 			}
 
-			if (message.kind === 'spawnWorktree') {
-				await spawnSpecWorktree(message.id, message.workspace);
+			if (message.kind === 'worktreeAction') {
+				await handleSpecWorktreeAction(message.action, message.id, message.workspace, specsProvider, specsBoardPanel);
 				return;
 			}
 
@@ -436,8 +445,6 @@ export function activate(context: vscode.ExtensionContext): void {
 			candidatesDiagnostics.lastState = { candidateCount: candidates.length };
 			return candidates;
 		},
-		listInstalledProviders: () => collectInstalledProviders(),
-		hasAcceptedRecords: async () => (await collectRecords(undefined, 'accepted')).length > 0,
 		diagnosticsEnabled: () => diagnosticsEnabled,
 		onCommand: async message => {
 			if (message.kind === 'rendered') {
@@ -450,11 +457,6 @@ export function activate(context: vscode.ExtensionContext): void {
 			if (message.kind === 'requestRefresh') {
 				await candidatesProvider.refresh();
 				await refreshWorkspaceState(welcomeProvider);
-				return;
-			}
-
-			if (message.kind === 'bootstrap') {
-				await bootstrap(candidatesProvider, undefined, message.provider);
 				return;
 			}
 
@@ -527,7 +529,6 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.candidates.focus', () => focusSidebarSection('candidates')));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.rejected.focus', () => focusSidebarSection('rejected')));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.retired.focus', () => focusSidebarSection('retired')));
-	context.subscriptions.push(vscode.commands.registerCommand('sundial.bootstrap', () => bootstrap(candidatesProvider)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.filterByDomain', () => runFilterByDomain(recordsState, recordsProvider)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.research.filterByDomain', () => runFilterByDomain(researchState, researchProvider)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.clearFilters', async () => {
@@ -544,7 +545,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.research.editSource', (id?: string) => editResearchSource(id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.openBoard', () => specsBoardPanel.reveal()));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.openSpec', (id?: string) => openSpec(id)));
-	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.spawnWorktree', (id?: string, workspace?: string) => spawnSpecWorktree(id, workspace)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.spawnWorktree', (id?: string, workspace?: string) =>
+		handleSpecWorktreeAction('createWorktree', id, workspace, specsProvider, specsBoardPanel)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.plan', (id?: string) => launchSpecSession('planning', id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.implement', (id?: string) => launchSpecSession('implementation', id)));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.review', (id?: string) => launchSpecSession('review', id)));
@@ -610,10 +612,6 @@ export function activate(context: vscode.ExtensionContext): void {
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'sundial.internal.candidates.click',
 			(id: string, target: 'title') => candidatesProvider.clickCandidateForDiagnostics(id, target),
-		));
-		context.subscriptions.push(vscode.commands.registerCommand(
-			'sundial.internal.candidates.selectProvider',
-			(provider: BootstrapProvider) => candidatesProvider.selectProviderForDiagnostics(provider),
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'sundial.internal.candidates.refresh',
@@ -945,9 +943,9 @@ async function collectResearch(
 async function collectSpecs(): Promise<readonly RecordSummary[]> {
 	const stores = await collectWorkspaceStores();
 	const all = await Promise.all(stores.map(async store => {
-		const [records, worktreeContext] = await Promise.all([
+		const [records, worktrees] = await Promise.all([
 			listSidebarSpecSummaries(store.root),
-			gitWorktreeContext(store.root),
+			worktreeStatesForStore(store),
 		]);
 		return records.map(record => ({
 			id: record.id,
@@ -956,8 +954,7 @@ async function collectSpecs(): Promise<readonly RecordSummary[]> {
 			enabled: true,
 			status: record.status,
 			...(stores.length > 1 ? { workspace: store.name } : {}),
-			...(worktreeContext.linked ? { worktreeSpawnDisabled: true } : {}),
-			...(specMatchesWorktreePrefix(record.id, worktreeContext.specPrefix) ? { activeWorktree: true } : {}),
+			worktree: worktrees.get(record.id) ?? { kind: 'error', message: 'No worktree state returned for this spec.' },
 		} satisfies RecordSummary));
 	}));
 
@@ -968,9 +965,9 @@ async function collectSpecGroups(context: vscode.ExtensionContext): Promise<read
 	const stores = await collectWorkspaceStores();
 	const collapsed = new Set(context.workspaceState.get<readonly string[]>(specsCollapsedGroupsStateKey) ?? []);
 	const all = await Promise.all(stores.map(async store => {
-		const [groups, worktreeContext] = await Promise.all([
+		const [groups, worktrees] = await Promise.all([
 			listSidebarSpecGroups(store.root),
-			gitWorktreeContext(store.root),
+			worktreeStatesForStore(store),
 		]);
 		return groups.map(group => ({
 			status: group.status,
@@ -981,8 +978,7 @@ async function collectSpecGroups(context: vscode.ExtensionContext): Promise<read
 				enabled: true,
 				status: spec.status,
 				...(stores.length > 1 ? { workspace: store.name } : {}),
-				...(worktreeContext.linked ? { worktreeSpawnDisabled: true } : {}),
-				...(specMatchesWorktreePrefix(spec.id, worktreeContext.specPrefix) ? { activeWorktree: true } : {}),
+				worktree: worktrees.get(spec.id) ?? { kind: 'error', message: 'No worktree state returned for this spec.' },
 			} satisfies RecordSummary)),
 		}));
 	}));
@@ -1043,7 +1039,7 @@ async function collectSpecBoardState(): Promise<SpecsBoardState> {
 		store,
 		lanes: await listSpecLanes(store.root),
 		specs: await listSpecSummaries(store.root),
-		worktreeContext: await gitWorktreeContext(store.root),
+		worktrees: await worktreeStatesForStore(store),
 	})));
 	const lanes: string[] = [];
 	for (const lane of perStore.flatMap(item => item.lanes)) {
@@ -1058,8 +1054,7 @@ async function collectSpecBoardState(): Promise<SpecsBoardState> {
 		title: spec.title,
 		status: spec.status,
 		...(stores.length > 1 ? { workspace: item.store.name } : {}),
-		...(item.worktreeContext.linked ? { worktreeSpawnDisabled: true } : {}),
-		...(specMatchesWorktreePrefix(spec.id, item.worktreeContext.specPrefix) ? { activeWorktree: true } : {}),
+		worktree: item.worktrees.get(spec.id) ?? { kind: 'error', message: 'No worktree state returned for this spec.' },
 	} satisfies SpecCard)));
 
 	return {
@@ -1138,8 +1133,14 @@ function pushUnique(values: string[], value: string): void {
 	}
 }
 
-function specMatchesWorktreePrefix(specId: string, specPrefix: string | undefined): boolean {
-	return specPrefix !== undefined && specId.toUpperCase() === specPrefix;
+async function worktreeStatesForStore(store: WorkspaceStore): Promise<ReadonlyMap<string, SpecWorktreeState>> {
+	try {
+		return cardWorktreeStates(parseWorktreeTopology(await runSundial(store.root, ['worktree', 'list', '--json'])));
+	} catch (error) {
+		const message = commandErrorMessage(error);
+		const specs = await listSpecSummaries(store.root);
+		return new Map(specs.map(spec => [spec.id, { kind: 'error', message }]));
+	}
 }
 
 async function collectCandidates(): Promise<readonly CandidateSummary[]> {
@@ -1250,7 +1251,13 @@ async function openSpec(id: string | undefined, workspace?: string): Promise<voi
 	await openMarkdownSource(filePath);
 }
 
-async function spawnSpecWorktree(id: string | undefined, workspace?: string): Promise<void> {
+async function handleSpecWorktreeAction(
+	action: SpecWorktreeAction,
+	id: string | undefined,
+	workspace: string | undefined,
+	specsProvider: RecordsWebviewProvider,
+	specsBoardPanel: SpecsBoardPanel,
+): Promise<void> {
 	const record = await specForCommand(id, workspace);
 	const filePath = await resolveSpecPath(record);
 	if (record === undefined || filePath === undefined) {
@@ -1263,56 +1270,123 @@ async function spawnSpecWorktree(id: string | undefined, workspace?: string): Pr
 		return;
 	}
 
-	const result = await runSpecWorktreeLaunch({
-		workspaceRoot,
-		specPath: filePath,
-		promptBranchName: async defaultBranch => vscode.window.showInputBox({
-			prompt: 'Branch name for the new worktree',
-			value: defaultBranch,
-			ignoreFocusOut: true,
-		}),
-		confirmOpenExistingWorktree: async (worktreePath, branch) => {
-			const action = await vscode.window.showInformationMessage(
-				`Branch "${branch}" is already checked out at ${worktreePath}.`,
-				'Open Worktree',
-				'Cancel',
-			);
-			return action === 'Open Worktree';
-		},
-		openFolder: async worktreePath => {
-			await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(worktreePath), { forceNewWindow: true });
-		},
-		withProgress: async (title, task) => vscode.window.withProgress(
-			{
-				location: vscode.ProgressLocation.Notification,
-				title,
-				cancellable: false,
-			},
-			() => task(),
-		),
-	});
+	try {
+		const topology = parseWorktreeTopology(await runSundial(workspaceRoot, ['worktree', 'list', '--json']));
+		const state = cardWorktreeStates(topology).get(record.id);
+		if (state === undefined) {
+			throw new Error(`Sundial returned no worktree state for ${record.id}.`);
+		}
 
-	showSpawnSpecWorktreeResult(result);
+		if (action === 'showWorktreeError') {
+			void vscode.window.showErrorMessage(state.kind === 'error' ? state.message : 'The worktree topology is no longer in an error state.');
+			return;
+		}
+		if (action === 'openWorktree') {
+			if (state.kind !== 'associatedElsewhere') {
+				throw new Error('The associated worktree is no longer available outside this window.');
+			}
+			await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(state.worktreePath), { forceNewWindow: true });
+			return;
+		}
+		if (action === 'returnPrimary') {
+			if (state.kind !== 'associatedActive') {
+				throw new Error('This window is no longer the associated worktree.');
+			}
+			await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(state.primaryPath), { forceNewWindow: false });
+			return;
+		}
+		if (action === 'createWorktree') {
+			const created = await vscode.window.withProgress({
+				location: vscode.ProgressLocation.Notification,
+				title: `Creating worktree for ${record.id}`,
+				cancellable: false,
+			}, async () => parseWorktreeCreated(await runSundial(workspaceRoot, ['worktree', 'create', record.id, '--json'])));
+			await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(created.worktreePath), { forceNewWindow: true });
+			return;
+		}
+		if (action === 'finishWorktree') {
+			await finishSpecWorktree(workspaceRoot, record.id);
+			await refreshSpecViews(specsProvider, specsBoardPanel);
+		}
+	} catch (error) {
+		void vscode.window.showErrorMessage(commandErrorMessage(error));
+	}
 }
 
-function showSpawnSpecWorktreeResult(result: SpawnSpecWorktreeResult): void {
-	if (result.kind === 'created') {
-		void vscode.window.showInformationMessage(`Created worktree "${result.branch}" at ${result.worktreePath}.`);
+async function finishSpecWorktree(root: string, specId: string): Promise<void> {
+	if (!await vscode.workspace.saveAll(false)) {
+		void vscode.window.showWarningMessage('Finish Worktree cancelled because not all files could be saved.');
+		return;
+	}
+	const preflight = parseWorktreePreflight(await runSundial(root, ['worktree', 'preflight', specId, '--json']));
+	if (preflight.kind === 'conflicts') {
+		await showRebaseConflict(preflight);
+		return;
+	}
+	if (preflight.kind !== 'ready') {
+		void vscode.window.showWarningMessage(preflight.message);
 		return;
 	}
 
-	if (result.kind === 'openedExisting') {
-		void vscode.window.showInformationMessage(`Opened existing worktree "${result.branch}".`);
-		return;
+	let primaryMessage: string | undefined;
+	if (preflight.needsPrimaryCommitMessage) {
+		primaryMessage = await promptCommitMessage('Commit message for changes in the primary worktree');
+		if (primaryMessage === undefined) {
+			return;
+		}
+	}
+	let worktreeMessage = preflight.suggestedWorktreeCommitMessage;
+	if (preflight.needsWorktreeCommitMessage && worktreeMessage === undefined) {
+		worktreeMessage = await promptCommitMessage('Commit message for changes in the spec worktree');
+		if (worktreeMessage === undefined) {
+			return;
+		}
 	}
 
-	if (result.kind === 'failed') {
-		void vscode.window.showErrorMessage(result.message);
-		return;
+	const args = [
+		'worktree', 'finish', specId,
+		'--expected-primary', preflight.primaryHead,
+		'--expected-worktree', preflight.worktreeHead,
+		'--json',
+	];
+	if (primaryMessage !== undefined) {
+		args.push('--primary-message', primaryMessage);
 	}
+	if (worktreeMessage !== undefined) {
+		args.push('--worktree-message', worktreeMessage);
+	}
+	const result = await vscode.window.withProgress({
+		location: vscode.ProgressLocation.Notification,
+		title: `Finishing worktree for ${specId}`,
+		cancellable: false,
+	}, async () => parseWorktreeFinish(await runSundial(root, args)));
 
-	if (result.kind === 'cancelled' && result.reason === 'existingWorktreeDeclined') {
-		void vscode.window.showWarningMessage('Branch is already checked out in another worktree; no new worktree was created.');
+	if (result.kind === 'completed') {
+		void vscode.window.showInformationMessage(`Finished ${specId} and removed ${result.removedWorktreePath}.`);
+	} else if (result.kind === 'conflicts') {
+		await showRebaseConflict(result);
+	} else {
+		void vscode.window.showWarningMessage(result.message);
+	}
+}
+
+async function promptCommitMessage(prompt: string): Promise<string | undefined> {
+	const value = await vscode.window.showInputBox({
+		prompt,
+		ignoreFocusOut: true,
+		validateInput: input => input.trim() === '' ? 'A commit message is required.' : undefined,
+	});
+	return value?.trim() || undefined;
+}
+
+async function showRebaseConflict(result: WorktreeConflicts): Promise<void> {
+	const action = await vscode.window.showWarningMessage(
+		`Rebase conflicts stopped Finish Worktree for ${result.specId}. Resolve them in ${result.worktreePath}, then run Finish Worktree again.`,
+		'Copy Prompt',
+	);
+	if (action === 'Copy Prompt') {
+		await vscode.env.clipboard.writeText(formatRebaseRecoveryPrompt(result));
+		void vscode.window.showInformationMessage('Copied the rebase recovery prompt.');
 	}
 }
 
@@ -1951,10 +2025,6 @@ async function openMarkdownPreview(filePath: string | undefined): Promise<void> 
 	await vscode.commands.executeCommand('markdown.showPreview', uri);
 }
 
-interface ProviderPick extends vscode.QuickPickItem {
-	readonly provider: BootstrapProvider;
-}
-
 interface SpecSessionProviderPick extends vscode.QuickPickItem {
 	readonly provider: SpecSessionProvider;
 }
@@ -2016,10 +2086,7 @@ async function initializeProject(
 				return;
 			}
 
-			const bootstrapChoice = await vscode.window.showInformationMessage('Sundial project initialized.', 'Bootstrap decisions');
-			if (bootstrapChoice === 'Bootstrap decisions') {
-				await bootstrap(candidatesProvider, root);
-			}
+			void vscode.window.showInformationMessage('Sundial project initialized.');
 		},
 	);
 
@@ -2154,89 +2221,6 @@ function runCommandInTerminal(
 	return terminal;
 }
 
-async function bootstrap(
-	candidatesProvider: CandidatesWebviewProvider,
-	selectedRoot?: string,
-	selectedProvider?: BootstrapProvider,
-): Promise<void> {
-	const root = selectedRoot ?? await chooseWorkspaceRoot('initialized');
-	if (root === undefined) {
-		void vscode.window.showErrorMessage('Open an initialized workspace folder before running Sundial bootstrap.');
-		return;
-	}
-
-	const provider = selectedProvider ?? await pickBootstrapProvider();
-	if (provider === undefined) {
-		return;
-	}
-
-	runSundialInTerminal(
-		root,
-		['--cwd', root, 'bootstrap', '--provider', provider],
-		`Sundial Bootstrap (${provider})`,
-		async () => {
-			await candidatesProvider.refresh();
-			await updateWorkspaceState();
-		},
-	);
-	await candidatesProvider.refresh();
-	await updateWorkspaceState();
-}
-
-async function pickBootstrapProvider(): Promise<BootstrapProvider | undefined> {
-	const installed = await collectInstalledProviders();
-	if (installed.length === 1) {
-		return installed[0];
-	}
-
-	const candidates: readonly { provider: BootstrapProvider; label: string; description: string }[] = installed.length === 0
-		? [
-			{ provider: 'claude', label: 'Claude Code', description: 'Use the claude CLI' },
-			{ provider: 'codex', label: 'Codex', description: 'Use the codex CLI' },
-		]
-		: installed.map(provider => provider === 'claude'
-			? { provider, label: 'Claude Code', description: 'Use the claude CLI' }
-			: { provider, label: 'Codex', description: 'Use the codex CLI' });
-
-	const picked = await vscode.window.showQuickPick<ProviderPick>(candidates, {
-		placeHolder: 'Select the LLM CLI to inspect the project and create candidates',
-	});
-	return picked?.provider;
-}
-
-async function collectInstalledProviders(): Promise<readonly BootstrapProvider[]> {
-	const stores = await collectWorkspaceStores();
-	const seen = new Set<BootstrapProvider>();
-	for (const store of stores) {
-		const [hasClaude, hasCodex] = await Promise.all([
-			directoryExists(path.join(store.root, '.claude')),
-			directoryExists(path.join(store.root, '.agents')),
-		]);
-		if (hasClaude) {
-			seen.add('claude');
-		}
-
-		if (hasCodex) {
-			seen.add('codex');
-		}
-	}
-
-	return ['claude', 'codex'].filter((provider): provider is BootstrapProvider => seen.has(provider as BootstrapProvider));
-}
-
-async function directoryExists(dirPath: string): Promise<boolean> {
-	try {
-		const stat = await fs.stat(dirPath);
-		return stat.isDirectory();
-	} catch (error) {
-		if (isNodeError(error) && error.code === 'ENOENT') {
-			return false;
-		}
-
-		throw error;
-	}
-}
-
 async function runLifecycle(_id: string, args: readonly string[], filePath: string): Promise<void> {
 	const root = await workspaceRootForPath(filePath);
 	if (root === undefined) {
@@ -2257,8 +2241,8 @@ async function workspaceRootForPath(filePath: string): Promise<string | undefine
 }
 
 async function runSundial(root: string, args: readonly string[]): Promise<string> {
-	const { stdout, stderr } = await execFileAsync(cliPath(), ['--cwd', root, ...args], { cwd: root });
-	return `${stdout}${stderr}`;
+	const { stdout } = await execFileAsync(cliPath(), ['--cwd', root, ...args], { cwd: root });
+	return stdout;
 }
 
 async function isCliAvailable(): Promise<boolean> {
@@ -2297,6 +2281,16 @@ function isNodeError(error: unknown): error is NodeJS.ErrnoException {
 
 function errorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
+}
+
+function commandErrorMessage(error: unknown): string {
+	if (error instanceof Error) {
+		const details = error as Error & { readonly stderr?: string | Buffer; readonly stdout?: string | Buffer };
+		const stderr = details.stderr?.toString().trim();
+		const stdout = details.stdout?.toString().trim();
+		return stderr || stdout || error.message;
+	}
+	return String(error);
 }
 
 function showCommandError(error: unknown): void {
@@ -2349,7 +2343,7 @@ async function chooseWorkspaceRoot(state: WorkspaceRootState): Promise<string | 
 	})), {
 		placeHolder: state === 'initialized'
 			? 'Select an initialized Sundial project root'
-			: 'Select the project root for Sundial bootstrap',
+			: 'Select the project root for Sundial initialization',
 	});
 
 	return pick?.root;

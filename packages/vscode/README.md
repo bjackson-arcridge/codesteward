@@ -6,9 +6,27 @@ Marketplace id: `arcridge.sundial`.
 
 ## Why Use Sundial
 
-AI coding sessions move faster when the agent can see the project rules that matter: architectural decisions, rejected approaches, domain vocabulary, workflow notes, and research that should not be rediscovered every time. Sundial makes that memory explicit, reviewable, and version-controlled.
+AI coding sessions move faster when the agent can see the project rules: architectural decisions, rejected approaches, domain vocabulary, workflow notes, and research that should not be rediscovered every time. Sundial makes that memory explicit, reviewable, and version-controlled.
 
-Sundial is built around a project-local store, not a hosted service:
+## Features
+
+The Sundial documents bar adds a sidebar with sections capturing the types of sundial documents.
+
+* **Domains**: Sundial groups decision records and research in a domain (think UI vs Backend) taxonomy; This provides high-level filtering on what documents are put into context for each task.
+- **Decision Records**: Decision Records are durable reminders to the agent of general decisions and patterns to apply to the project.
+    **Accepted DRs**  Filter by domain, open a rendered preview, edit source Markdown, disable stale guidance, or retire a record.
+ .  **Candidates**: review proposed DRs, preview or edit the source, accept candidates into approved records, reject them with a reason, retire them, or dismiss throwaway proposals.
+ .  **Rejected and Retired DRs**:
+- **Research**: Captures research on programmatic boundaries or dependency behaviors; make durable so the same research can be applied when implmenting multiple features; or just to record project assumptions.
+- **Specs**: A way to organize agent workstreams; lightweight spec driven development.
+ * **Workflow** Specs flow through Backlog, Todo, Active, Done, and Archived states.
+ * **Template** Create new specs quickly with customizabler templates.
+ * **Worktree Management:** Spec are a worktree management and navigation plane: create managed worktrees, open an associated worktree, return to the primary checkout, and automated merging and cleanup.
+ .  **Specs Board**: Offers a kanban-style view of specs as cards on a board.
+The extension watches `sundial/decisions`, `sundial/research`, and `sundial/specs` so the sidebar refreshes when files change outside VS Code, including changes made by terminal commands or agent runs.
+
+## Decisions as Code
+Sundial is built around a project-local store, not a hosted service.  By default projects markdown managed by sundial lives in the `sundial` directory in the repo:
 
 - `sundial/decisions/accepted/` stores approved Decision Records that agents should follow.
 - `sundial/decisions/candidates/` stores proposed decisions waiting for human review.
@@ -17,42 +35,18 @@ Sundial is built around a project-local store, not a hosted service:
 - `sundial/specs/` stores living implementation specs and `workflow.yml` for spec lanes.
 - `sundial/domains.md` keeps the project domain vocabulary visible in source control.
 
-## VS Code Features
+## Agent Skills
 
-The Sundial activity bar adds webview-backed sidebar sections for the day-to-day workflow:
-
-- **Decision Records**: browse accepted DRs, filter by domain, open a rendered preview, edit source Markdown, disable stale guidance, or retire a record.
-- **Research**: browse research notes with summaries, filter by domain, preview notes, and jump to source.
-- **Specs**: browse implementation specs grouped by workflow status, collapse noisy groups, open specs, and launch the full specs board.
-- **Specs Board**: create specs, drag specs between lanes, archive specs, and delete specs through the CLI-backed workflow.
-- **Candidates**: review proposed DRs, preview or edit the source, accept candidates into approved records, reject them with a reason, retire them, or dismiss throwaway proposals.
-- **Rejected and Retired DRs**: inspect lifecycle history, promote records back when needed, or delete old files from disk.
-- **Welcome and Diagnostics**: initialize new workspaces, install the CLI, and inspect extension diagnostics when something needs debugging.
-
-The main sidebar behaves as an accordion: opening any governance section closes the others, and the selected section uses all height not occupied by the section headers.
-
-The extension watches `sundial/decisions`, `sundial/research`, and `sundial/specs` so the sidebar refreshes when files change outside VS Code, including changes made by terminal commands or agent runs.
-
-## Agent Workflows
-
-During initialization, Sundial can install managed agent assets for Claude Code, Codex, or both:
-
-- Shared workflow guidance at `sundial/SUNDIAL-INSTRUCTIONS.md`.
-- Claude Code skills under `.claude/skills/`.
-- Codex skills under `.agents/skills/`.
-
-The decision-aware skills reference the shared instructions, which tell agents to retrieve accepted Decision Records before consequential design or implementation work, propose new candidate DRs when they discover reusable guidance, and store long-form research notes when details are likely to be forgotten or misremembered.
-
-Bootstrap runs can use Claude Code or Codex to inspect the project and create candidate DRs through the Sundial CLI. Candidates then flow through the same human review path as hand-authored proposals.
+Sundial installs skills during project initialization to guide agent harnesses on how to use and update the decisions and research in the `sundial` directory.
 
 ## Getting Started
 
 1. Open a workspace in VS Code.
 2. Open the Sundial activity bar.
-3. Install the Sundial CLI from the welcome view if it is not already available.
+3. Install the Sundial CLI from the welcome view (if prompted).
 4. Initialize the project and choose Claude Code, Codex, or both.
-5. Run `Sundial: Bootstrap Decisions` or start adding specs, research, and candidate DRs as the project evolves.
-6. Review candidates in the Sundial sidebar and accept only the guidance that should become future agent precedent.
+
+## What is a good set of domains?
 
 If VS Code cannot find the CLI on `PATH`, set `sundial.cliPath` to the executable you want the extension to use.
 
@@ -60,15 +54,13 @@ If VS Code cannot find the CLI on `PATH`, set `sundial.cliPath` to the executabl
 
 Sundial keeps its records in Markdown so they stay easy to review, diff, and edit. These companion extensions make that editing loop more comfortable:
 
-- **Git Worktree Manager** by jackiotyu: highly recommended for spec-driven work across Git worktrees. Sundial can create and open spec worktrees directly, while Git Worktree Manager gives you a dedicated worktree list, quick switching between worktree windows, and familiar cleanup tools. Sundial does not require this extension, so teams can keep using another worktree process if they already have one.
-- **Markdown Inline Editor** by CodeSmith: edit Markdown with a more direct, document-like flow while keeping the source file as the source of truth.
+- **Markdown Inline Editor** by CodeSmith: edit Markdown with a more direct, document-like visualization of headers and bullets.
 
 ## Commands
 
 Sundial contributes these user-facing commands:
 
 - `Sundial: Install CLI`
-- `Sundial: Bootstrap Decisions`
 - `Sundial: Show Diagnostics`
 - `Sundial: Filter Decision Records by Domain`
 - `Sundial: Clear Decision Record Filters`
@@ -86,7 +78,3 @@ Sundial contributes these user-facing commands:
 - `Sundial: Reject Candidate`
 - `Sundial: Retire Candidate`
 - `Sundial: Dismiss Candidate`
-
-## Why Markdown
-
-Sundial records are ordinary files. Engineers can read them in code review, agents can retrieve them as context, and the team can diff, edit, branch, retire, or delete them using normal repository workflows.

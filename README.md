@@ -71,8 +71,6 @@ Implemented commands:
 sundial init --root /path/to/project [--folder docs] [--claude] [--codex]
 sundial update [--root /path/to/project] [--folder docs] [--claude] [--codex]
 sundial status
-sundial bootstrap --provider claude [--folder docs]
-sundial bootstrap --provider codex [--folder docs]
 sundial domains
 sundial dr retrieve --domain cli --domain vscode.webview
 sundial dr get DR-0001
@@ -96,14 +94,14 @@ sundial candidate dismiss CAND-0001
 
 - `--claude` writes missing Claude Code skills to `.claude/skills/` from CLI templates.
 - `--codex` writes missing Codex skills to `.agents/skills/` from CLI templates.
-- Pass both flags to bootstrap both runtimes.
-- Pass `--folder docs` to keep the store at `/path/to/project/sundial` while installing runtime assets under `/path/to/project/docs` and running bootstrap from that folder.
+- Pass both flags to install both agent integrations.
+- Pass `--folder docs` to keep the store at `/path/to/project/sundial` while installing runtime assets under `/path/to/project/docs`.
 
 Use `sundial update --claude --codex` to refresh installed generated files later without rerunning store initialization. The update command discovers the nearest ancestor `sundial` store by default; pass `--root /path/to/project` to target a specific project, or `--folder docs` to change the configured target folder. It refreshes `sundial/SUNDIAL-INSTRUCTIONS.md`; selected harness updates also remove legacy Sundial-managed blocks from `AGENTS.md` or `.claude/CLAUDE.md` while preserving user-authored content.
 
 ## VS Code
 
-The extension contributes a `Sundial` activity bar view with a Candidate Inbox, a `Sundial: Initialize Project` command, and a `Sundial: Bootstrap Decisions` command. Bootstrap invokes the selected Claude or Codex CLI and requires it to create DR candidates through `sundial candidate create`, so candidates use the normal lifecycle path.
+The extension contributes a `Sundial` activity bar view with a Candidate Inbox and project initialization, Decision Record, research, and spec workflows.
 
 ## Notes
 

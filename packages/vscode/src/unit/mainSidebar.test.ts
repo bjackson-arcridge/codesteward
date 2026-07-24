@@ -15,7 +15,7 @@ describe('main sidebar message protocol', () => {
 		assert.equal(isHostToWebview({
 			kind: 'sectionMessage',
 			section: 'candidates',
-			message: { kind: 'state', candidates: [], installedProviders: [], hasAcceptedRecords: false },
+			message: { kind: 'state', candidates: [] },
 		}), true);
 		assert.equal(isWebviewToHost({ kind: 'selectSection', section: 'specs' }), true);
 		assert.equal(isWebviewToHost({ kind: 'setSectionVisibility', section: 'specs', visible: false }), true);
@@ -31,7 +31,7 @@ describe('main sidebar message protocol', () => {
 			kind: 'state',
 			activeSection: 'records',
 			visibleSections: ['specs'],
-			sectionState: { kind: 'state', candidates: [], installedProviders: [], hasAcceptedRecords: false },
+			sectionState: { kind: 'state', candidates: [] },
 		}), false);
 		assert.equal(isWebviewToHost({ kind: 'selectSection', section: 'unknown' }), false);
 		assert.equal(isWebviewToHost({ kind: 'setSectionVisibility', section: 'specs', visible: 'false' }), false);

@@ -1,4 +1,5 @@
 import { isSpecSessionPhase, type SpecSessionPhase } from '../../specSessions';
+import type { SpecWorktreeState } from '../../specWorktrees';
 
 export interface RecordSummary {
 	readonly id: string;
@@ -8,8 +9,7 @@ export interface RecordSummary {
 	readonly summary?: string;
 	readonly status?: string;
 	readonly workspace?: string;
-	readonly worktreeSpawnDisabled?: boolean;
-	readonly activeWorktree?: boolean;
+	readonly worktree?: SpecWorktreeState;
 }
 
 export interface SpecRecordGroup {
@@ -19,7 +19,8 @@ export interface SpecRecordGroup {
 }
 
 export type RecordActionMode = 'accepted' | 'rejected' | 'retired' | 'research' | 'specs';
-export type RecordClickTarget = 'title' | 'preview' | 'worktree' | 'delete' | SpecSessionPhase;
+export type SpecWorktreeAction = 'createWorktree' | 'openWorktree' | 'returnPrimary' | 'finishWorktree' | 'showWorktreeError';
+export type RecordClickTarget = 'title' | 'preview' | SpecWorktreeAction | 'delete' | SpecSessionPhase;
 
 export interface RecordRenderDiagnostic {
 	readonly recordCount: number;
@@ -59,7 +60,7 @@ export type WebviewToHost =
 	| { kind: 'openBoard' }
 	| { kind: 'createSpec'; title: string; status: string; workspace?: string }
 	| { kind: 'moveSpec'; id: string; status: string; workspace?: string }
-	| { kind: 'spawnSpecWorktree'; id: string; workspace?: string }
+	| { kind: 'specWorktreeAction'; action: SpecWorktreeAction; id: string; workspace?: string }
 	| { kind: 'deleteSpec'; id: string; workspace?: string; skipConfirmation?: boolean }
 	| { kind: 'launchSpec'; id: string; phase: SpecSessionPhase; workspace?: string }
 	| { kind: 'setDomainFilter'; domainFilter?: string }
@@ -180,8 +181,7 @@ function isRecordSummary(value: unknown): value is RecordSummary {
 		summary?: unknown;
 		status?: unknown;
 		workspace?: unknown;
-		worktreeSpawnDisabled?: unknown;
-		activeWorktree?: unknown;
+		worktree?: unknown;
 		skipConfirmation?: unknown;
 	};
 	return typeof record.id === 'string'
@@ -191,8 +191,7 @@ function isRecordSummary(value: unknown): value is RecordSummary {
 		&& (record.summary === undefined || typeof record.summary === 'string')
 		&& (record.status === undefined || typeof record.status === 'string')
 		&& (record.workspace === undefined || typeof record.workspace === 'string')
-		&& (record.worktreeSpawnDisabled === undefined || typeof record.worktreeSpawnDisabled === 'boolean')
-		&& (record.activeWorktree === undefined || typeof record.activeWorktree === 'boolean');
+		&& (record.worktree === undefined || isSpecWorktreeState(record.worktree));
 }
 
 function isSpecRecordGroupArray(value: unknown): value is readonly SpecRecordGroup[] {
@@ -234,6 +233,7 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 		workspace?: unknown;
 		skipConfirmation?: unknown;
 		phase?: unknown;
+		action?: unknown;
 	};
 	if (message.kind === 'preview'
 		|| message.kind === 'edit'
@@ -271,8 +271,9 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 			&& (message.workspace === undefined || typeof message.workspace === 'string');
 	}
 
-	if (message.kind === 'spawnSpecWorktree') {
+	if (message.kind === 'specWorktreeAction') {
 		return typeof message.id === 'string'
+			&& isSpecWorktreeAction(message.action)
 			&& (message.workspace === undefined || typeof message.workspace === 'string');
 	}
 
@@ -333,9 +334,35 @@ function isStringArray(value: unknown): value is readonly string[] {
 function isRecordClickTarget(value: unknown): value is RecordClickTarget {
 	return value === 'title'
 		|| value === 'preview'
-		|| value === 'worktree'
+		|| isSpecWorktreeAction(value)
 		|| value === 'delete'
 		|| isSpecSessionPhase(value);
+}
+
+function isSpecWorktreeAction(value: unknown): value is SpecWorktreeAction {
+	return value === 'createWorktree' || value === 'openWorktree' || value === 'returnPrimary'
+		|| value === 'finishWorktree' || value === 'showWorktreeError';
+}
+
+function isSpecWorktreeState(value: unknown): value is SpecWorktreeState {
+	if (typeof value !== 'object' || value === null) {
+		return false;
+	}
+	const state = value as Record<string, unknown>;
+	if (state.kind === 'none') {
+		return true;
+	}
+	if (state.kind === 'error') {
+		return typeof state.message === 'string';
+	}
+	if (state.kind !== 'associatedElsewhere' && state.kind !== 'associatedActive') {
+		return false;
+	}
+	return typeof state.worktreePath === 'string'
+		&& typeof state.primaryPath === 'string'
+		&& typeof state.branch === 'string'
+		&& (state.rebaseInProgress === undefined || typeof state.rebaseInProgress === 'boolean')
+		&& (state.kind !== 'associatedElsewhere' || typeof state.canFinish === 'boolean');
 }
 
 function isRecordActionMode(value: unknown): value is RecordActionMode {

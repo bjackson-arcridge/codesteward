@@ -1,7 +1,7 @@
 ---
 id: DR-0020
 title: Stewardship commands use compact top-level nouns
-status: accepted
+status: retired
 domain: cli
 created: 2026-05-08
 references:

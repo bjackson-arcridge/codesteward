@@ -1,12 +1,11 @@
 ---
 id: SPEC-0011
 title: Sundial spec cards can navigate to active worktrees or main
-status: Backlog
+status: Done
 created: 2026-07-22
 updated: 2026-07-23
 created_by: bjackson
 ---
-
 # Sundial spec cards can navigate to active worktrees or main
 
 ## Discovery
@@ -193,5 +192,14 @@ After the user gives the copied prompt to an LLM and that LLM completes the reba
 - 2026-07-23: Verified that the installed editor tools contain interactive task commands but not the generic background task submit/status contract, so capability detection and manual fallback are required.
 - 2026-07-23: Proposed CAND-0003 to preserve the cross-product CLI ownership boundary.
 - 2026-07-23: Reduced conflict recovery to a copyable LLM prompt plus a fresh Finish invocation; removed agent selection, task submission/status polling, persisted recovery state, and a separate resume command from scope.
+- 2026-07-23: Added the `sundial worktree` list/create/preflight/finish command family with versioned JSON contracts, deterministic nested paths, common-repository exclusion and locking, exact topology classification, guarded commits, rebase, fast-forward merge, and worktree cleanup.
+- 2026-07-23: Replaced the extension-host Git launcher and boolean card flags with CLI-owned operations, typed none/elsewhere/active/error states, create/open/return/finish/error actions, theme-token treatments, and a bounded Copy Prompt recovery handoff.
+- 2026-07-23: Bumped `@arcridge/sundial` and `arcridge.sundial` to 0.5.0, updated the workspace lockfile and package documentation, and preserved the existing Command Palette worktree entry point.
 
 ## Test Log
+
+- 2026-07-23: `npm run check-types` passed for CLI, extension host, and webview projects.
+- 2026-07-23: `npm run lint` passed.
+- 2026-07-23: `npm run test:unit` passed: 65 CLI tests and 72 VS Code tests.
+- 2026-07-23: Real-Git CLI tests passed for exact topology, nested creation, common exclude idempotence, dirty commits, clean finish, a genuine rebase conflict, repeat conflict reporting, external rebase completion, and successful fresh finish.
+- 2026-07-23: Elevated `npm test` passed all pinned VS Code 1.118.1 integration scenarios: 8 records/candidates, 3 init-from-welcome, and 3 bootstrap-selector.

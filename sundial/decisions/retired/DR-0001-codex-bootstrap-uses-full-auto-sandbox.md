@@ -1,7 +1,7 @@
 ---
 id: DR-0001
 title: Codex bootstrap uses full-auto sandbox
-status: accepted
+status: retired
 domain: cli.bootstrap
 created: 2026-05-04
 references:

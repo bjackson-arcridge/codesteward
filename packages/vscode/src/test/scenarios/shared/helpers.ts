@@ -63,9 +63,6 @@ export interface ExtensionDiagnostics {
 		readonly candidateCount: number;
 		readonly cardCount: number;
 		readonly emptyVisible: boolean;
-		readonly bootstrapAction?: 'bootstrap' | 'audit';
-		readonly bootstrapProvider?: 'claude' | 'codex';
-		readonly providerSelectorVisible?: boolean;
 	};
 	readonly welcomeLastRendered?: {
 		readonly cliAvailable: boolean;

@@ -224,14 +224,32 @@ export class RecordsApp extends LitElement {
 				cursor: grabbing;
 			}
 
-			cs-card.spec-card[active-worktree='true'] {
+			cs-card.spec-card[worktree-state='associatedActive'] {
 				border-color: var(--vscode-gitDecoration-addedResourceForeground, var(--cs-focus));
 				background: color-mix(in srgb, var(--cs-card-bg) 82%, var(--vscode-gitDecoration-addedResourceForeground, var(--cs-focus)) 18%);
 			}
 
-			.active-worktree-label {
+			cs-card.spec-card[worktree-state='associatedElsewhere'] {
+				border-color: var(--vscode-textLink-foreground, var(--cs-focus));
+				background: color-mix(in srgb, var(--cs-card-bg) 88%, var(--vscode-textLink-foreground, var(--cs-focus)) 12%);
+			}
+
+			cs-card.spec-card[worktree-state='error'] {
+				border-color: var(--vscode-gitDecoration-conflictingResourceForeground, var(--vscode-editorWarning-foreground));
+				background: color-mix(in srgb, var(--cs-card-bg) 88%, var(--vscode-gitDecoration-conflictingResourceForeground, var(--vscode-editorWarning-foreground)) 12%);
+			}
+
+			.worktree-state-label[data-state='associatedActive'] {
 				color: var(--vscode-gitDecoration-addedResourceForeground, var(--cs-focus));
 				font-weight: 600;
+			}
+
+			.worktree-state-label[data-state='associatedElsewhere'] {
+				color: var(--vscode-textLink-foreground, var(--cs-focus));
+			}
+
+			.worktree-state-label[data-state='error'] {
+				color: var(--vscode-gitDecoration-conflictingResourceForeground, var(--vscode-editorWarning-foreground));
 			}
 
 			@media (min-width: 260px) {
@@ -377,7 +395,7 @@ export class RecordsApp extends LitElement {
 					groupCount: this.renderRoot.querySelectorAll('.spec-group').length,
 					openBoardButtonVisible: this.renderRoot.querySelector('[data-action="open-kanban"]') !== null,
 					specAddFormVisible: this.renderRoot.querySelector('[data-action="add-spec"]') !== null,
-					specWorktreeActionCount: this.renderRoot.querySelectorAll('[data-record-target="worktree"]').length,
+					specWorktreeActionCount: this.renderRoot.querySelectorAll('[data-worktree-action]').length,
 					specDeleteActionCount: this.renderRoot.querySelectorAll('[data-record-target="delete"]').length,
 				} : {}),
 			},
@@ -501,7 +519,7 @@ export class RecordsApp extends LitElement {
 				class=${isSpec ? 'spec-card' : ''}
 				?draggable=${isSpec}
 				dragging=${this.draggedSpec?.id === record.id && this.draggedSpec?.workspace === record.workspace ? 'true' : 'false'}
-				active-worktree=${record.activeWorktree === true ? 'true' : 'false'}
+				worktree-state=${record.worktree?.kind ?? 'none'}
 				data-spec-id=${record.id}
 				@dragstart=${(event: DragEvent) => this.handleSpecDragStart(event, record)}
 				@dragend=${this.handleSpecDragEnd}
@@ -517,7 +535,10 @@ export class RecordsApp extends LitElement {
 					@click=${() => this.send({ kind: 'preview', id: record.id })}
 				>${record.title}</button>
 				<span slot="meta">
-					<span class=${record.activeWorktree === true ? 'id active-worktree-label' : 'id'}>${record.id}${record.activeWorktree === true ? ' [Active Worktree]' : ''}</span>
+					<span class="id">${record.id}</span>
+					${isSpec && record.worktree !== undefined && record.worktree.kind !== 'none'
+						? html`<span class="worktree-state-label" data-state=${record.worktree.kind}>${this.worktreeStateLabel(record.worktree.kind)}</span>`
+						: nothing}
 					${isSpec && this.isSelectedWorkspace(record)
 						? html`<span class="spec-phase-actions">${this.renderSpecPhaseActions(record)}</span>`
 						: nothing}
@@ -540,21 +561,8 @@ export class RecordsApp extends LitElement {
 
 	private renderActions(record: RecordSummary) {
 		if (this.actionMode === 'specs') {
-			const spawnWorktreeDisabled = record.worktreeSpawnDisabled === true;
 			return html`
-				<cs-icon-button
-					icon="repo-forked"
-					label=${spawnWorktreeDisabled ? 'Spawn worktree unavailable from a worktree' : 'Spawn worktree'}
-					?disabled=${spawnWorktreeDisabled}
-					data-record-id=${record.id}
-					data-record-target="worktree"
-					data-record-workspace=${record.workspace ?? nothing}
-					@click=${() => this.send({
-						kind: 'spawnSpecWorktree',
-						id: record.id,
-						...(record.workspace === undefined ? {} : { workspace: record.workspace }),
-					})}
-				></cs-icon-button>
+				${this.renderWorktreeActions(record)}
 				<cs-icon-button
 					icon="trash"
 					label="Delete spec"
@@ -628,6 +636,42 @@ export class RecordsApp extends LitElement {
 				@click=${(event: Event) => this.openRetirePrompt(record, event)}
 			></cs-icon-button>
 		`;
+	}
+
+	private renderWorktreeActions(record: RecordSummary) {
+		const state = record.worktree ?? { kind: 'none' as const };
+		const actions = state.kind === 'none'
+			? [{ action: 'createWorktree' as const, icon: 'repo-forked', label: 'Create worktree' }]
+			: state.kind === 'associatedElsewhere'
+				? [
+					{ action: 'openWorktree' as const, icon: 'arrow-right', label: 'Open worktree' },
+					...(state.canFinish ? [{ action: 'finishWorktree' as const, icon: 'git-merge', label: 'Finish worktree' }] : []),
+				]
+				: state.kind === 'associatedActive'
+					? [{ action: 'returnPrimary' as const, icon: 'arrow-left', label: 'Return to primary worktree' }]
+					: [{ action: 'showWorktreeError' as const, icon: 'warning', label: 'Show worktree error' }];
+		return actions.map(item => html`
+			<cs-icon-button
+				icon=${item.icon}
+				label=${item.label}
+				data-record-id=${record.id}
+				data-record-target=${item.action}
+				data-worktree-action=${item.action}
+				data-record-workspace=${record.workspace ?? nothing}
+				@click=${() => this.send({
+					kind: 'specWorktreeAction',
+					action: item.action,
+					id: record.id,
+					...(record.workspace === undefined ? {} : { workspace: record.workspace }),
+				})}
+			></cs-icon-button>
+		`);
+	}
+
+	private worktreeStateLabel(kind: 'associatedElsewhere' | 'associatedActive' | 'error'): string {
+		return kind === 'associatedActive' ? 'Active Worktree'
+			: kind === 'associatedElsewhere' ? 'Worktree Elsewhere'
+				: 'Worktree Error';
 	}
 
 	private renderSpecPhaseActions(record: RecordSummary) {

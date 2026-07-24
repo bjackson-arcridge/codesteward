@@ -2,18 +2,19 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { describe, test } from 'node:test';
 import { Writable } from 'node:stream';
-import { bootstrapCommand, main, runBootstrapCommand } from '../main';
+import { describe, test } from 'node:test';
+import { main } from '../main';
 import { initStore } from '../core/store';
 
-describe('bootstrapCommand', () => {
+describe('CLI main', () => {
 	test('prints package version without requiring a store', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-version-'));
 		const packageJson = JSON.parse(await fs.readFile(path.resolve(__dirname, '../../package.json'), 'utf8')) as { readonly version: string };
 
 		const result = await runCli(root, ['--version']);
 
+		assert.equal(packageJson.version, '0.6.0');
 		assert.equal(result.stdout, `${packageJson.version}\n`);
 		assert.equal(result.stderr, '');
 		assert.equal(result.exitCode, undefined);
@@ -37,66 +38,21 @@ describe('bootstrapCommand', () => {
 		}
 	});
 
+	test('does not expose the removed bootstrap command', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-no-bootstrap-'));
+
+		const result = await runCli(root, ['bootstrap', '--provider', 'codex']);
+		const help = await runCli(root, ['help']);
+
+		assert.match(result.stderr, /Unknown command: bootstrap/);
+		assert.equal(result.exitCode, 64);
+		assert.doesNotMatch(help.stdout, /^\s*bootstrap\s/m);
+	});
+
 	test('build script marks the bundled CLI entrypoint executable', async () => {
 		const esbuildScript = await fs.readFile(path.resolve(__dirname, '../../esbuild.js'), 'utf8');
 
 		assert.match(esbuildScript, /fs\.chmod\(path\.join\('dist', 'main\.js'\), 0o755\)/);
-	});
-
-	test('runs Codex bootstrap in bounded full-auto mode', () => {
-		const command = bootstrapCommand('codex', '/project', 'bootstrap prompt');
-
-		assert.equal(command.file, 'codex');
-		assert.deepEqual(command.args, [
-			'exec',
-			'--cd',
-			'/project',
-			'--full-auto',
-			'--skip-git-repo-check',
-			'bootstrap prompt',
-		]);
-		assert.equal(command.args.includes('--ask-for-approval'), false);
-		assert.equal(command.args.includes('--dangerously-bypass-approvals-and-sandbox'), false);
-	});
-
-	test('streams bootstrap output while the child process is running', async () => {
-		let stdout = '';
-		let stderr = '';
-		let resolveFirstStdout: () => void = () => undefined;
-		const firstStdout = new Promise<void>(resolve => {
-			resolveFirstStdout = resolve;
-		});
-		const io = {
-			stdout: new Writable({
-				write(chunk, _encoding, callback) {
-					stdout += chunk.toString();
-					resolveFirstStdout();
-					callback();
-				},
-			}),
-			stderr: new Writable({
-				write(chunk, _encoding, callback) {
-					stderr += chunk.toString();
-					callback();
-				},
-			}),
-		};
-		const run = runBootstrapCommand({
-			file: process.execPath,
-			args: [
-				'-e',
-				'process.stdout.write("ready\\n"); setTimeout(() => process.stderr.write("done\\n"), 50);',
-			],
-		}, process.cwd(), io);
-
-		await Promise.race([
-			firstStdout,
-			new Promise((_resolve, reject) => setTimeout(() => reject(new Error('Timed out waiting for stdout stream.')), 1000)),
-		]);
-
-		assert.equal(stdout, 'ready\n');
-		await run;
-		assert.equal(stderr, 'done\n');
 	});
 
 	test('retrieves accepted DRs by hierarchical domain', async () => {

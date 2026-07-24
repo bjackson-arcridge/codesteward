@@ -2,7 +2,7 @@
   "name": "sundial",
   "displayName": "Sundial",
   "description": "Markdown-backed Decision Records and agent skills for AI coding workflows.",
-  "version": "0.4.2",
+  "version": "0.6.0",
   "publisher": "arcridge",
   "license": "Apache-2.0",
   "homepage": "https://github.com/bjackson-arcridge/sundial/tree/main/packages/vscode#readme",
@@ -47,12 +47,6 @@
         "title": "Sundial: Install CLI",
         "icon": "$(cloud-download)",
         "enablement": "!sundial.cliAvailable"
-      },
-      {
-        "command": "sundial.bootstrap",
-        "title": "Sundial: Bootstrap Decisions",
-        "icon": "$(search)",
-        "enablement": "sundial.workspaceInitialized"
       },
       {
         "command": "sundial.showDiagnostics",
@@ -222,10 +216,6 @@
         {
           "command": "sundial.installCli",
           "when": "!sundial.cliAvailable"
-        },
-        {
-          "command": "sundial.bootstrap",
-          "when": "sundial.workspaceInitialized"
         },
         {
           "command": "sundial.showDiagnostics"

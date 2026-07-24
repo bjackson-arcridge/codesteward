@@ -1,4 +1,3 @@
-import { spawn } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import {
@@ -53,6 +52,15 @@ import {
 	setSpecStatus,
 	type SpecRecord,
 } from './core/specs';
+import {
+	createManagedSpecWorktree,
+	finishManagedSpecWorktree,
+	listManagedSpecWorktrees,
+	type ManagedWorktreeFinishResult,
+	type ManagedWorktreePreflight,
+	type ManagedWorktreeTopology,
+	preflightManagedSpecWorktree,
+} from './core/worktrees';
 
 const packageJson = require('../package.json') as { readonly version: string };
 const cliVersion = packageJson.version;
@@ -74,7 +82,6 @@ Commands:
   init        Create or update the project-local sundial store at an explicit root
   update      Update installed files for the discovered or explicit project root
   status      Report store health, counts, and validation state
-  bootstrap   Run an LLM-backed bootstrap that creates candidates via the CLI
   domains     List known domains from sundial/domains.md
   dr retrieve Retrieve visible accepted DRs by relevant domains
   dr get      Cat DR markdown files by id
@@ -86,6 +93,7 @@ Commands:
   dr delete   Remove a rejected or retired DR file from disk
   candidate   Create, list, show, accept, reject, retire, or dismiss candidates
   spec        Create, list, show, update, delete, or render implementation specs
+  worktree    List, create, inspect, or finish managed spec worktrees
   help        Show this help
 `;
 
@@ -144,11 +152,6 @@ export async function main(argv: readonly string[], io: Pick<NodeJS.Process, 'cw
 		return;
 	}
 
-	if (command === 'bootstrap') {
-		await runBootstrap(parsed, commandArgs, io);
-		return;
-	}
-
 	if (command === 'dr') {
 		await runDr(parsed, commandArgs, io);
 		return;
@@ -164,54 +167,13 @@ export async function main(argv: readonly string[], io: Pick<NodeJS.Process, 'cw
 		return;
 	}
 
+	if (command === 'worktree') {
+		await runWorktree(parsed, commandArgs, io);
+		return;
+	}
+
 	write(io.stderr, `Unknown command: ${command}\n\n${usage}`);
 	io.exitCode = 64;
-}
-
-export type BootstrapProvider = 'claude' | 'codex';
-interface BootstrapCommand {
-	readonly file: string;
-	readonly args: readonly string[];
-}
-interface BootstrapOutput {
-	readonly stdout: Pick<NodeJS.WritableStream, 'write'>;
-	readonly stderr: Pick<NodeJS.WritableStream, 'write'>;
-}
-
-async function runBootstrap(
-	options: CliOptions,
-	args: readonly string[],
-	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
-): Promise<void> {
-	const parsed = parseBootstrapArgs(args, io);
-	if (parsed === undefined) {
-		return;
-	}
-
-	const discoveredPaths = await requireStore(options.cwd, io);
-	if (discoveredPaths === undefined) {
-		return;
-	}
-
-	try {
-		const paths = parsed.folder === undefined
-			? discoveredPaths
-			: (await updateRuntimeAssets(discoveredPaths.root, { folder: parsed.folder })).paths;
-		const prompt = bootstrapPrompt(paths);
-		const command = bootstrapCommand(parsed.provider, paths.targetRoot, prompt);
-
-		if (!options.quiet) {
-			write(io.stdout, `Starting bootstrap with ${parsed.provider}: ${formatBootstrapCommand(command)}\n`);
-		}
-
-		await runBootstrapCommand(command, paths.targetRoot, options.quiet ? undefined : io);
-
-		if (!options.quiet) {
-			write(io.stdout, `Bootstrap completed with ${parsed.provider}.\n`);
-		}
-	} catch (error) {
-		writeError(error, io);
-	}
 }
 
 async function runCandidate(
@@ -550,6 +512,199 @@ async function runSpec(
 
 	write(io.stderr, 'Usage: sundial spec (create | list | board | show | status | update-status | delete | lanes)\n');
 	io.exitCode = 64;
+}
+
+async function runWorktree(
+	options: CliOptions,
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
+): Promise<void> {
+	const [subcommand, ...subcommandArgs] = args;
+	const parsed = parseWorktreeArgs(subcommand, subcommandArgs, io);
+	if (parsed === undefined) {
+		return;
+	}
+
+	const paths = await requireStore(options.cwd, io);
+	if (paths === undefined) {
+		return;
+	}
+
+	try {
+		if (parsed.command === 'list') {
+			const result = await listManagedSpecWorktrees(paths);
+			writeWorktreeResult(options, parsed.json, result, io);
+			return;
+		}
+
+		if (parsed.command === 'create') {
+			const result = await createManagedSpecWorktree(paths, parsed.specId);
+			writeWorktreeResult(options, parsed.json, result, io);
+			return;
+		}
+
+		if (parsed.command === 'preflight') {
+			const result = await preflightManagedSpecWorktree(paths, parsed.specId);
+			writeWorktreeResult(options, parsed.json, result, io);
+			return;
+		}
+
+		if (parsed.command !== 'finish') {
+			return;
+		}
+
+		const result = await finishManagedSpecWorktree(paths, parsed.specId, {
+			expectedPrimaryHead: parsed.expectedPrimaryHead,
+			expectedWorktreeHead: parsed.expectedWorktreeHead,
+			primaryCommitMessage: parsed.primaryCommitMessage,
+			worktreeCommitMessage: parsed.worktreeCommitMessage,
+		});
+		writeWorktreeResult(options, parsed.json, result, io);
+		if (!parsed.json && (result.kind === 'failed' || result.kind === 'stale' || result.kind === 'blocked')) {
+			io.exitCode = 1;
+		}
+	} catch (error) {
+		writeError(error, io);
+	}
+}
+
+type ParsedWorktreeArgs =
+	| { readonly command: 'list'; readonly json: boolean }
+	| { readonly command: 'create' | 'preflight'; readonly specId: string; readonly json: boolean }
+	| {
+		readonly command: 'finish';
+		readonly specId: string;
+		readonly expectedPrimaryHead: string;
+		readonly expectedWorktreeHead: string;
+		readonly primaryCommitMessage?: string;
+		readonly worktreeCommitMessage?: string;
+		readonly json: boolean;
+	};
+
+function parseWorktreeArgs(
+	subcommand: string | undefined,
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
+): ParsedWorktreeArgs | undefined {
+	const worktreeUsage = 'Usage: sundial worktree (list [--json] | create <spec-id> [--json] | preflight <spec-id> [--json] | finish <spec-id> --expected-primary <sha> --expected-worktree <sha> [--primary-message <text>] [--worktree-message <text>] [--json])\n';
+	if (subcommand === 'list') {
+		if (args.length === 0) {
+			return { command: 'list', json: false };
+		}
+		if (args.length === 1 && args[0] === '--json') {
+			return { command: 'list', json: true };
+		}
+		return usageError(worktreeUsage, io);
+	}
+
+	if (subcommand !== 'create' && subcommand !== 'preflight' && subcommand !== 'finish') {
+		return usageError(worktreeUsage, io);
+	}
+
+	const [specId, ...flags] = args;
+	if (specId === undefined || specId.startsWith('--')) {
+		return usageError(worktreeUsage, io);
+	}
+
+	let json = false;
+	let expectedPrimaryHead: string | undefined;
+	let expectedWorktreeHead: string | undefined;
+	let primaryCommitMessage: string | undefined;
+	let worktreeCommitMessage: string | undefined;
+
+	for (let index = 0; index < flags.length; index += 1) {
+		const flag = flags[index];
+		if (flag === '--json') {
+			json = true;
+			continue;
+		}
+
+		const value = flags[index + 1];
+		if (value === undefined) {
+			return usageError(worktreeUsage, io);
+		}
+		if (flag === '--expected-primary') {
+			expectedPrimaryHead = value;
+		} else if (flag === '--expected-worktree') {
+			expectedWorktreeHead = value;
+		} else if (flag === '--primary-message') {
+			primaryCommitMessage = value;
+		} else if (flag === '--worktree-message') {
+			worktreeCommitMessage = value;
+		} else {
+			return usageError(worktreeUsage, io);
+		}
+		index += 1;
+	}
+
+	if (subcommand !== 'finish') {
+		if (expectedPrimaryHead !== undefined || expectedWorktreeHead !== undefined
+			|| primaryCommitMessage !== undefined || worktreeCommitMessage !== undefined) {
+			return usageError(worktreeUsage, io);
+		}
+		return { command: subcommand, specId, json };
+	}
+
+	if (expectedPrimaryHead === undefined || expectedWorktreeHead === undefined) {
+		return usageError(worktreeUsage, io);
+	}
+
+	return {
+		command: 'finish',
+		specId,
+		expectedPrimaryHead,
+		expectedWorktreeHead,
+		primaryCommitMessage,
+		worktreeCommitMessage,
+		json,
+	};
+}
+
+function writeWorktreeResult(
+	options: CliOptions,
+	json: boolean,
+	result: ManagedWorktreeTopology | ManagedWorktreePreflight | ManagedWorktreeFinishResult
+		| Awaited<ReturnType<typeof createManagedSpecWorktree>>,
+	io: Pick<NodeJS.Process, 'stdout'>,
+): void {
+	if (options.quiet) {
+		return;
+	}
+	if (json) {
+		write(io.stdout, `${JSON.stringify(result)}\n`);
+		return;
+	}
+
+	if (result.kind === 'topology') {
+		write(io.stdout, `Primary: ${result.primaryPath}\nActive: ${result.activePath}\n`);
+		for (const spec of result.specs) {
+			const detail = spec.state.kind === 'none'
+				? 'none'
+				: spec.state.kind === 'error'
+					? `error: ${spec.state.message}`
+					: `${spec.state.kind}: ${spec.state.worktreePath}`;
+			write(io.stdout, `${spec.id}: ${detail}\n`);
+		}
+		return;
+	}
+
+	if (result.kind === 'created') {
+		write(io.stdout, `Created ${result.specId} worktree at ${result.worktreePath} on ${result.branch}.\n`);
+		return;
+	}
+	if (result.kind === 'ready') {
+		write(io.stdout, `${result.specId} is ready to finish from ${result.worktreePath}.\n`);
+		return;
+	}
+	if (result.kind === 'completed') {
+		write(io.stdout, `Finished ${result.specId}; merged ${result.branch} and removed ${result.removedWorktreePath}.\n`);
+		return;
+	}
+	if (result.kind === 'conflicts') {
+		write(io.stdout, `Rebase conflicts for ${result.specId}: ${result.conflictPaths.join(', ')}\n`);
+		return;
+	}
+	write(io.stdout, `${result.kind}: ${result.message}\n`);
 }
 
 async function runSpecCreate(
@@ -1452,203 +1607,6 @@ function parseHistoricalDrArgs(
 	return { id, from };
 }
 
-function parseBootstrapArgs(
-	args: readonly string[],
-	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
-): { readonly provider: BootstrapProvider; readonly folder?: string } | undefined {
-	let provider: BootstrapProvider | undefined;
-	let folder: string | undefined;
-
-	for (let index = 0; index < args.length; index += 1) {
-		const arg = args[index];
-
-		if (arg === '--provider') {
-			const value = args[index + 1];
-			if (value !== 'claude' && value !== 'codex') {
-				return usageError(bootstrapUsage(), io);
-			}
-
-			provider = value;
-			index += 1;
-			continue;
-		}
-
-		if (arg === '--folder') {
-			const value = args[index + 1];
-			if (value === undefined) {
-				return usageError(bootstrapUsage(), io);
-			}
-
-			folder = value;
-			index += 1;
-			continue;
-		}
-
-		return usageError(bootstrapUsage(), io);
-	}
-
-	if (provider === undefined) {
-		return usageError(bootstrapUsage(), io);
-	}
-
-	return { provider, folder };
-}
-
-function bootstrapUsage(): string {
-	return 'Usage: sundial bootstrap --provider claude|codex [--folder <relative-path>]\n';
-}
-
-export function bootstrapCommand(
-	provider: BootstrapProvider,
-	root: string,
-	prompt: string,
-): BootstrapCommand {
-	if (provider === 'claude') {
-		return {
-			file: 'claude',
-			args: [
-				'--print',
-				'--permission-mode',
-				'acceptEdits',
-				'--allowedTools',
-				[
-					'Read',
-					'Glob',
-					'Grep',
-					'Bash(sundial --cwd * candidate create *)',
-					'Bash(sundial --cwd * domains)',
-					'Bash(sundial --cwd * dr list *)',
-				].join(','),
-				prompt,
-			],
-		};
-	}
-
-	return {
-		file: 'codex',
-		args: [
-			'exec',
-			'--cd',
-			root,
-			'--full-auto',
-			'--skip-git-repo-check',
-			prompt,
-		],
-	};
-}
-
-export async function runBootstrapCommand(
-	command: BootstrapCommand,
-	cwd: string,
-	io?: BootstrapOutput,
-): Promise<void> {
-	await new Promise<void>((resolve, reject) => {
-		const child = spawn(command.file, command.args, {
-			cwd,
-			stdio: ['ignore', 'pipe', 'pipe'],
-		});
-		let settled = false;
-
-		child.stdout.on('data', (chunk: Buffer) => {
-			io?.stdout.write(chunk);
-		});
-
-		child.stderr.on('data', (chunk: Buffer) => {
-			io?.stderr.write(chunk);
-		});
-
-		child.on('error', (error: Error) => {
-			if (settled) {
-				return;
-			}
-
-			settled = true;
-			reject(error);
-		});
-
-		child.on('close', (code, signal) => {
-			if (settled) {
-				return;
-			}
-
-			settled = true;
-			if (code === 0) {
-				resolve();
-				return;
-			}
-
-			if (signal !== null) {
-				reject(new Error(`Command failed with signal ${signal}: ${formatBootstrapCommand(command)}`));
-				return;
-			}
-
-			reject(new Error(`Command failed with exit code ${code ?? 'unknown'}: ${formatBootstrapCommand(command)}`));
-		});
-	});
-}
-
-function formatBootstrapCommand(command: BootstrapCommand): string {
-	const args = command.args.map((arg, index) => {
-		const isPrompt = index === command.args.length - 1;
-		return isPrompt ? '<prompt>' : shellQuote(arg);
-	});
-
-	return [shellQuote(command.file), ...args].join(' ');
-}
-
-function bootstrapPrompt(paths: StorePaths): string {
-	const root = paths.targetRoot;
-
-	return [
-		'You are running a Sundial bootstrap.',
-		'',
-		`Project root: ${root}`,
-		...(paths.folder === '.'
-			? []
-			: [
-				`Sundial store root: ${paths.root}`,
-				`Configured folder: ${paths.folder}`,
-			]),
-		'',
-		'Goal:',
-		'- Inspect existing project instructions, markdown documentation, and representative source code.',
-		'- Find only project-specific decisions that would change how a future agent acts on a similar task.',
-		'- Create candidates only by running the public Sundial CLI. Do not write sundial files directly.',
-		'',
-		'Candidate bar:',
-		'- Create a candidate only when it establishes reusable project constraints, boundaries, ownership rules, integration details, or deliberately rejected alternatives.',
-		'- Before creating a candidate, ask: would this guidance change future design or implementation behavior beyond explaining the current code?',
-		'- Prefer creating nothing over creating backward-facing or merely explanatory candidates.',
-		'',
-		'Important candidate creation contract:',
-		`- Use this command shape: sundial --cwd ${shellQuote(root)} candidate create --title "<title>" --domain "<domain>" --decision "<terse guidance>"`,
-		'- Use --proposed-domain <domain> "<description>" instead of --domain when the domain is not already listed in sundial/domains.md.',
-		'- A candidate may have --decision, --pitfalls, or both. At least one is required.',
-		'- Pitfalls discipline: similar to decision, but some information is better conveyed as what not to do instead of what to do. CRITICAL: Pitfalls and Decisions do not repeat each other. All information should be net-new.',
-		'- Add --appendix "<human-facing context>" only when explanatory background helps reviewers; do not put governing guidance there.',
-		'- Add --ref <path-or-symbol> when useful, repeated for each reference.',
-		'- Use existing domains from sundial/domains.md when possible. Proposed domains are for truly useful missing terms.',
-		'- Every DR candidate must go through `sundial candidate create`; do not create markdown files manually.',
-		'',
-		'What to inspect:',
-		'- AGENTS.md, AGENT.md, CLAUDE.md, sundial/SUNDIAL-INSTRUCTIONS.md, .agents/**, .claude/**.',
-		'- README files, architecture/design/ADR docs, implementation plans, and other meaningful markdown.',
-		'- Source tree structure and representative implementation files that reveal project conventions.',
-		'- Existing accepted and candidate DRs, so you do not duplicate them.',
-		'',
-		'What to avoid:',
-		'- Do not create candidates for generic best practices, obvious framework behavior, style preferences with no architectural consequence, speculation, one-off fixes, or backward-facing rationale.',
-		'- Do not edit application source, docs, domains, or accepted DRs.',
-		'- Prefer fewer, high-signal candidates.',
-		'',
-		'After creating candidates, summarize what you created. If no DR-worthy decisions exist, say that and create nothing.',
-	].join('\n');
-}
-
-function shellQuote(value: string): string {
-	return `'${value.replaceAll('\'', '\'\\\'\'')}'`;
-}
-
 function candidateCreateUsage(): string {
 	return 'Usage: sundial candidate create --title <title> [--domain <domain> | --proposed-domain <domain> <description>] (--decision <text> | --pitfalls <text> | --decision <text> --pitfalls <text>) [--appendix <text>] [--ref <ref>]\n';
 }
@@ -2088,7 +2046,7 @@ async function runInit(
 	}
 
 	if (!parsed.claude && !parsed.codex) {
-		write(io.stdout, 'Agent runtime bootstrap skipped. Pass --claude, --codex, or both to install runtime assets.\n');
+		write(io.stdout, 'Agent runtime installation skipped. Pass --claude, --codex, or both to install runtime assets.\n');
 	}
 
 	if (result.created.length > 0) {

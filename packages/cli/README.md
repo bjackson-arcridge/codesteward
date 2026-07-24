@@ -29,8 +29,8 @@ sundial init --root /path/to/project --claude --codex
 
 - `--claude` writes missing Claude Code skills to `.claude/skills/` from CLI templates.
 - `--codex` writes missing Codex skills to `.agents/skills/` from CLI templates.
-- Pass both flags to bootstrap both runtimes.
-- Pass `--folder docs` to keep the store at `/path/to/project/sundial` while installing runtime assets under `/path/to/project/docs` and running bootstrap from that folder.
+- Pass both flags to install both agent integrations.
+- Pass `--folder docs` to keep the store at `/path/to/project/sundial` while installing runtime assets under `/path/to/project/docs`.
 
 Refresh installed skill files later without rerunning store init:
 
@@ -68,8 +68,6 @@ project/
 sundial init --root <path> [--folder <relative-path>] [--claude] [--codex]
 sundial update [--root <path>] [--folder <relative-path>] [--claude] [--codex]
 sundial status
-sundial bootstrap --provider claude [--folder <relative-path>]
-sundial bootstrap --provider codex [--folder <relative-path>]
 sundial domains
 
 sundial dr list [--status accepted]
@@ -87,6 +85,16 @@ sundial candidate accept CAND-0001
 sundial candidate reject CAND-0001 --reason "Covered by DR-0001"
 sundial candidate retire CAND-0001 [--by DR-0001]
 sundial candidate dismiss CAND-0001
+
+sundial spec create --title "Implementation title" [--status Backlog]
+sundial spec list [--status Active]
+sundial spec status SPEC-0001 Active
+sundial spec show SPEC-0001
+
+sundial worktree list [--json]
+sundial worktree create SPEC-0001 [--json]
+sundial worktree preflight SPEC-0001 [--json]
+sundial worktree finish SPEC-0001 --expected-primary <sha> --expected-worktree <sha> [--primary-message <text>] [--worktree-message <text>] [--json]
 ```
 
 Notes:
@@ -95,10 +103,11 @@ Notes:
 - Repeat `--domain` on one `dr retrieve` call to retrieve all relevant domain branches together.
 - Candidate DRs can include a proposed domain with a description; accepting the DR appends that proposal to `sundial/domains.md`.
 - DRs can include a `## Appendix` section for human-facing explanatory context; short and medium retrieval omit it.
+- Managed spec worktrees use `.sundial-worktrees/<spec-file-basename>` below the primary checkout. Creation and finish are guarded by current topology and Git state; `--json` returns the versioned contract used by the VS Code extension.
 
 ## VS Code
 
-A companion VS Code extension contributes a `Sundial` activity bar view with a Candidate Inbox, a `Sundial: Initialize Project` command, and a `Sundial: Bootstrap Decisions` command. Bootstrap invokes the selected Claude or Codex CLI and requires it to create DR candidates through `sundial candidate create`, so candidates use the normal lifecycle path. The extension expects the `sundial` CLI to be available on `PATH`.
+A companion VS Code extension contributes a `Sundial` activity bar view with a Candidate Inbox and project initialization, Decision Record, research, and spec workflows. The extension expects the `sundial` CLI to be available on `PATH`.
 
 ## Links
 

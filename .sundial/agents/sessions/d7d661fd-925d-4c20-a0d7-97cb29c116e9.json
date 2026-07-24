@@ -5,7 +5,7 @@
   "provider": "codex",
   "state": "available",
   "createdAt": "2026-07-23T16:21:55.638Z",
-  "updatedAt": "2026-07-23T16:27:15.314Z",
+  "updatedAt": "2026-07-24T11:26:00.032Z",
   "transcript": [
     {
       "role": "user",
@@ -20,5 +20,25 @@
       "text": "Confirmed: current 0.4.2 behavior creates a **sibling worktree** using extension-owned Git logic and opens it in a new VS Code window. The `.sundial-worktrees/` container and editor-CLI flow are planned, not implemented.\n\nFocused tests passed: **21/21**. No product files changed."
     }
   ],
-  "providerSessionId": "019f8fc8-cf8f-7823-b4c2-984b4df8d2e4"
+  "providerSessionId": "019f8fc8-cf8f-7823-b4c2-984b4df8d2e4",
+  "coordinationUpdates": [
+    {
+      "at": "2026-07-23T16:27:15.314Z",
+      "state": "waiting",
+      "message": "Waiting for an assignment.",
+      "files": []
+    },
+    {
+      "at": "2026-07-24T11:25:41.055Z",
+      "state": "working",
+      "message": "Starting the assigned work.",
+      "files": []
+    },
+    {
+      "at": "2026-07-24T11:26:00.032Z",
+      "state": "blocked",
+      "message": "Provider turn was interrupted.",
+      "files": []
+    }
+  ]
 }

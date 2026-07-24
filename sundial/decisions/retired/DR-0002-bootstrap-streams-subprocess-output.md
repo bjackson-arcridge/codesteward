@@ -1,7 +1,7 @@
 ---
 id: DR-0002
 title: Bootstrap streams subprocess output
-status: accepted
+status: retired
 domain: cli.bootstrap
 created: 2026-05-04
 references:

@@ -35,7 +35,7 @@ describe('package manifest contributions', () => {
 		const views = manifest.contributes?.views?.sundial ?? [];
 		const initializedViews = views.filter(view => view.when === 'sundial.workspaceInitialized');
 
-		assert.equal(manifest.version, '0.4.2');
+		assert.equal(manifest.version, '0.6.0');
 		assert.deepEqual(initializedViews, [{
 			id: 'sundial.main',
 			name: 'Sundial',
@@ -44,14 +44,20 @@ describe('package manifest contributions', () => {
 		}]);
 	});
 
-	test('does not show bootstrap as a candidates view title button', () => {
+	test('does not contribute the removed bootstrap feature', () => {
 		const manifest = readPackageManifest();
+		const commands = manifest.contributes?.commands ?? [];
 		const viewTitle = manifest.contributes?.menus?.['view/title'] ?? [];
 
+		assert.equal(
+			commands.some(item => item.command === 'sundial.bootstrap'),
+			false,
+		);
 		assert.equal(
 			viewTitle.some(item => item.command === 'sundial.bootstrap'),
 			false,
 		);
+		assert.doesNotMatch(readExtensionSource(), /registerCommand\('sundial\.bootstrap'/);
 	});
 
 	test('declares Sundial spec commands without extension dependencies', () => {
@@ -95,15 +101,17 @@ describe('package manifest contributions', () => {
 
 		assert.match(source, /if \(message\.kind === 'moveSpec'\) {\s*await moveSpec\(message\.id, message\.status, message\.workspace, specsProvider, specsBoardPanel\);/);
 		assert.match(source, /if \(message\.kind === 'move'\) {\s*await moveSpec\(message\.id, message\.status, message\.workspace, specsProvider, specsBoardPanel\);/);
-		assert.match(source, /if \(message\.kind === 'spawnSpecWorktree'\) {\s*await spawnSpecWorktree\(message\.id, message\.workspace\);/);
-		assert.match(source, /if \(message\.kind === 'spawnWorktree'\) {\s*await spawnSpecWorktree\(message\.id, message\.workspace\);/);
+		assert.match(source, /if \(message\.kind === 'specWorktreeAction'\) {\s*await handleSpecWorktreeAction\(message\.action, message\.id, message\.workspace, specsProvider, specsBoardPanel\);/);
+		assert.match(source, /if \(message\.kind === 'worktreeAction'\) {\s*await handleSpecWorktreeAction\(message\.action, message\.id, message\.workspace, specsProvider, specsBoardPanel\);/);
 		assert.match(source, /if \(message\.kind === 'createSpec'\) {\s*await createSpec\(message\.title, message\.status, message\.workspace, specsProvider, specsBoardPanel\);/);
 		assert.match(source, /if \(message\.kind === 'deleteSpec'\) {\s*await deleteSpec\(message\.id, message\.workspace, specsProvider, specsBoardPanel, message\.skipConfirmation === true\);/);
 		assert.match(source, /const output = await runSundial\(root, \['spec', 'create', '--title', title, '--status', status\]\);/);
 		assert.match(source, /await openMarkdownSource\(createdPath\);/);
 		assert.match(source, /stores\.map\(store => listSpecLanes\(store\.root\)\)/);
 		assert.match(source, /await runLifecycle\(record\.id, \['spec', 'status', record\.id, status\], filePath\);/);
-		assert.match(source, /vscode\.commands\.executeCommand\('vscode\.openFolder', vscode\.Uri\.file\(worktreePath\), \{ forceNewWindow: true \}\)/);
+		assert.match(source, /vscode\.commands\.executeCommand\('vscode\.openFolder', vscode\.Uri\.file\(state\.worktreePath\), \{ forceNewWindow: true \}\)/);
+		assert.match(source, /\['worktree', 'create', record\.id, '--json'\]/);
+		assert.match(source, /\['worktree', 'preflight', specId, '--json'\]/);
 		assert.doesNotMatch(source, /frontmatter[\s\S]{0,120}message\.status/);
 	});
 

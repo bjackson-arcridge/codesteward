@@ -1,12 +1,10 @@
 import * as vscode from 'vscode';
 import { renderWebviewHtml } from '../shared/csp.js';
 import { attachMessageRouter, type MessageRouter } from '../shared/messageRouter.js';
-import { type BootstrapProvider, type CandidateSummary, type HostToWebview, type WebviewToHost, isWebviewToHost } from './messages.js';
+import { type CandidateSummary, type HostToWebview, type WebviewToHost, isWebviewToHost } from './messages.js';
 
 export interface CandidatesServices {
 	readonly listCandidates: () => Promise<readonly CandidateSummary[]>;
-	readonly listInstalledProviders: () => Promise<readonly BootstrapProvider[]>;
-	readonly hasAcceptedRecords: () => Promise<boolean>;
 	readonly diagnosticsEnabled?: () => boolean;
 	readonly onCommand: (message: WebviewToHost) => void | Promise<void>;
 }
@@ -64,10 +62,6 @@ export class CandidatesWebviewProvider implements vscode.WebviewViewProvider {
 		this.post({ kind: 'diagnosticClickCandidate', id, target });
 	}
 
-	selectProviderForDiagnostics(provider: BootstrapProvider): void {
-		this.post({ kind: 'diagnosticSelectProvider', provider });
-	}
-
 	private post(message: HostToWebview): void {
 		for (const router of this.routers) {
 			router.post(message);
@@ -76,17 +70,11 @@ export class CandidatesWebviewProvider implements vscode.WebviewViewProvider {
 	}
 
 	private async buildState(): Promise<HostToWebview> {
-		const [candidates, installedProviders, hasAcceptedRecords] = await Promise.all([
-			this.services.listCandidates(),
-			this.services.listInstalledProviders(),
-			this.services.hasAcceptedRecords(),
-		]);
+		const candidates = await this.services.listCandidates();
 		const diagnosticsEnabled = this.services.diagnosticsEnabled?.() === true;
 		return {
 			kind: 'state',
 			candidates,
-			installedProviders,
-			hasAcceptedRecords,
 			...(diagnosticsEnabled ? { diagnosticsEnabled } : {}),
 		};
 	}

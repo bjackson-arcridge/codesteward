@@ -4,7 +4,6 @@ import { tokenStyles } from '../shared/styles.js';
 import { connectRefreshTriggers } from '../shared/host.js';
 import { assertNever } from '../shared/guards.js';
 import {
-	type BootstrapProvider,
 	type CandidateSummary,
 	type SimpleCandidateCommandKind,
 	type HostToWebview,
@@ -14,7 +13,6 @@ import {
 import '../shared/components/cs-card.js';
 import '../shared/components/cs-icon-button.js';
 import '../shared/components/cs-badge.js';
-import '../shared/components/cs-button.js';
 import '../shared/components/cs-icon.js';
 
 type CandidatePromptKind = 'reject';
@@ -48,52 +46,6 @@ export class CandidatesApp extends LitElement {
 			.empty-message {
 				min-width: 0;
 				overflow-wrap: anywhere;
-			}
-
-			.empty-action {
-				justify-self: end;
-			}
-
-			.provider-selector {
-				grid-column: 1 / -1;
-				display: flex;
-				flex-wrap: wrap;
-				align-items: center;
-				gap: 4px 10px;
-				margin: 0;
-				padding: 5px 8px;
-				border: 1px solid var(--cs-card-border);
-				border-radius: 2px;
-				background: var(--cs-card-bg);
-			}
-
-			.provider-selector legend {
-				padding: 0 4px;
-				font-size: calc(var(--vscode-font-size) - 1px);
-				color: var(--cs-fg-muted);
-			}
-
-			.provider-selector label {
-				display: flex;
-				align-items: center;
-				gap: 6px;
-				cursor: pointer;
-				color: var(--cs-fg);
-			}
-
-			.provider-selector input[type='radio'] {
-				accent-color: var(--cs-button-bg);
-				cursor: pointer;
-			}
-
-			@media (max-width: 240px) {
-				.empty {
-					grid-template-columns: minmax(0, 1fr);
-				}
-
-				.empty-action {
-					justify-self: start;
-				}
 			}
 
 			.id {
@@ -185,9 +137,6 @@ export class CandidatesApp extends LitElement {
 	private stopRefreshTriggers?: () => void;
 	private promptReturnTarget?: HTMLElement;
 	@state() private candidates: readonly CandidateSummary[] = [];
-	@state() private installedProviders: readonly BootstrapProvider[] = [];
-	@state() private hasAcceptedRecords = false;
-	@state() private selectedProvider?: BootstrapProvider;
 	@state() private diagnosticsEnabled = false;
 	@state() private activePrompt?: CandidatePrompt;
 
@@ -208,16 +157,12 @@ export class CandidatesApp extends LitElement {
 			return;
 		}
 
-		const provider = this.effectiveProvider();
 		this.send({
 			kind: 'rendered',
 			diagnostic: {
 				candidateCount: this.candidates.length,
 				cardCount: this.renderRoot.querySelectorAll('cs-card').length,
 				emptyVisible: this.renderRoot.querySelector('.empty') !== null,
-				bootstrapAction: this.bootstrapAction(),
-				...(provider === undefined ? {} : { bootstrapProvider: provider }),
-				providerSelectorVisible: this.installedProviders.length >= 2,
 			},
 		});
 	}
@@ -231,77 +176,12 @@ export class CandidatesApp extends LitElement {
 	}
 
 	private renderEmpty() {
-		const action = this.bootstrapAction();
-		const label = action === 'audit' ? 'Audit decisions' : 'Bootstrap decisions';
-		const emptyMessage = 'No active candidates.';
-		const providerSelector = this.installedProviders.length >= 2 ? this.renderProviderSelector() : nothing;
-		const buttonDisabled = this.installedProviders.length === 0;
-		const buttonTooltip = buttonDisabled
-			? 'Initialize a Claude Code or Codex harness before running bootstrap.'
-			: '';
 		return html`
 			<div class="empty">
-				<div class="empty-message">${emptyMessage}</div>
-				<cs-button
-					class="empty-action"
-					?disabled=${buttonDisabled}
-					title=${buttonTooltip}
-					@click=${this.dispatchBootstrap}
-				>${label}</cs-button>
-				${providerSelector}
+				<div class="empty-message">No active candidates.</div>
 			</div>
 		`;
 	}
-
-	private renderProviderSelector() {
-		const provider = this.effectiveProvider();
-		return html`
-			<fieldset class="provider-selector" role="radiogroup" aria-label="Bootstrap provider">
-				<legend>Run with</legend>
-				${this.installedProviders.map(option => html`
-					<label>
-						<input
-							type="radio"
-							name="bootstrap-provider"
-							value=${option}
-							.checked=${provider === option}
-							@change=${() => this.selectProvider(option)}
-						/>
-						${option === 'claude' ? 'Claude Code' : 'Codex'}
-					</label>
-				`)}
-			</fieldset>
-		`;
-	}
-
-	private bootstrapAction(): 'bootstrap' | 'audit' {
-		return this.hasAcceptedRecords ? 'audit' : 'bootstrap';
-	}
-
-	private effectiveProvider(): BootstrapProvider | undefined {
-		if (this.installedProviders.length === 0) {
-			return undefined;
-		}
-
-		if (this.selectedProvider !== undefined && this.installedProviders.includes(this.selectedProvider)) {
-			return this.selectedProvider;
-		}
-
-		return this.installedProviders[0];
-	}
-
-	private selectProvider(provider: BootstrapProvider): void {
-		this.selectedProvider = provider;
-	}
-
-	private dispatchBootstrap = (): void => {
-		const provider = this.effectiveProvider();
-		if (provider === undefined) {
-			return;
-		}
-
-		this.send({ kind: 'bootstrap', provider });
-	};
 
 	private renderCandidate(candidate: CandidateSummary) {
 		const activePrompt = this.activePrompt?.candidateId === candidate.id ? this.activePrompt : undefined;
@@ -461,13 +341,7 @@ export class CandidatesApp extends LitElement {
 		switch (message.kind) {
 			case 'state':
 				this.candidates = message.candidates;
-				this.installedProviders = message.installedProviders;
-				this.hasAcceptedRecords = message.hasAcceptedRecords;
 				this.diagnosticsEnabled = message.diagnosticsEnabled === true;
-				if (this.selectedProvider !== undefined && !message.installedProviders.includes(this.selectedProvider)) {
-					this.selectedProvider = undefined;
-				}
-
 				if (this.activePrompt !== undefined && !message.candidates.some(candidate => candidate.id === this.activePrompt?.candidateId)) {
 					this.activePrompt = undefined;
 					this.promptReturnTarget = undefined;
@@ -476,11 +350,6 @@ export class CandidatesApp extends LitElement {
 			case 'diagnosticClickCandidate':
 				if (this.diagnosticsEnabled) {
 					this.clickCandidate(message.id, message.target);
-				}
-				return;
-			case 'diagnosticSelectProvider':
-				if (this.diagnosticsEnabled) {
-					this.selectProvider(message.provider);
 				}
 				return;
 			default:

@@ -19,8 +19,4 @@ export const scenarios = [
 		label: 'init-from-welcome',
 		description: 'Welcome webview drives the agent-selection init flow on an uninitialized workspace.',
 	},
-	{
-		label: 'bootstrap-selector',
-		description: 'Candidates empty-state surfaces the audit/bootstrap action and provider selector based on installed harnesses.',
-	},
 ];

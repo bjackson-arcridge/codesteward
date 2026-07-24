@@ -1,15 +1,16 @@
 import { isSpecSessionPhase, type SpecSessionPhase } from '../../specSessions';
+import type { SpecWorktreeState } from '../../specWorktrees';
 
 export interface SpecCard {
 	readonly id: string;
 	readonly title: string;
 	readonly status: string;
 	readonly workspace?: string;
-	readonly worktreeSpawnDisabled?: boolean;
-	readonly activeWorktree?: boolean;
+	readonly worktree: SpecWorktreeState;
 }
 
-export type SpecCardActionTarget = 'open' | 'worktree' | 'archive' | 'delete' | SpecSessionPhase;
+export type SpecWorktreeAction = 'createWorktree' | 'openWorktree' | 'returnPrimary' | 'finishWorktree' | 'showWorktreeError';
+export type SpecCardActionTarget = 'open' | SpecWorktreeAction | 'archive' | 'delete' | SpecSessionPhase;
 
 export interface SpecsRenderDiagnostic {
 	readonly laneCount: number;
@@ -34,7 +35,7 @@ export type HostToWebview =
 
 export type WebviewToHost =
 	| { kind: 'open'; id: string; workspace?: string }
-	| { kind: 'spawnWorktree'; id: string; workspace?: string }
+	| { kind: 'worktreeAction'; action: SpecWorktreeAction; id: string; workspace?: string }
 	| { kind: 'create'; title: string; status: string; workspace?: string }
 	| { kind: 'move'; id: string; status: string; workspace?: string }
 	| { kind: 'delete'; id: string; workspace?: string }
@@ -59,6 +60,7 @@ export function isHostToWebview(value: unknown): value is HostToWebview {
 		workspace?: unknown;
 		target?: unknown;
 		phase?: unknown;
+		action?: unknown;
 	};
 
 	if (message.kind === 'state') {
@@ -108,10 +110,17 @@ export function isWebviewToHost(value: unknown): value is WebviewToHost {
 		workspace?: unknown;
 		diagnostic?: unknown;
 		phase?: unknown;
+		action?: unknown;
 	};
 
-	if (message.kind === 'open' || message.kind === 'spawnWorktree' || message.kind === 'delete') {
+	if (message.kind === 'open' || message.kind === 'delete') {
 		return typeof message.id === 'string'
+			&& (message.workspace === undefined || typeof message.workspace === 'string');
+	}
+
+	if (message.kind === 'worktreeAction') {
+		return typeof message.id === 'string'
+			&& isSpecWorktreeAction(message.action)
 			&& (message.workspace === undefined || typeof message.workspace === 'string');
 	}
 
@@ -150,15 +159,13 @@ function isSpecCard(value: unknown): value is SpecCard {
 		title?: unknown;
 		status?: unknown;
 		workspace?: unknown;
-		worktreeSpawnDisabled?: unknown;
-		activeWorktree?: unknown;
+		worktree?: unknown;
 	};
 	return typeof spec.id === 'string'
 		&& typeof spec.title === 'string'
 		&& typeof spec.status === 'string'
 		&& (spec.workspace === undefined || typeof spec.workspace === 'string')
-		&& (spec.worktreeSpawnDisabled === undefined || typeof spec.worktreeSpawnDisabled === 'boolean')
-		&& (spec.activeWorktree === undefined || typeof spec.activeWorktree === 'boolean');
+		&& isSpecWorktreeState(spec.worktree);
 }
 
 function isSpecsRenderDiagnostic(value: unknown): value is SpecsRenderDiagnostic {
@@ -182,10 +189,36 @@ function isSpecsRenderDiagnostic(value: unknown): value is SpecsRenderDiagnostic
 
 function isSpecCardActionTarget(value: unknown): value is SpecCardActionTarget {
 	return value === 'open'
-		|| value === 'worktree'
+		|| isSpecWorktreeAction(value)
 		|| value === 'archive'
 		|| value === 'delete'
 		|| isSpecSessionPhase(value);
+}
+
+function isSpecWorktreeAction(value: unknown): value is SpecWorktreeAction {
+	return value === 'createWorktree' || value === 'openWorktree' || value === 'returnPrimary'
+		|| value === 'finishWorktree' || value === 'showWorktreeError';
+}
+
+function isSpecWorktreeState(value: unknown): value is SpecWorktreeState {
+	if (typeof value !== 'object' || value === null) {
+		return false;
+	}
+	const state = value as Record<string, unknown>;
+	if (state.kind === 'none') {
+		return true;
+	}
+	if (state.kind === 'error') {
+		return typeof state.message === 'string';
+	}
+	if (state.kind !== 'associatedElsewhere' && state.kind !== 'associatedActive') {
+		return false;
+	}
+	return typeof state.worktreePath === 'string'
+		&& typeof state.primaryPath === 'string'
+		&& typeof state.branch === 'string'
+		&& (state.rebaseInProgress === undefined || typeof state.rebaseInProgress === 'boolean')
+		&& (state.kind !== 'associatedElsewhere' || typeof state.canFinish === 'boolean');
 }
 
 function isStringArray(value: unknown): value is readonly string[] {

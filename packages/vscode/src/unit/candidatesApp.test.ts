@@ -19,4 +19,11 @@ describe('Candidates app card actions', () => {
 		assert.doesNotMatch(source, /data-candidate-target="preview"/);
 		assert.doesNotMatch(source, /label="View rendered markdown"/);
 	});
+
+	test('does not render the removed bootstrap action', () => {
+		const source = readCandidatesAppSource();
+
+		assert.doesNotMatch(source, /bootstrap/i);
+		assert.doesNotMatch(source, /provider-selector/);
+	});
 });

@@ -1,354 +1,229 @@
-import { execFile } from 'node:child_process';
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
-
-export interface GitCommandResult {
-	readonly stdout: string;
-	readonly stderr: string;
-}
-
-export type GitRunner = (cwd: string, args: readonly string[]) => Promise<GitCommandResult>;
-export type BranchPrompt = (defaultBranch: string) => Promise<string | undefined>;
-export type ExistingWorktreePrompt = (worktreePath: string, branch: string) => Promise<boolean>;
-export type OpenFolderRunner = (worktreePath: string) => Promise<void>;
-export type ProgressRunner = <T>(title: string, task: () => Promise<T>) => Promise<T>;
-export type PathExists = (targetPath: string) => Promise<boolean>;
-
-export interface SpawnSpecWorktreeOptions {
-	readonly workspaceRoot: string;
-	readonly specPath: string;
-	readonly promptBranchName: BranchPrompt;
-	readonly confirmOpenExistingWorktree: ExistingWorktreePrompt;
-	readonly openFolder: OpenFolderRunner;
-	readonly git?: GitRunner;
-	readonly pathExists?: PathExists;
-	readonly withProgress?: ProgressRunner;
-}
-
-export type SpawnSpecWorktreeResult =
+export type SpecWorktreeState =
+	| { readonly kind: 'none' }
 	| {
-		readonly kind: 'created';
-		readonly branch: string;
+		readonly kind: 'associatedElsewhere';
 		readonly worktreePath: string;
-	}
-	| {
-		readonly kind: 'openedExisting';
+		readonly primaryPath: string;
 		readonly branch: string;
+		readonly rebaseInProgress?: boolean;
+		readonly canFinish: boolean;
+	}
+	| {
+		readonly kind: 'associatedActive';
 		readonly worktreePath: string;
+		readonly primaryPath: string;
+		readonly branch: string;
+		readonly rebaseInProgress?: boolean;
 	}
-	| {
-		readonly kind: 'cancelled';
-		readonly reason: 'branchPrompt' | 'existingWorktreeDeclined';
-	}
-	| {
-		readonly kind: 'failed';
-		readonly message: string;
-	};
+	| { readonly kind: 'error'; readonly message: string };
 
-export interface GitWorktreeEntry {
-	readonly worktreePath: string;
-	readonly branch?: string;
-}
-
-export interface GitWorktreeContext {
-	readonly linked: boolean;
-	readonly specPrefix?: string;
-}
-
-export const defaultGitRunner: GitRunner = (cwd, args) => {
-	return new Promise((resolve, reject) => {
-		execFile('git', [...args], { cwd }, (error, stdout, stderr) => {
-			if (error !== null) {
-				reject(error);
-				return;
-			}
-
-			resolve({
-				stdout: stringifyOutput(stdout),
-				stderr: stringifyOutput(stderr),
-			});
-		});
-	});
-};
-
-export async function gitWorktreeContext(
-	workspaceRoot: string,
-	git: GitRunner = defaultGitRunner,
-): Promise<GitWorktreeContext> {
-	try {
-		const [gitDirResult, commonDirResult, topLevelResult] = await Promise.all([
-			git(workspaceRoot, ['rev-parse', '--git-dir']),
-			git(workspaceRoot, ['rev-parse', '--git-common-dir']),
-			git(workspaceRoot, ['rev-parse', '--show-toplevel']),
-		]);
-		const gitDir = resolveGitPath(workspaceRoot, firstLine(gitDirResult.stdout));
-		const commonDir = resolveGitPath(workspaceRoot, firstLine(commonDirResult.stdout));
-		const linked = gitDir.length > 0 && commonDir.length > 0 && gitDir !== commonDir;
-		if (!linked) {
-			return { linked: false };
-		}
-
-		return {
-			linked,
-			...optionalSpecPrefix(firstLine(topLevelResult.stdout)),
+export interface WorktreeTopology {
+	readonly version: 1;
+	readonly kind: 'topology';
+	readonly primaryPath: string;
+	readonly activePath: string;
+	readonly activeIsPrimary: boolean;
+	readonly specs: readonly {
+		readonly id: string;
+		readonly state: Exclude<SpecWorktreeState, { readonly kind: 'associatedElsewhere' }> | {
+			readonly kind: 'associatedElsewhere';
+			readonly worktreePath: string;
+			readonly primaryPath: string;
+			readonly branch: string;
+			readonly rebaseInProgress?: boolean;
 		};
+	}[];
+}
+
+export interface WorktreeCreated {
+	readonly version: 1;
+	readonly kind: 'created';
+	readonly specId: string;
+	readonly primaryPath: string;
+	readonly worktreePath: string;
+	readonly branch: string;
+}
+
+export interface WorktreeReady {
+	readonly version: 1;
+	readonly kind: 'ready';
+	readonly specId: string;
+	readonly primaryPath: string;
+	readonly worktreePath: string;
+	readonly primaryBranch: string;
+	readonly featureBranch: string;
+	readonly primaryHead: string;
+	readonly worktreeHead: string;
+	readonly needsPrimaryCommitMessage: boolean;
+	readonly needsWorktreeCommitMessage: boolean;
+	readonly suggestedWorktreeCommitMessage?: string;
+}
+
+export interface WorktreeConflicts {
+	readonly version: 1;
+	readonly kind: 'conflicts';
+	readonly specId: string;
+	readonly primaryPath: string;
+	readonly worktreePath: string;
+	readonly primaryBranch: string;
+	readonly featureBranch: string;
+	readonly conflictPaths: readonly string[];
+}
+
+export interface WorktreeCompleted {
+	readonly version: 1;
+	readonly kind: 'completed';
+	readonly specId: string;
+	readonly primaryPath: string;
+	readonly removedWorktreePath: string;
+	readonly branch: string;
+	readonly head: string;
+}
+
+export interface WorktreeProblem {
+	readonly version: 1;
+	readonly kind: 'blocked' | 'stale' | 'failed';
+	readonly specId: string;
+	readonly message: string;
+}
+
+export type WorktreePreflight = WorktreeReady | WorktreeConflicts | WorktreeProblem;
+export type WorktreeFinish = WorktreeCompleted | WorktreeConflicts | WorktreeProblem;
+
+export function parseWorktreeTopology(output: string): WorktreeTopology {
+	const value = parseJson(output);
+	if (!isWorktreeTopology(value)) {
+		throw new Error('Sundial returned an unsupported worktree topology result.');
+	}
+	return value;
+}
+
+export function parseWorktreeCreated(output: string): WorktreeCreated {
+	const value = parseJson(output);
+	if (!isWorktreeCreated(value)) {
+		throw new Error('Sundial returned an unsupported worktree creation result.');
+	}
+	return value;
+}
+
+export function parseWorktreePreflight(output: string): WorktreePreflight {
+	const value = parseJson(output);
+	if (!isWorktreeReady(value) && !isWorktreeConflicts(value) && !isWorktreeProblem(value, ['blocked'])) {
+		throw new Error('Sundial returned an unsupported worktree preflight result.');
+	}
+	return value;
+}
+
+export function parseWorktreeFinish(output: string): WorktreeFinish {
+	const value = parseJson(output);
+	if (!isWorktreeCompleted(value) && !isWorktreeConflicts(value)
+		&& !isWorktreeProblem(value, ['blocked', 'stale', 'failed'])) {
+		throw new Error('Sundial returned an unsupported worktree finish result.');
+	}
+	return value;
+}
+
+export function cardWorktreeStates(topology: WorktreeTopology): ReadonlyMap<string, SpecWorktreeState> {
+	return new Map(topology.specs.map(spec => [
+		spec.id,
+		spec.state.kind === 'associatedElsewhere'
+			? { ...spec.state, canFinish: topology.activeIsPrimary }
+			: spec.state,
+	]));
+}
+
+export function formatRebaseRecoveryPrompt(result: WorktreeConflicts): string {
+	const conflictList = result.conflictPaths.slice(0, 100).map(item => `- ${item}`).join('\n') || '- Inspect git status for conflicts.';
+	return [
+		`Resolve the in-progress Git rebase for Sundial spec ${result.specId}.`,
+		`Work only inside this managed worktree: ${result.worktreePath}`,
+		`The feature branch is ${result.featureBranch}; it is being rebased onto ${result.primaryBranch}.`,
+		'',
+		'First run `git status`. Resolve every current conflict without changing files outside this worktree, stage each resolution, then run `git rebase --continue`. Repeat until Git reports that the rebase is complete. Do not merge branches, remove the worktree, abort the rebase, or use force/reset commands. Leave final merge and cleanup to Sundial.',
+		'',
+		'Current conflicted paths:',
+		conflictList,
+	].join('\n').slice(0, 16_384);
+}
+
+function parseJson(output: string): unknown {
+	try {
+		return JSON.parse(output);
 	} catch {
-		return { linked: false };
+		throw new Error('Sundial returned invalid JSON for a worktree command.');
 	}
 }
 
-export async function isLinkedGitWorktree(
-	workspaceRoot: string,
-	git: GitRunner = defaultGitRunner,
-): Promise<boolean> {
-	return (await gitWorktreeContext(workspaceRoot, git)).linked;
-}
-
-export async function spawnSpecWorktree(options: SpawnSpecWorktreeOptions): Promise<SpawnSpecWorktreeResult> {
-	const git = options.git ?? defaultGitRunner;
-	const pathExists = options.pathExists ?? defaultPathExists;
-	const withProgress = options.withProgress ?? runWithoutProgress;
-	const specName = specFileBasename(options.specPath);
-
-	if (await isLinkedGitWorktree(options.workspaceRoot, git)) {
-		return failed('Cannot spawn a worktree from a workspace that is already a Git worktree.');
-	}
-
-	let gitRoot: string;
-	try {
-		gitRoot = firstLine((await git(options.workspaceRoot, ['rev-parse', '--show-toplevel'])).stdout);
-	} catch {
-		return failed(`No Git repository found for ${options.workspaceRoot}.`);
-	}
-
-	if (gitRoot.length === 0) {
-		return failed(`No Git repository found for ${options.workspaceRoot}.`);
-	}
-
-	const branchInput = await options.promptBranchName(defaultBranchName(specName));
-	if (branchInput === undefined) {
-		return { kind: 'cancelled', reason: 'branchPrompt' };
-	}
-
-	const branch = branchInput.trim();
-	if (branch.length === 0) {
-		return failed('Branch name is required.');
-	}
-
-	try {
-		await git(gitRoot, ['check-ref-format', '--branch', branch]);
-	} catch {
-		return failed(`Invalid branch name "${branch}".`);
-	}
-
-	let worktrees: readonly GitWorktreeEntry[];
-	try {
-		worktrees = parseWorktreeListPorcelain((await git(gitRoot, ['worktree', 'list', '--porcelain'])).stdout);
-	} catch (error) {
-		return failed(`Could not inspect Git worktrees: ${errorDetails(error)}`);
-	}
-
-	const existing = findWorktreeForBranch(worktrees, branch);
-	if (existing !== undefined) {
-		try {
-			if (await options.confirmOpenExistingWorktree(existing.worktreePath, branch)) {
-				await options.openFolder(existing.worktreePath);
-				return { kind: 'openedExisting', branch, worktreePath: existing.worktreePath };
-			}
-		} catch (error) {
-			return failed(`Could not open existing worktree: ${errorDetails(error)}`);
-		}
-
-		return { kind: 'cancelled', reason: 'existingWorktreeDeclined' };
-	}
-
-	const worktreePath = defaultWorktreePath(gitRoot, specName);
-	const pathError = validateWorktreePath(worktreePath, gitRoot, options.workspaceRoot);
-	if (pathError !== undefined) {
-		return failed(pathError);
-	}
-
-	if (await pathExists(worktreePath)) {
-		return failed(`Worktree path already exists: ${worktreePath}`);
-	}
-
-	const branchExists = await localBranchExists(git, gitRoot, branch);
-	const addArgs = branchExists
-		? ['worktree', 'add', worktreePath, branch]
-		: ['worktree', 'add', '-b', branch, worktreePath, 'HEAD'];
-
-	try {
-		await withProgress(`Creating worktree ${branch}`, () => git(gitRoot, addArgs));
-	} catch (error) {
-		return failed(`Git failed to create worktree: ${errorDetails(error)}`);
-	}
-
-	try {
-		await options.openFolder(worktreePath);
-	} catch (error) {
-		return failed(`Created worktree at ${worktreePath}, but VS Code could not open it: ${errorDetails(error)}`);
-	}
-
-	return { kind: 'created', branch, worktreePath };
-}
-
-export function specFileBasename(specPath: string): string {
-	const basename = path.basename(specPath);
-	return basename.toLowerCase().endsWith('.md') ? basename.slice(0, -3) : basename;
-}
-
-export function defaultBranchName(specName: string): string {
-	return specName;
-}
-
-export function defaultWorktreePath(gitRoot: string, specName: string): string {
-	return path.join(path.dirname(gitRoot), specName);
-}
-
-export function specPrefixFromWorktreePath(worktreePath: string): string | undefined {
-	const match = /^(SPEC-\d{4})(?:\b|[-_])/i.exec(path.basename(worktreePath));
-	return match?.[1].toUpperCase();
-}
-
-export function parseWorktreeListPorcelain(output: string): readonly GitWorktreeEntry[] {
-	const entries: GitWorktreeEntry[] = [];
-	let current: { worktreePath: string; branch?: string } | undefined;
-
-	const pushCurrent = (): void => {
-		if (current !== undefined) {
-			entries.push(current);
-			current = undefined;
-		}
-	};
-
-	for (const line of output.split(/\r?\n/)) {
-		if (line.length === 0) {
-			pushCurrent();
-			continue;
-		}
-
-		if (line.startsWith('worktree ')) {
-			pushCurrent();
-			current = { worktreePath: line.slice('worktree '.length) };
-			continue;
-		}
-
-		if (line.startsWith('branch ') && current !== undefined) {
-			current.branch = normalizeLocalBranchRef(line.slice('branch '.length));
-		}
-	}
-
-	pushCurrent();
-	return entries;
-}
-
-export function findWorktreeForBranch(
-	worktrees: readonly GitWorktreeEntry[],
-	branch: string,
-): GitWorktreeEntry | undefined {
-	return worktrees.find(worktree => worktree.branch === branch);
-}
-
-export function validateWorktreePath(
-	worktreePath: string,
-	gitRoot: string,
-	workspaceRoot: string,
-): string | undefined {
-	const resolvedWorktreePath = path.resolve(worktreePath);
-	const gitDir = path.join(path.resolve(gitRoot), '.git');
-	if (isSameOrInside(resolvedWorktreePath, gitDir)) {
-		return `Refusing to create a worktree inside .git: ${worktreePath}`;
-	}
-
-	const sundialDir = path.join(path.resolve(workspaceRoot), 'sundial');
-	if (isSameOrInside(resolvedWorktreePath, sundialDir)) {
-		return `Refusing to create a worktree inside sundial/: ${worktreePath}`;
-	}
-
-	return undefined;
-}
-
-async function localBranchExists(git: GitRunner, gitRoot: string, branch: string): Promise<boolean> {
-	try {
-		await git(gitRoot, ['show-ref', '--verify', '--quiet', `refs/heads/${branch}`]);
-		return true;
-	} catch {
+function isWorktreeTopology(value: unknown): value is WorktreeTopology {
+	if (!isObject(value) || value.version !== 1 || value.kind !== 'topology'
+		|| typeof value.primaryPath !== 'string' || typeof value.activePath !== 'string'
+		|| typeof value.activeIsPrimary !== 'boolean' || !Array.isArray(value.specs)) {
 		return false;
 	}
+	return value.specs.every(spec => isObject(spec)
+		&& typeof spec.id === 'string'
+		&& isSpecWorktreeState(spec.state, false));
 }
 
-async function defaultPathExists(targetPath: string): Promise<boolean> {
-	try {
-		await fs.access(targetPath);
+function isSpecWorktreeState(value: unknown, requireFinish: boolean): value is SpecWorktreeState {
+	if (!isObject(value) || typeof value.kind !== 'string') {
+		return false;
+	}
+	if (value.kind === 'none') {
 		return true;
-	} catch (error) {
-		if (isNodeError(error) && error.code === 'ENOENT') {
-			return false;
-		}
-
-		throw error;
 	}
-}
-
-const runWithoutProgress: ProgressRunner = async (_title, task) => task();
-
-function failed(message: string): SpawnSpecWorktreeResult {
-	return { kind: 'failed', message };
-}
-
-function firstLine(output: string): string {
-	return output.split(/\r?\n/, 1)[0].trim();
-}
-
-function normalizeLocalBranchRef(ref: string): string {
-	const prefix = 'refs/heads/';
-	return ref.startsWith(prefix) ? ref.slice(prefix.length) : ref;
-}
-
-function optionalSpecPrefix(worktreePath: string): Pick<GitWorktreeContext, 'specPrefix'> {
-	const specPrefix = specPrefixFromWorktreePath(worktreePath);
-	return specPrefix === undefined ? {} : { specPrefix };
-}
-
-function resolveGitPath(cwd: string, gitPath: string): string {
-	if (gitPath.length === 0) {
-		return '';
+	if (value.kind === 'error') {
+		return typeof value.message === 'string';
 	}
-
-	return path.resolve(cwd, gitPath);
-}
-
-function isSameOrInside(targetPath: string, parentPath: string): boolean {
-	const relative = path.relative(parentPath, targetPath);
-	return relative === '' || (relative.length > 0 && !relative.startsWith('..') && !path.isAbsolute(relative));
-}
-
-function errorDetails(error: unknown): string {
-	if (error instanceof Error) {
-		const output = [
-			stringifyErrorOutput(error, 'stderr'),
-			stringifyErrorOutput(error, 'stdout'),
-			error.message,
-		].filter(value => value.length > 0);
-		return output.join('\n');
+	if (value.kind !== 'associatedElsewhere' && value.kind !== 'associatedActive') {
+		return false;
 	}
-
-	return String(error);
+	return typeof value.worktreePath === 'string'
+		&& typeof value.primaryPath === 'string'
+		&& typeof value.branch === 'string'
+		&& (value.rebaseInProgress === undefined || typeof value.rebaseInProgress === 'boolean')
+		&& (!requireFinish || value.kind !== 'associatedElsewhere' || typeof value.canFinish === 'boolean');
 }
 
-function stringifyErrorOutput(error: Error, key: 'stdout' | 'stderr'): string {
-	const value = (error as Error & Partial<Record<'stdout' | 'stderr', string | Buffer>>)[key];
-	return stringifyOutput(value).trim();
+function isWorktreeCreated(value: unknown): value is WorktreeCreated {
+	return isObject(value) && value.version === 1 && value.kind === 'created'
+		&& typeof value.specId === 'string' && typeof value.primaryPath === 'string'
+		&& typeof value.worktreePath === 'string' && typeof value.branch === 'string';
 }
 
-function stringifyOutput(output: string | Buffer | undefined): string {
-	if (output === undefined) {
-		return '';
-	}
-
-	return Buffer.isBuffer(output) ? output.toString('utf8') : output;
+function isWorktreeReady(value: unknown): value is WorktreeReady {
+	return isObject(value) && value.version === 1 && value.kind === 'ready'
+		&& typeof value.specId === 'string' && typeof value.primaryPath === 'string'
+		&& typeof value.worktreePath === 'string' && typeof value.primaryBranch === 'string'
+		&& typeof value.featureBranch === 'string' && typeof value.primaryHead === 'string'
+		&& typeof value.worktreeHead === 'string' && typeof value.needsPrimaryCommitMessage === 'boolean'
+		&& typeof value.needsWorktreeCommitMessage === 'boolean'
+		&& (value.suggestedWorktreeCommitMessage === undefined || typeof value.suggestedWorktreeCommitMessage === 'string');
 }
 
-function isNodeError(error: unknown): error is NodeJS.ErrnoException {
-	return error instanceof Error && 'code' in error;
+function isWorktreeConflicts(value: unknown): value is WorktreeConflicts {
+	return isObject(value) && value.version === 1 && value.kind === 'conflicts'
+		&& typeof value.specId === 'string' && typeof value.primaryPath === 'string'
+		&& typeof value.worktreePath === 'string' && typeof value.primaryBranch === 'string'
+		&& typeof value.featureBranch === 'string' && isStringArray(value.conflictPaths);
+}
+
+function isWorktreeCompleted(value: unknown): value is WorktreeCompleted {
+	return isObject(value) && value.version === 1 && value.kind === 'completed'
+		&& typeof value.specId === 'string' && typeof value.primaryPath === 'string'
+		&& typeof value.removedWorktreePath === 'string' && typeof value.branch === 'string'
+		&& typeof value.head === 'string';
+}
+
+function isWorktreeProblem(value: unknown, kinds: readonly string[]): value is WorktreeProblem {
+	return isObject(value) && value.version === 1 && typeof value.kind === 'string'
+		&& kinds.includes(value.kind) && typeof value.specId === 'string' && typeof value.message === 'string';
+}
+
+function isStringArray(value: unknown): value is readonly string[] {
+	return Array.isArray(value) && value.every(item => typeof item === 'string');
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null;
 }

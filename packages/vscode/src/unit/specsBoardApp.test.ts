@@ -44,15 +44,18 @@ describe('Specs board add form', () => {
 	test('archives cards through the typed move command and keeps delete separate', () => {
 		const source = readSpecsBoardAppSource();
 
-		assert.match(source, /icon="repo-forked"/);
-		assert.match(source, /Spawn worktree unavailable from a worktree/);
-		assert.match(source, /\?disabled=\$\{spawnWorktreeDisabled\}/);
-		assert.match(source, /data-spec-target="worktree"/);
-		assert.match(source, /kind: 'spawnWorktree'/);
+		assert.match(source, /label: 'Create worktree'/);
+		assert.match(source, /label: 'Open worktree'/);
+		assert.match(source, /label: 'Return to primary worktree'/);
+		assert.match(source, /label: 'Finish worktree'/);
+		assert.match(source, /label: 'Show worktree error'/);
+		assert.match(source, /data-worktree-action=\$\{item\.action\}/);
+		assert.match(source, /kind: 'worktreeAction'/);
 		assert.match(source, /worktreeActionCount/);
-		assert.match(source, /active-worktree=\$\{spec\.activeWorktree === true \? 'true' : 'false'\}/);
-		assert.match(source, /\[Active Worktree\]/);
+		assert.match(source, /worktree-state=\$\{spec\.worktree\.kind\}/);
+		assert.match(source, /Worktree Elsewhere/);
 		assert.match(source, /gitDecoration-addedResourceForeground/);
+		assert.match(source, /gitDecoration-conflictingResourceForeground/);
 		assert.match(source, /icon="archive"/);
 		assert.match(source, /label="Archive spec"/);
 		assert.match(source, /data-spec-target="archive"/);
