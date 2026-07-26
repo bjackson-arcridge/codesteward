@@ -26,7 +26,14 @@ import {
 	listDecisionRecords,
 	ValidationResult,
 } from './core/dr';
-import { readDomainVocabulary, type DomainDefinition } from './core/domains';
+import {
+	addDomain,
+	readDomainsJson,
+	readDomainVocabulary,
+	removeDomain,
+	updateDomain,
+	type DomainDefinition,
+} from './core/domains';
 import {
 	countDecisionRecords,
 	decisionRecordDirectory,
@@ -83,7 +90,7 @@ Commands:
   init        Create or update the project-local sundial store at an explicit root
   update      Update installed files for the discovered or explicit project root
   status      Report store health, counts, and validation state
-  domains     List known domains from sundial/domains.md
+  domains     List, add, update, or remove domains in sundial/domains.md
   dr retrieve Retrieve visible accepted DRs by relevant domains
   dr get      Cat DR markdown files by id
   dr list     List DRs by status
@@ -2182,28 +2189,152 @@ async function runDomains(
 	args: readonly string[],
 	io: Pick<NodeJS.Process, 'stdout' | 'stderr' | 'exitCode'>,
 ): Promise<void> {
-	if (args.length > 0) {
-		write(io.stderr, `Usage: sundial domains\n`);
-		io.exitCode = 64;
+	const invocation = parseDomainsInvocation(args, io);
+	if (invocation === undefined) {
 		return;
 	}
-
 	const paths = await requireStore(options.cwd, io);
 	if (paths === undefined) {
 		return;
 	}
 
-	const vocabulary = await readDomainVocabulary(paths.domains);
-	if (!validateVocabularyForListing(vocabulary.errors, io)) {
-		return;
-	}
+	try {
+		switch (invocation.kind) {
+			case 'list':
+				if (invocation.json) {
+					const result = await readDomainsJson(paths.domains);
+					if (!options.quiet) {
+						write(io.stdout, `${JSON.stringify(result, undefined, 2)}\n`);
+					}
+					return;
+				}
 
-	if (options.quiet) {
-		return;
+				const vocabulary = await readDomainVocabulary(paths.domains);
+				if (!validateVocabularyForListing(vocabulary.errors, io) || options.quiet) {
+					return;
+				}
+				write(io.stdout, 'Domains:\n');
+				renderDomainDefinitions(vocabulary.domains, io);
+				return;
+			case 'add':
+				await addDomain(paths.domains, invocation.name, invocation.description);
+				if (!options.quiet) {
+					write(io.stdout, `Added domain ${invocation.name}.\n`);
+				}
+				return;
+			case 'update': {
+				const updatedVocabulary = await updateDomain(paths.domains, invocation.currentName, invocation);
+				const resultingName = updatedVocabulary.domains.find(
+					domain => domain.name === (invocation.name ?? invocation.currentName),
+				)?.name ?? invocation.name ?? invocation.currentName;
+				if (!options.quiet) {
+					write(io.stdout, `Updated domain ${resultingName}.\n`);
+				}
+				return;
+			}
+			case 'remove':
+				await removeDomain(paths.domains, invocation.name);
+				if (!options.quiet) {
+					write(io.stdout, `Removed domain ${invocation.name}.\n`);
+				}
+				return;
+		}
+	} catch (error) {
+		write(io.stderr, `${error instanceof Error ? error.message : String(error)}\n`);
+		io.exitCode = 1;
 	}
+}
 
-	write(io.stdout, 'Domains:\n');
-	renderDomainDefinitions(vocabulary.domains, io);
+type DomainsInvocation =
+	| { readonly kind: 'list'; readonly json: boolean }
+	| { readonly kind: 'add'; readonly name: string; readonly description: string }
+	| { readonly kind: 'update'; readonly currentName: string; readonly name?: string; readonly description?: string }
+	| { readonly kind: 'remove'; readonly name: string };
+
+function parseDomainsInvocation(
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
+): DomainsInvocation | undefined {
+	if (args.length === 0) {
+		return { kind: 'list', json: false };
+	}
+	if (args.length === 1 && args[0] === '--json') {
+		return { kind: 'list', json: true };
+	}
+	const [subcommand, ...subcommandArgs] = args;
+	if (subcommand === 'add') {
+		const parsed = parseDomainAdd(subcommandArgs, io);
+		return parsed === undefined ? undefined : { kind: 'add', ...parsed };
+	}
+	if (subcommand === 'update') {
+		const parsed = parseDomainUpdate(subcommandArgs, io);
+		return parsed === undefined ? undefined : { kind: 'update', ...parsed };
+	}
+	if (subcommand === 'remove' && subcommandArgs.length === 1) {
+		return { kind: 'remove', name: subcommandArgs[0] };
+	}
+	return domainsUsageError(io);
+}
+
+function parseDomainAdd(
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
+): { readonly name: string; readonly description: string } | undefined {
+	let name: string | undefined;
+	let description: string | undefined;
+	for (let index = 0; index < args.length; index += 1) {
+		const value = args[index + 1];
+		if (args[index] === '--name' && value !== undefined && name === undefined) {
+			name = value;
+			index += 1;
+		} else if (args[index] === '--description' && value !== undefined && description === undefined) {
+			description = value;
+			index += 1;
+		} else {
+			return domainsUsageError(io);
+		}
+	}
+	return name === undefined || description === undefined ? domainsUsageError(io) : { name, description };
+}
+
+function parseDomainUpdate(
+	args: readonly string[],
+	io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>,
+): { readonly currentName: string; readonly name?: string; readonly description?: string } | undefined {
+	const [currentName, ...options] = args;
+	if (currentName === undefined || currentName.startsWith('--')) {
+		return domainsUsageError(io);
+	}
+	let name: string | undefined;
+	let description: string | undefined;
+	for (let index = 0; index < options.length; index += 1) {
+		const value = options[index + 1];
+		if (options[index] === '--name' && value !== undefined && name === undefined) {
+			name = value;
+			index += 1;
+		} else if (options[index] === '--description' && value !== undefined && description === undefined) {
+			description = value;
+			index += 1;
+		} else {
+			return domainsUsageError(io);
+		}
+	}
+	return name === undefined && description === undefined
+		? domainsUsageError(io)
+		: { currentName, ...(name === undefined ? {} : { name }), ...(description === undefined ? {} : { description }) };
+}
+
+function domainsUsageError(io: Pick<NodeJS.Process, 'stderr' | 'exitCode'>): undefined {
+	write(io.stderr, [
+		'Usage:',
+		'  sundial domains [--json]',
+		'  sundial domains add --name <name> --description <description>',
+		'  sundial domains update <current-name> [--name <new-name>] [--description <description>]',
+		'  sundial domains remove <name>',
+		'',
+	].join('\n'));
+	io.exitCode = 64;
+	return undefined;
 }
 
 function validateVocabularyForListing(

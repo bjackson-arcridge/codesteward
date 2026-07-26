@@ -71,6 +71,10 @@ sundial init --root <path> [--folder <relative-path>] [--claude] [--codex]
 sundial update [--root <path>] [--folder <relative-path>] [--claude] [--codex]
 sundial status
 sundial domains
+sundial domains --json
+sundial domains add --name <name> --description <description>
+sundial domains update <current-name> [--name <new-name>] [--description <description>]
+sundial domains remove <name>
 
 sundial dr list [--status accepted]
 sundial dr get DR-0001
@@ -104,7 +108,10 @@ Notes:
 
 - Enabled accepted DRs are the only precedent retrieved by `dr retrieve`.
 - Repeat `--domain` on one `dr retrieve` call to retrieve all relevant domain branches together.
-- Candidate DRs can include a proposed domain with a description; accepting the DR appends that proposal to `sundial/domains.md`.
+- Domain reads are sorted without rewriting the file. CLI-owned adds, updates, removals, and accepted candidate proposals rewrite the domain section in canonical lexical order.
+- Renaming or removing a domain is blocked while Decision Records or research notes reference it. The permanent `all` domain can only have its description updated.
+- `domains --json` returns the versioned domain, exact-reference-count, and filtered-suggestion contract used by editor adapters.
+- Candidate DRs can include a proposed domain with a description; accepting the DR adds that proposal to `sundial/domains.md`.
 - DRs can include a `## Appendix` section for human-facing explanatory context; short and medium retrieval omit it.
 - New specs render the customizable body in `sundial/templates/spec.md`; it can use `{{id}}`, `{{title}}`, `{{status}}`, `{{created}}`, `{{updated}}`, and `{{created_by}}`.
 - Managed spec worktrees use `.sundial-worktrees/<spec-file-basename>` below the primary checkout. Creation and finish are guarded by current topology and Git state; `--json` returns the versioned contract used by the VS Code extension.

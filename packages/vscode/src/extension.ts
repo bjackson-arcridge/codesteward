@@ -23,6 +23,8 @@ import { RecordsWebviewProvider } from './webviews/records/recordsWebviewProvide
 import { CandidatesWebviewProvider } from './webviews/candidates/candidatesWebviewProvider';
 import { SpecsBoardPanel, type SpecsBoardState } from './webviews/specs/specsBoardPanel';
 import { MainSidebarWebviewProvider } from './webviews/main/mainSidebarWebviewProvider';
+import { DomainsWebviewProvider } from './webviews/domains/domainsWebviewProvider';
+import { parseDomainsCliJson, type DomainsRenderDiagnostic } from './webviews/domains/messages';
 import type { SidebarSection } from './webviews/main/messages';
 import type { RecordClickTarget, RecordRenderDiagnostic, RecordSummary, SpecRecordGroup, SpecWorktreeAction } from './webviews/records/messages';
 import type { CandidateRenderDiagnostic, CandidateSummary } from './webviews/candidates/messages';
@@ -98,6 +100,10 @@ interface WelcomeDiagnostics {
 	lastCommand?: WelcomeWebviewToHost;
 }
 
+interface DomainsDiagnostics {
+	lastRendered?: DomainsRenderDiagnostic;
+}
+
 export function activate(context: vscode.ExtensionContext): void {
 	const recordsState: RecordsState = { domainFilter: undefined };
 	const researchState: RecordsState = { domainFilter: undefined };
@@ -109,6 +115,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	const retiredRecordsDiagnostics: RecordsDiagnostics = {};
 	const candidatesDiagnostics: CandidatesDiagnostics = {};
 	const welcomeDiagnostics: WelcomeDiagnostics = {};
+	const domainsDiagnostics: DomainsDiagnostics = {};
 	const diagnosticsEnabled = isIntegrationTest();
 	const diagnosticsChannel = vscode.window.createOutputChannel('Sundial Diagnostics');
 	context.subscriptions.push(diagnosticsChannel);
@@ -165,11 +172,13 @@ export function activate(context: vscode.ExtensionContext): void {
 	});
 
 	let candidatesProvider: CandidatesWebviewProvider;
+	let domainsProvider: DomainsWebviewProvider;
 	let rejectedRecordsProvider: RecordsWebviewProvider;
 	let retiredRecordsProvider: RecordsWebviewProvider;
 	let governanceRefreshTimer: NodeJS.Timeout | undefined;
 	const refreshGovernance = async (): Promise<void> => {
 		await refreshGovernanceViews(welcomeProvider, candidatesProvider, recordsProvider, rejectedRecordsProvider, retiredRecordsProvider, researchProvider, specsProvider);
+		await domainsProvider?.refresh();
 		await specsBoardPanel.refresh();
 	};
 	const scheduleGovernanceRefresh = (): void => {
@@ -496,7 +505,23 @@ export function activate(context: vscode.ExtensionContext): void {
 		},
 	});
 
+	domainsProvider = new DomainsWebviewProvider({
+		listWorkspaces: async () => (await collectWorkspaceStores()).map(store => ({ root: store.root, name: store.name })),
+		load: async root => parseDomainsCliJson(JSON.parse(await runSundial(root, ['domains', '--json'])) as unknown),
+		mutate: async (root, args) => {
+			await runSundial(root, args);
+		},
+		onMutation: refreshGovernance,
+		diagnosticsEnabled: () => diagnosticsEnabled,
+		onRendered: message => {
+			if (diagnosticsEnabled) {
+				domainsDiagnostics.lastRendered = message.diagnostic;
+			}
+		},
+	});
+
 	const mainSidebarProvider = new MainSidebarWebviewProvider(context.extensionUri, context.workspaceState, {
+		domains: domainsProvider,
 		records: recordsProvider,
 		research: researchProvider,
 		specs: specsProvider,
@@ -513,11 +538,16 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(mainSidebarProvider);
 	context.subscriptions.push(specsBoardPanel);
 	const governanceWatcher = vscode.workspace.createFileSystemWatcher('**/sundial/{decisions,research,specs}/**/*.{md,yml,yaml}');
+	const domainsWatcher = vscode.workspace.createFileSystemWatcher('**/sundial/domains.md');
 	context.subscriptions.push(
 		governanceWatcher,
+		domainsWatcher,
 		governanceWatcher.onDidCreate(scheduleGovernanceRefresh),
 		governanceWatcher.onDidChange(scheduleGovernanceRefresh),
 		governanceWatcher.onDidDelete(scheduleGovernanceRefresh),
+		domainsWatcher.onDidCreate(scheduleGovernanceRefresh),
+		domainsWatcher.onDidChange(scheduleGovernanceRefresh),
+		domainsWatcher.onDidDelete(scheduleGovernanceRefresh),
 		{
 			dispose: () => {
 				if (governanceRefreshTimer !== undefined) {
@@ -528,6 +558,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	);
 
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.installCli', () => installCli(welcomeProvider)));
+	context.subscriptions.push(vscode.commands.registerCommand('sundial.domains.focus', () => focusSidebarSection('domains')));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.records.focus', () => focusSidebarSection('records')));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.research.focus', () => focusSidebarSection('research')));
 	context.subscriptions.push(vscode.commands.registerCommand('sundial.specs.focus', () => focusSidebarSection('specs')));
@@ -582,6 +613,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			specsBoardDiagnostics,
 			candidatesDiagnostics,
 			welcomeDiagnostics,
+			domainsDiagnostics,
 			recordsState,
 			researchState,
 		);
@@ -603,6 +635,7 @@ export function activate(context: vscode.ExtensionContext): void {
 				specsBoardDiagnostics,
 				candidatesDiagnostics,
 				welcomeDiagnostics,
+				domainsDiagnostics,
 				recordsState,
 				researchState,
 			),
@@ -678,6 +711,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	}
 	context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
 		void candidatesProvider.refresh();
+		void domainsProvider.refresh();
 		void recordsProvider.refresh();
 		void researchProvider.refresh();
 		void specsProvider.refresh();
@@ -804,6 +838,7 @@ interface ExtensionDiagnostics {
 	readonly candidatesLastRendered?: CandidatesDiagnostics['lastRendered'];
 	readonly welcomeLastRendered?: WelcomeDiagnostics['lastRendered'];
 	readonly welcomeLastCommand?: WelcomeDiagnostics['lastCommand'];
+	readonly domainsLastRendered?: DomainsDiagnostics['lastRendered'];
 	readonly assets: readonly DiagnosticAsset[];
 }
 
@@ -818,6 +853,7 @@ async function buildDiagnostics(
 	specsBoardDiagnostics: SpecsBoardDiagnostics,
 	candidatesDiagnostics: CandidatesDiagnostics,
 	welcomeDiagnostics: WelcomeDiagnostics,
+	domainsDiagnostics: DomainsDiagnostics,
 	recordsState: RecordsState,
 	researchState: RecordsState,
 ): Promise<ExtensionDiagnostics> {
@@ -854,6 +890,7 @@ async function buildDiagnostics(
 		candidatesLastRendered: candidatesDiagnostics.lastRendered,
 		welcomeLastRendered: welcomeDiagnostics.lastRendered,
 		welcomeLastCommand: welcomeDiagnostics.lastCommand,
+		domainsLastRendered: domainsDiagnostics.lastRendered,
 		assets: await Promise.all([
 			'dist/webviews/welcome.js',
 			'dist/webviews/records.js',

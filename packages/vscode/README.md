@@ -10,23 +10,25 @@ AI coding sessions move faster when the agent can see the project rules: archite
 
 ## Features
 
-The Sundial documents bar adds a sidebar with sections capturing the types of sundial documents.
+The Sundial documents bar adds a sidebar with sections for each type of Sundial document.
 
-* **Domains**: Sundial groups decision records and research in a domain (think UI vs Backend) taxonomy; This provides high-level filtering on what documents are put into context for each task.
+- **Domains**: The first sidebar section lists the selected project's sorted vocabulary. Add custom or suggested domains, edit descriptions or unreferenced names, and remove unreferenced domains without leaving VS Code.
 - **Decision Records**: Decision Records are durable reminders to the agent of general decisions and patterns to apply to the project.
-    **Accepted DRs**  Filter by domain, open a rendered preview, edit source Markdown, disable stale guidance, or retire a record.
- .  **Candidates**: review proposed DRs, preview or edit the source, accept candidates into approved records, reject them with a reason, retire them, or dismiss throwaway proposals.
- .  **Rejected and Retired DRs**:
-- **Research**: Captures research on programmatic boundaries or dependency behaviors; make durable so the same research can be applied when implmenting multiple features; or just to record project assumptions.
-- **Specs**: A way to organize agent workstreams; lightweight spec driven development.
- * **Workflow** Specs flow through Backlog, Todo, Active, Done, and Archived states.
- * **Template** Customize `sundial/templates/spec.md` from the Specs sidebar. New specs substitute `{{id}}`, `{{title}}`, `{{status}}`, `{{created}}`, `{{updated}}`, and `{{created_by}}` while Sundial adds workflow frontmatter.
- * **Worktree Management:** Specs are a worktree management and navigation plane: create managed worktrees, open an associated worktree, return to the primary checkout, and automate merging and cleanup.
- * **Specs Board**: Offers a kanban-style view of specs as cards on a board.
-The extension watches `sundial/decisions`, `sundial/research`, and `sundial/specs` so the sidebar refreshes when files change outside VS Code, including changes made by terminal commands or agent runs.
+  - **Accepted DRs**: Filter by domain, open a rendered preview, edit source Markdown, disable stale guidance, or retire a record.
+  - **Candidates**: Review proposed DRs, preview or edit the source, accept candidates into approved records, reject them with a reason, retire them, or dismiss throwaway proposals.
+  - **Rejected and Retired DRs**: Preserve decision history for future reference.
+- **Research**: Captures research on programmatic boundaries or dependency behavior so it can inform multiple features and preserve project assumptions.
+- **Specs**: Organizes agent workstreams through lightweight, spec-driven development.
+  - **Workflow**: Specs flow through Backlog, Todo, Active, Done, and Archived states.
+  - **Template**: Customize `sundial/templates/spec.md` from the Specs sidebar. New specs substitute `{{id}}`, `{{title}}`, `{{status}}`, `{{created}}`, `{{updated}}`, and `{{created_by}}` while Sundial adds workflow frontmatter.
+  - **Worktree Management**: Specs are a worktree-management and navigation plane: create managed worktrees, open an associated worktree, return to the primary checkout, and automate merging and cleanup.
+  - **Specs Board**: Offers a kanban-style view of specs as cards on a board.
+
+The extension watches `sundial/domains.md`, `sundial/decisions`, `sundial/research`, and `sundial/specs` so the sidebar refreshes when files change outside VS Code, including changes made by terminal commands or agent runs.
 
 ## Documentation as Code
-Sundial is built around a project-local store, not a hosted service.  By default projects markdown managed by sundial lives in the `sundial` directory in the repo:
+
+Sundial is built around a project-local store, not a hosted service. By default, project Markdown managed by Sundial lives in the repository's `sundial` directory:
 
 - `sundial/decisions/accepted/` stores approved Decision Records that agents should follow.
 - `sundial/decisions/candidates/` stores proposed decisions waiting for human review.
@@ -46,14 +48,15 @@ Sundial installs skills during project initialization to guide agent harnesses o
 2. Open the Sundial activity bar.
 3. Install the Sundial CLI from the welcome view (if prompted).
 4. Initialize the project and choose Claude Code, Codex, or both.
+5. Open the Domains section, choose a workspace when prompted, and use `+` to review a suggested domain or enter a custom lowercase dot-separated name.
 
 If VS Code cannot find the CLI on `PATH`, set `sundial.cliPath` to the executable you want the extension to use.
 
 ## What is a good set of domains?
 
+Domains serve two purposes. First, the UI can filter artifacts by domain, making domains an organizational tool. Second, agents are prompted to query only the domains relevant to the task at hand.
 
-The point of domains is two-fold. First, the UI has various options to filter artifacts by domain, so you can use them as an oganizational mechanism.  Second, the LLM has been prompted to only query domains that are relevant to the task at hand.
-Domains should clearly partition the project space into seperable concerns (UI, API, Backend,...).  Start with a few high level domains; thus far in experimentation, going more fine-grain does not really help with the filtering problem.
+Domains should partition the project into separable concerns such as `ui`, `api`, and `backend`. Start with a few high-level domains; in practice, overly fine-grained domains do not improve filtering. The sidebar suggests common starting points such as `api`, `cli`, `data`, `docs`, `security`, `testing`, and `ui`. Nested domains such as `ui.accessibility` can represent a focused branch while preserving its parent context.
 
 ## Recommended Extensions
 

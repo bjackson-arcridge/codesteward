@@ -1,6 +1,7 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
 import type { CandidatesApp } from '../candidates/candidates-app.js';
+import type { DomainsApp } from '../domains/domains-app.js';
 import type { RecordsApp } from '../records/records-app.js';
 import { getHost, readInitialState } from '../shared/host.js';
 import { tokenStyles } from '../shared/styles.js';
@@ -15,6 +16,7 @@ import {
 	sidebarSections,
 } from '../../main/messages.js';
 import '../candidates/candidates-app.js';
+import '../domains/domains-app.js';
 import '../records/records-app.js';
 import '../shared/components/cs-icon.js';
 import '../shared/components/cs-menu-item.js';
@@ -23,6 +25,7 @@ import '../shared/components/cs-popover.js';
 import type { CsPopover } from '../shared/components/cs-popover.js';
 
 const sectionLabels: Readonly<Record<SidebarSection, string>> = {
+	domains: 'Domains',
 	records: 'Decision Records',
 	research: 'Research',
 	specs: 'Specs',
@@ -101,7 +104,7 @@ export class MainSidebarApp extends LitElement {
 	];
 
 	private readonly host = getHost<WebviewToHost, PersistedState>();
-	@state() private activeSection: SidebarSection = 'records';
+	@state() private activeSection: SidebarSection = 'domains';
 	@state() private visibleSections: readonly SidebarSection[] = sidebarSections;
 	@state() private sectionStates: Partial<Record<SidebarSection, SectionHostToWebview>> = {};
 	@query('cs-popover') private contextMenu?: CsPopover;
@@ -181,7 +184,9 @@ export class MainSidebarApp extends LitElement {
 						aria-labelledby=${headerId}
 						@cs-section-message=${(event: CustomEvent<SectionWebviewToHost>) => this.forwardSectionMessage(section, event)}
 					>
-						${section === 'candidates'
+						${section === 'domains'
+							? html`<cs-domains-app data-section-app=${section}></cs-domains-app>`
+							: section === 'candidates'
 							? html`<cs-candidates-app data-section-app=${section}></cs-candidates-app>`
 							: html`<cs-records-app data-section-app=${section}></cs-records-app>`}
 					</div>
@@ -229,27 +234,28 @@ export class MainSidebarApp extends LitElement {
 		if (!(current instanceof HTMLElement)) {
 			return;
 		}
-		const currentIndex = sidebarSections.findIndex(section => section === current.dataset.section);
+		const orderedSections = sidebarSections.filter(section => this.visibleSections.includes(section));
+		const currentIndex = orderedSections.findIndex(section => section === current.dataset.section);
 		let nextIndex: number | undefined;
 		switch (event.key) {
 			case 'ArrowDown':
-				nextIndex = (currentIndex + 1) % sidebarSections.length;
+				nextIndex = (currentIndex + 1) % orderedSections.length;
 				break;
 			case 'ArrowUp':
-				nextIndex = (currentIndex - 1 + sidebarSections.length) % sidebarSections.length;
+				nextIndex = (currentIndex - 1 + orderedSections.length) % orderedSections.length;
 				break;
 			case 'Home':
 				nextIndex = 0;
 				break;
 			case 'End':
-				nextIndex = sidebarSections.length - 1;
+				nextIndex = orderedSections.length - 1;
 				break;
 			default:
 				return;
 		}
 
 		event.preventDefault();
-		this.renderRoot.querySelector<HTMLElement>(`[data-section="${sidebarSections[nextIndex]}"]`)?.focus();
+		this.renderRoot.querySelector<HTMLElement>(`[data-section="${orderedSections[nextIndex]}"]`)?.focus();
 	};
 
 	private forwardSectionMessage(section: SidebarSection, event: CustomEvent<SectionWebviewToHost>): void {
@@ -298,7 +304,7 @@ export class MainSidebarApp extends LitElement {
 			if (message === undefined) {
 				continue;
 			}
-			const app = this.renderRoot.querySelector<RecordsApp | CandidatesApp>(`[data-section-app="${section}"]`);
+			const app = this.renderRoot.querySelector<DomainsApp | RecordsApp | CandidatesApp>(`[data-section-app="${section}"]`);
 			app?.acceptHostMessage(message);
 		}
 	}

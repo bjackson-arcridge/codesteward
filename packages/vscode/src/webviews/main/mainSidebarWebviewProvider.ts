@@ -3,6 +3,8 @@ import type { CandidatesWebviewProvider } from '../candidates/candidatesWebviewP
 import type { HostToWebview as CandidateHostToWebview, WebviewToHost as CandidateWebviewToHost } from '../candidates/messages';
 import type { HostToWebview as RecordHostToWebview, WebviewToHost as RecordWebviewToHost } from '../records/messages';
 import type { RecordsWebviewProvider } from '../records/recordsWebviewProvider';
+import type { DomainsWebviewProvider } from '../domains/domainsWebviewProvider';
+import type { HostToWebview as DomainHostToWebview, WebviewToHost as DomainWebviewToHost } from '../domains/messages';
 import { renderWebviewHtml } from '../shared/csp';
 import { attachMessageRouter, type MessageRouter } from '../shared/messageRouter';
 import {
@@ -20,11 +22,13 @@ const sidebarStateKey = 'sundial.sidebar.state';
 const legacyActiveSectionStateKey = 'sundial.sidebar.activeSection';
 
 interface PersistedSidebarState {
+	readonly version: 2;
 	readonly activeSection: SidebarSection;
 	readonly visibleSections: readonly SidebarSection[];
 }
 
 export interface MainSidebarProviders {
+	readonly domains: DomainsWebviewProvider;
 	readonly records: RecordsWebviewProvider;
 	readonly research: RecordsWebviewProvider;
 	readonly specs: RecordsWebviewProvider;
@@ -52,10 +56,16 @@ export class MainSidebarWebviewProvider implements vscode.WebviewViewProvider, v
 			this.visibleSections = persistedState.visibleSections;
 			this.activeSection = persistedState.activeSection;
 		} else {
-			this.visibleSections = defaults;
-			this.activeSection = isSidebarSection(legacyActiveSection) ? legacyActiveSection : 'records';
+			const legacy = readLegacyPersistedSidebarState(persistedState);
+			this.visibleSections = legacy === undefined
+				? defaults
+				: sidebarSections.filter(section => section === 'domains' || legacy.visibleSections.includes(section));
+			this.activeSection = legacy?.activeSection
+				?? (isSidebarSection(legacyActiveSection) ? legacyActiveSection : 'domains');
+			void this.persistState();
 		}
 
+		this.subscriptions.push(providers.domains.onDidPostMessage(message => this.postSectionMessage('domains', message)));
 		for (const section of ['records', 'research', 'specs', 'rejected', 'retired'] as const) {
 			this.subscriptions.push(providers[section].onDidPostMessage(message => this.postSectionMessage(section, message)));
 		}
@@ -151,12 +161,16 @@ export class MainSidebarWebviewProvider implements vscode.WebviewViewProvider, v
 
 	private persistState(): Thenable<void> {
 		return this.state.update(sidebarStateKey, {
+			version: 2,
 			activeSection: this.activeSection,
 			visibleSections: this.visibleSections,
 		} satisfies PersistedSidebarState);
 	}
 
 	private handleSectionMessage(section: SidebarSection, message: SectionWebviewToHost): void | Promise<void> {
+		if (section === 'domains') {
+			return this.providers.domains.handleMessage(message as DomainWebviewToHost);
+		}
 		if (section === 'candidates') {
 			return this.providers.candidates.handleMessage(message as CandidateWebviewToHost);
 		}
@@ -173,6 +187,9 @@ export class MainSidebarWebviewProvider implements vscode.WebviewViewProvider, v
 	}
 
 	private getSectionState(section: SidebarSection): Promise<SectionHostToWebview> {
+		if (section === 'domains') {
+			return this.providers.domains.getState() as Promise<DomainHostToWebview>;
+		}
 		if (section === 'candidates') {
 			return this.providers.candidates.getState() as Promise<CandidateHostToWebview>;
 		}
@@ -195,10 +212,31 @@ function isPersistedSidebarState(value: unknown): value is PersistedSidebarState
 		return false;
 	}
 	const state = value as Record<string, unknown>;
-	return isSidebarSection(state.activeSection)
+	return state.version === 2
+		&& isSidebarSection(state.activeSection)
 		&& Array.isArray(state.visibleSections)
 		&& state.visibleSections.length > 0
 		&& state.visibleSections.every(isSidebarSection)
 		&& new Set(state.visibleSections).size === state.visibleSections.length
 		&& state.visibleSections.includes(state.activeSection);
+}
+
+function readLegacyPersistedSidebarState(value: unknown): Omit<PersistedSidebarState, 'version'> | undefined {
+	if (typeof value !== 'object' || value === null) {
+		return undefined;
+	}
+	const state = value as Record<string, unknown>;
+	const legacySections = sidebarSections.filter(section => section !== 'domains');
+	return isSidebarSection(state.activeSection)
+		&& state.activeSection !== 'domains'
+		&& Array.isArray(state.visibleSections)
+		&& state.visibleSections.length > 0
+		&& state.visibleSections.every(section => legacySections.includes(section as typeof legacySections[number]))
+		&& new Set(state.visibleSections).size === state.visibleSections.length
+		&& state.visibleSections.includes(state.activeSection)
+		? {
+			activeSection: state.activeSection,
+			visibleSections: state.visibleSections as readonly SidebarSection[],
+		}
+		: undefined;
 }

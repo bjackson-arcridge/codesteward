@@ -35,7 +35,7 @@ describe('package manifest contributions', () => {
 		const views = manifest.contributes?.views?.sundial ?? [];
 		const initializedViews = views.filter(view => view.when === 'sundial.workspaceInitialized');
 
-		assert.equal(manifest.version, '0.7.4');
+		assert.equal(manifest.version, '0.8.0');
 		assert.deepEqual(initializedViews, [{
 			id: 'sundial.main',
 			name: 'Sundial',

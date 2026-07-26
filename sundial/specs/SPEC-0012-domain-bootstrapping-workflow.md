@@ -1,12 +1,11 @@
 ---
 id: SPEC-0012
 title: Domain Bootstrapping Workflow
-status: Backlog
+status: Done
 created: 2026-07-24
 updated: 2026-07-24
 created_by: bjackson
 ---
-
 # Domain Bootstrapping Workflow
 
 When a user first bootstraps sundial in a project, they need to set up their domains.
@@ -153,7 +152,13 @@ When a user first bootstraps sundial in a project, they need to set up their dom
 ## Implementation Log
 
 - 2026-07-24: Planned canonical CLI domain mutations, a CLI-owned suggestion catalog, a dedicated top-most Domains accordion section, safe reference checks, multi-root targeting, refresh behavior, accessibility, and regression coverage.
+- 2026-07-24: Implemented sorted, validated domain reads and canonical writes; CLI add/update/remove and versioned JSON; exact-reference safety checks; and canonical candidate-proposal acceptance.
+- 2026-07-24: Added the first/default Domains sidebar section with one-time persisted-state migration, workspace-scoped CLI delegation, external-file refreshes, typed protocols, inline add/edit/remove flows, filtered suggestions, diagnostics, accessibility behavior, and documentation.
+- 2026-07-26: After rebasing onto CLI 0.7.2 and VS Code 0.7.4, bumped both independently versioned packages to 0.8.0 for the added Domains functionality. No new Decision Record candidate was needed because the durable implementation guidance was already captured by the applicable accepted records.
 
 ## Test Log
 
-- Planning phase only; no product code or test suites were run.
+- 2026-07-26: `npm run check-types` passed.
+- 2026-07-26: `npm run lint` passed.
+- 2026-07-26: `npm run test:unit` passed (69 CLI and 77 VS Code tests).
+- 2026-07-26: Elevated `npm test` passed against the prepared project-managed VS Code 1.118.1 runtime (9 records/candidates scenarios and 3 initialization scenarios).

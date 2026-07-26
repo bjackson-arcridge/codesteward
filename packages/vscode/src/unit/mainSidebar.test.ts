@@ -8,6 +8,12 @@ describe('main sidebar message protocol', () => {
 	test('accepts section-specific state and commands', () => {
 		assert.equal(isHostToWebview({
 			kind: 'state',
+			activeSection: 'domains',
+			visibleSections: ['domains'],
+			sectionState: { kind: 'state', workspaces: [], domains: [], suggestions: [], busy: false },
+		}), true);
+		assert.equal(isHostToWebview({
+			kind: 'state',
 			activeSection: 'records',
 			visibleSections: ['records'],
 			sectionState: { kind: 'state', records: [] },
@@ -61,6 +67,8 @@ describe('main sidebar accordion', () => {
 		assert.match(source, /openAt\(header, event\.clientX, event\.clientY, false\)/);
 		assert.match(source, /Hide' : 'Show'/);
 		assert.match(source, /visibleSections/);
+		assert.match(source, /domains: 'Domains'/);
+		assert.ok(source.indexOf("domains: 'Domains'") < source.indexOf("records: 'Decision Records'"));
 		const popoverSource = fs.readFileSync(
 			path.resolve(__dirname, '../../src/webviews/apps/shared/components/cs-popover.ts'),
 			'utf8',

@@ -10,11 +10,17 @@ import {
 	isHostToWebview as isRecordHostToWebview,
 	isWebviewToHost as isRecordWebviewToHost,
 } from '../records/messages';
+import {
+	type HostToWebview as DomainHostToWebview,
+	type WebviewToHost as DomainWebviewToHost,
+	isHostToWebview as isDomainHostToWebview,
+	isWebviewToHost as isDomainWebviewToHost,
+} from '../domains/messages';
 
-export const sidebarSections = ['records', 'research', 'specs', 'candidates', 'rejected', 'retired'] as const;
+export const sidebarSections = ['domains', 'records', 'research', 'specs', 'candidates', 'rejected', 'retired'] as const;
 export type SidebarSection = typeof sidebarSections[number];
-export type SectionHostToWebview = RecordHostToWebview | CandidateHostToWebview;
-export type SectionWebviewToHost = RecordWebviewToHost | CandidateWebviewToHost;
+export type SectionHostToWebview = DomainHostToWebview | RecordHostToWebview | CandidateHostToWebview;
+export type SectionWebviewToHost = DomainWebviewToHost | RecordWebviewToHost | CandidateWebviewToHost;
 
 export type HostToWebview =
 	| { kind: 'state'; activeSection: SidebarSection; visibleSections: readonly SidebarSection[]; sectionState: SectionHostToWebview }
@@ -71,11 +77,19 @@ function isVisibleSections(value: unknown): value is readonly SidebarSection[] {
 }
 
 function isSectionHostMessage(section: SidebarSection, value: unknown): value is SectionHostToWebview {
-	return section === 'candidates' ? isCandidateHostToWebview(value) : isRecordHostToWebview(value);
+	return section === 'domains'
+		? isDomainHostToWebview(value)
+		: section === 'candidates'
+			? isCandidateHostToWebview(value)
+			: isRecordHostToWebview(value);
 }
 
 function isSectionWebviewMessage(section: SidebarSection, value: unknown): value is SectionWebviewToHost {
-	return section === 'candidates' ? isCandidateWebviewToHost(value) : isRecordWebviewToHost(value);
+	return section === 'domains'
+		? isDomainWebviewToHost(value)
+		: section === 'candidates'
+			? isCandidateWebviewToHost(value)
+			: isRecordWebviewToHost(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

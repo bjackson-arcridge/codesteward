@@ -2,7 +2,7 @@
   "name": "sundial",
   "displayName": "Sundial",
   "description": "Markdown-backed Decision Records and agent skills for AI coding workflows.",
-  "version": "0.7.4",
+  "version": "0.8.0",
   "publisher": "arcridge",
   "license": "Apache-2.0",
   "homepage": "https://github.com/bjackson-arcridge/sundial/tree/main/packages/vscode#readme",

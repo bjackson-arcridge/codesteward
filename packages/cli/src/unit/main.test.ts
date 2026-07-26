@@ -14,7 +14,7 @@ describe('CLI main', () => {
 
 		const result = await runCli(root, ['--version']);
 
-		assert.equal(packageJson.version, '0.7.2');
+		assert.equal(packageJson.version, '0.8.0');
 		assert.equal(result.stdout, `${packageJson.version}\n`);
 		assert.equal(result.stderr, '');
 		assert.equal(result.exitCode, undefined);
@@ -209,6 +209,24 @@ describe('CLI main', () => {
 		assert.doesNotMatch(result.stdout, /Tags:/);
 		assert.equal(result.stderr, '');
 		assert.equal(result.exitCode, undefined);
+	});
+
+	test('manages domains through the CLI with JSON and usage exit codes', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-domains-crud-'));
+		await initStore(root);
+
+		const added = await runCli(root, ['domains', 'add', '--name', 'api', '--description', 'API contracts.']);
+		const updated = await runCli(root, ['domains', 'update', 'api', '--name', 'api-contracts']);
+		const json = await runCli(root, ['domains', '--json']);
+		const malformed = await runCli(root, ['domains', 'update', 'api-contracts']);
+		const removed = await runCli(root, ['domains', 'remove', 'api-contracts']);
+
+		assert.match(added.stdout, /Added domain api/);
+		assert.match(updated.stdout, /Updated domain api-contracts/);
+		assert.equal(JSON.parse(json.stdout).version, 1);
+		assert.equal(JSON.parse(json.stdout).domains.some((domain: { name: string }) => domain.name === 'api-contracts'), true);
+		assert.equal(malformed.exitCode, 64);
+		assert.match(removed.stdout, /Removed domain api-contracts/);
 	});
 
 	test('creates lists shows and updates specs through configured workflow lanes', async () => {
