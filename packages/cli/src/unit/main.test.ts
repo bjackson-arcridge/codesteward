@@ -14,7 +14,7 @@ describe('CLI main', () => {
 
 		const result = await runCli(root, ['--version']);
 
-		assert.equal(packageJson.version, '0.7.1');
+		assert.equal(packageJson.version, '0.7.2');
 		assert.equal(result.stdout, `${packageJson.version}\n`);
 		assert.equal(result.stderr, '');
 		assert.equal(result.exitCode, undefined);
@@ -415,43 +415,6 @@ describe('CLI main', () => {
 		assert.match(implementSkillContents, /name: decision-aware-implement/);
 		assert.match(researchSkillContents, /name: remember-research/);
 		assert.equal(result.stderr, '');
-	});
-
-	test('updates shared store assets without reinstalling agent runtimes', async () => {
-		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sundial-update-shared-'));
-		const init = await initStore(root);
-		const specTemplatePath = path.join(init.paths.store, 'templates', 'spec.md');
-		await fs.unlink(specTemplatePath);
-
-		const result = await runCli(root, ['update', '--root', root]);
-
-		assert.match(result.stdout, /Updated Sundial files/);
-		assert.match(result.stdout, /sundial\/templates\/spec\.md/);
-		assert.equal(await fs.readFile(specTemplatePath, 'utf8'), [
-			'# {{title}}',
-			'',
-			'## Discovery',
-			'',
-			'## Applicable Decision Records',
-			'',
-			'## Applicable Research Notes',
-			'',
-			'## Planned Approach',
-			'',
-			'## Rejected Alternatives',
-			'',
-			'## Test Plan',
-			'',
-			'## Open Questions',
-			'',
-			'## Implementation Log',
-			'',
-			'## Test Log',
-			'',
-		].join('\n'));
-		assert.doesNotMatch(result.stdout, /\.agents|\.claude/);
-		assert.equal(result.stderr, '');
-		assert.equal(result.exitCode, undefined);
 	});
 
 	test('updates generated skill files from a nested project directory', async () => {

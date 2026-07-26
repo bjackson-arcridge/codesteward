@@ -25,7 +25,7 @@ The Sundial documents bar adds a sidebar with sections capturing the types of su
  * **Specs Board**: Offers a kanban-style view of specs as cards on a board.
 The extension watches `sundial/decisions`, `sundial/research`, and `sundial/specs` so the sidebar refreshes when files change outside VS Code, including changes made by terminal commands or agent runs.
 
-## Decisions as Code
+## Documentation as Code
 Sundial is built around a project-local store, not a hosted service.  By default projects markdown managed by sundial lives in the `sundial` directory in the repo:
 
 - `sundial/decisions/accepted/` stores approved Decision Records that agents should follow.
@@ -47,9 +47,13 @@ Sundial installs skills during project initialization to guide agent harnesses o
 3. Install the Sundial CLI from the welcome view (if prompted).
 4. Initialize the project and choose Claude Code, Codex, or both.
 
+If VS Code cannot find the CLI on `PATH`, set `sundial.cliPath` to the executable you want the extension to use.
+
 ## What is a good set of domains?
 
-If VS Code cannot find the CLI on `PATH`, set `sundial.cliPath` to the executable you want the extension to use.
+
+The point of domains is two-fold. First, the UI has various options to filter artifacts by domain, so you can use them as an oganizational mechanism.  Second, the LLM has been prompted to only query domains that are relevant to the task at hand.
+Domains should clearly partition the project space into seperable concerns (UI, API, Backend,...).  Start with a few high level domains; thus far in experimentation, going more fine-grain does not really help with the filtering problem.
 
 ## Recommended Extensions
 

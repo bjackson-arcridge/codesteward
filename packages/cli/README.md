@@ -102,7 +102,6 @@ sundial worktree finish SPEC-0001 --expected-primary <sha> --expected-worktree <
 
 Notes:
 
-- Run `sundial update [--root <path>]` without harness flags to refresh shared store assets only; add `--claude` and/or `--codex` when agent runtime assets should also be refreshed.
 - Enabled accepted DRs are the only precedent retrieved by `dr retrieve`.
 - Repeat `--domain` on one `dr retrieve` call to retrieve all relevant domain branches together.
 - Candidate DRs can include a proposed domain with a description; accepting the DR appends that proposal to `sundial/domains.md`.

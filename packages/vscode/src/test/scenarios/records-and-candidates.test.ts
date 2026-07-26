@@ -120,6 +120,26 @@ suite('Scenario: records-and-candidates', () => {
 		await waitForActiveTextDocument(specPath);
 	});
 
+	test('customizing a missing spec template creates and opens only that file', async () => {
+		await useLocalSundialCli();
+		await activateExtension();
+		await waitForWebviewDiagnostics();
+		await focusSpecsView();
+
+		const templatePath = path.join(workspaceRoot(), 'sundial', 'templates', 'spec.md');
+		await fs.rm(templatePath, { force: true });
+
+		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+		await vscode.commands.executeCommand('sundial.specs.customizeTemplate');
+
+		await waitForActiveTextDocument(templatePath);
+		assert.match(await fs.readFile(templatePath, 'utf8'), /## Discovery/);
+
+		await fs.writeFile(templatePath, '# Keep this customization\n', 'utf8');
+		await vscode.commands.executeCommand('sundial.specs.customizeTemplate');
+		assert.equal(await fs.readFile(templatePath, 'utf8'), '# Keep this customization\n');
+	});
+
 	test('creates, moves, and deletes specs from the sidebar', async () => {
 		await useLocalSundialCli();
 		await activateExtension();

@@ -103,6 +103,10 @@ export async function ensureSpecTemplate(paths: StorePaths): Promise<SpecTemplat
 		return { filePath, created: true };
 	} catch (error) {
 		if (isNodeError(error) && error.code === 'EEXIST') {
+			const stats = await fs.stat(filePath);
+			if (!stats.isFile()) {
+				throw new Error(`Spec template path is not a file: ${filePath}`);
+			}
 			return { filePath, created: false };
 		}
 

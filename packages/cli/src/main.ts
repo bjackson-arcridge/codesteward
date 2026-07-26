@@ -1993,6 +1993,10 @@ function parseUpdateArgs(
 		return updateUsageError(io);
 	}
 
+	if (!claude && !codex && folder === undefined) {
+		return updateUsageError(io);
+	}
+
 	return { root, folder, claude, codex };
 }
 
