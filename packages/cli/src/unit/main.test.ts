@@ -14,7 +14,7 @@ describe('CLI main', () => {
 
 		const result = await runCli(root, ['--version']);
 
-		assert.equal(packageJson.version, '0.8.0');
+		assert.equal(packageJson.version, '0.8.1');
 		assert.equal(result.stdout, `${packageJson.version}\n`);
 		assert.equal(result.stderr, '');
 		assert.equal(result.exitCode, undefined);
@@ -30,7 +30,8 @@ describe('CLI main', () => {
 			assert.match(result.stdout, /Usage:\s+sundial/);
 			assert.match(result.stdout, /Decision Record Workflow/);
 			assert.match(result.stdout, /sundial candidate create/);
-			assert.match(result.stdout, /Pitfalls discipline/);
+			assert.match(result.stdout, /Token minimization is the goal/);
+			assert.doesNotMatch(result.stdout, /Pitfalls discipline/);
 			assert.match(result.stdout, /--proposed-domain/);
 			assert.doesNotMatch(result.stdout, /<!-- sundial:agent-instructions -->/);
 			assert.equal(result.stderr, '');

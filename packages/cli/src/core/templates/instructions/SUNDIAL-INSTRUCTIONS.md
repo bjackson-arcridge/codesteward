@@ -24,32 +24,31 @@ When a prompt asks you to use Sundial review skill/instructions for a `SPEC-*`, 
 
 ## Sundial Candidate Decision Record Submission
 
-Decison Record discipline: Decision Records record rules that will guide future implementation and design. Any user suggested DR is valid.
-DRs should be proposed if a pattern should be remembered and stored for future refernce. Check rejected DRs before proposing new DRs:
+Decision Record discipline: Decision Records record rules that will guide future implementation and design. Any user suggested DR is valid. The Agent should propose DRs judiciously only when a pattern should be remembered and stored for future reference, and will have long-reaching implications within a module or is valid beyond the scope of a single file or module.
 
-`sundial dr list --status rejected`.
+First internally consider a DR with the following parts:
 
-Create candidate records through the CLI; do not write candidate markdown files by hand.
+A Decision contains the governing guidance.  It is as short as possible to convey the governance to an LLM.  Token minimization is the goal. Positive (do this) and Negative (don't do this) framing or a mixture are valid. Only record details that the LLM would not immediately infer from its training. Omit generic best practices, framework basics, boilerplate, and speculative detail.
+
+A decision should contain no redundancies; it is optimized for brevity. Every clause adds information that cannot be inferred from general engineering knowledge.
+
+An Appendix is optional and can contain more historical and user-facing context. Appendix is non-governing material intended primarily for future human reference, not normal agent retrieval. Use it when there was a significant conversation with the user on this decision and/or investigation of alternatives was done prior to proposing the decision. Do not use it as a matter of course. The appendix can optimize for narrative over conciseness, but should be a maximum of 200 words.
+
+References identify the strongest available project source for the decision.
+
+Revise the draft to fix any rubric failures, then call the create command once with the final fields. Do not create candidate records as part of the drafting or evaluation loop, and do not write candidate markdown files by hand.
 
 ```bash
 sundial candidate create \
   --title "<candidate title>" \
   --domain "<domain>" \
   --decision "<terse governing guidance>" \
-  --pitfalls "<terse governing guidance>" \
-  --appendix "<human facing details>" \
   --ref "<path-or-symbol>"
 ```
 
+Add `--appendix` only when the draft passes the appendix rubric above.
+
 The goal of the DR domain system is to do useful filtering while also ensuring all relevant DRs are retrieved in the appropriate context.
-
-Required CLI fields: `title` plus at least one of `decision` or `pitfalls`. A candidate may have either or both.
-
-Decision discipline: Record directives that inform the LLM of the project constraints and decisions. Only record details that the LLM would not immediately infor from its training. Omit generic best practices, framework basics, boilerplate, and speculative detail.
-
-Pitfalls discipline: Similar to decision, but some information is better conveyed as what not to do instead of what to do.  CRITICAL: Pitfalls and Decisions do not repeat each other.  All information should be net-new.
-
-Appendix discipline: For human-facing explanatory context. It is non-governing and short/medium retrieval usually omits it, so do not put agent instructions, applicability, constraints, or hidden requirements there.
 
 Use either `--domain <known-domain>` or `--proposed-domain <domain> "<description>"` when proposing a new domain.
 

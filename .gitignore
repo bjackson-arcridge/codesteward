@@ -21,3 +21,8 @@ npm-debug.log*
 .env.local
 .sundial/agents
 .sundial/
+
+# Sundial runtime state
+.sundial/agents/
+.sundial/*response.md
+.sundial/*newAnnotation.md
